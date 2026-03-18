@@ -10,6 +10,7 @@ import UserListPage from './users/UserListPage';
 import ServiceManagement from './services/pages/ServiceManagement';
 import ServiceRequestList from './services/pages/ServiceRequestList';
 import TaskQueue from './services/pages/TaskQueue';
+import KanbanBoard from './tasks/pages/KanbanBoard';
 import { ClientService } from './clients/ClientService';
 import { BookingService } from './bookings/BookingService';
 import { useServiceStore } from './services/store/useServiceStore';
@@ -111,6 +112,7 @@ function App() {
             <Route path="/services" element={<ServiceManagement />} />
             <Route path="/service-requests" element={<ServiceRequestList />} />
             <Route path="/tasks" element={<TaskQueue />} />
+            <Route path="/kanban" element={<KanbanBoard />} />
           </Route>
         </Route>
 
