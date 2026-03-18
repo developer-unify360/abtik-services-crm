@@ -25,6 +25,9 @@ class TaskColumnSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskColumn
         fields = '__all__'
+        extra_kwargs = {
+            'tenant': {'required': False},
+        }
     
     def get_tasks_count(self, obj):
         return obj.tasks.count()
@@ -34,6 +37,9 @@ class TaskLabelSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskLabel
         fields = '__all__'
+        extra_kwargs = {
+            'tenant': {'required': False},
+        }
 
 
 class TaskSubtaskSerializer(serializers.ModelSerializer):
@@ -313,7 +319,7 @@ class TaskStatusChangeSerializer(serializers.Serializer):
 class KanbanColumnSerializer(serializers.ModelSerializer):
     """Serializer for kanban column with tasks"""
     tasks = serializers.SerializerMethodField()
-    WIP_LIMIT = serializers.IntegerField(source='WIP_LIMIT', read_only=True)
+    WIP_LIMIT = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = TaskColumn
