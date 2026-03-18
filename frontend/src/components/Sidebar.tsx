@@ -9,6 +9,8 @@ import {
   Book as BookIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
+  Assignment as AssignmentIcon,
+  Work as WorkIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -24,6 +26,8 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Clients', path: '/clients', icon: <PeopleIcon /> },
   { label: 'Bookings', path: '/bookings', icon: <BookIcon /> },
+  { label: 'Service Requests', path: '/service-requests', icon: <WorkIcon /> },
+  { label: 'Service Catalog', path: '/services', icon: <AssignmentIcon /> },
   { label: 'Users', path: '/users', icon: <PersonIcon /> },
   { label: 'Tenants', path: '/tenants', icon: <BusinessIcon /> },
 ];

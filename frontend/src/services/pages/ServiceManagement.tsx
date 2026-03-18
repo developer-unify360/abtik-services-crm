@@ -81,7 +81,7 @@ const ServiceManagement: React.FC = () => {
               <span className="font-medium">All Services</span>
               <ChevronRight size={16} />
             </button>
-            {categories.map(cat => (
+            {(Array.isArray(categories) ? categories : []).map(cat => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -118,7 +118,7 @@ const ServiceManagement: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {services.map(service => (
+              {(Array.isArray(services) ? services : []).map(service => (
                 <div key={service.id} className="group bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                     <button 

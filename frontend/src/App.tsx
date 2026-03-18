@@ -8,6 +8,7 @@ import BookingListPage from './bookings/BookingListPage';
 import TenantListPage from './tenants/TenantListPage';
 import UserListPage from './users/UserListPage';
 import ServiceManagement from './services/pages/ServiceManagement';
+import ServiceRequestList from './services/pages/ServiceRequestList';
 import TaskQueue from './services/pages/TaskQueue';
 import { Box, Typography, Paper, Grid } from '@mui/material';
 
@@ -47,6 +48,7 @@ function App() {
             <Route path="/users" element={<UserListPage />} />
             <Route path="/tenants" element={<TenantListPage />} />
             <Route path="/services" element={<ServiceManagement />} />
+            <Route path="/service-requests" element={<ServiceRequestList />} />
             <Route path="/tasks" element={<TaskQueue />} />
           </Route>
         </Route>

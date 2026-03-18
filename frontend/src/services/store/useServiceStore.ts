@@ -1,15 +1,17 @@
 import { create } from 'zustand';
-import { ServiceApi, ServiceCategoryApi } from '../api/ServiceApi';
-import type { Service, ServiceCategory, ServiceCreateData, ServiceCategoryCreateData } from '../api/ServiceApi';
+import { ServiceApi, ServiceCategoryApi, ServiceRequestApi } from '../api/ServiceApi';
+import type { Service, ServiceCategory, ServiceCreateData, ServiceCategoryCreateData, ServiceRequest, ServiceRequestCreateData, ServiceRequestAssignData, ServiceRequestStatusUpdateData } from '../api/ServiceApi';
 
 interface ServiceState {
   categories: ServiceCategory[];
   services: Service[];
+  serviceRequests: ServiceRequest[];
   isLoading: boolean;
   error: string | null;
   
   fetchCategories: () => Promise<void>;
   fetchServices: (categoryId?: string) => Promise<void>;
+  fetchServiceRequests: (filters?: { status?: string; assigned_to?: string; priority?: string; booking_id?: string }) => Promise<void>;
   
   createCategory: (data: ServiceCategoryCreateData) => Promise<void>;
   updateCategory: (id: string, data: Partial<ServiceCategoryCreateData>) => Promise<void>;
@@ -18,11 +20,17 @@ interface ServiceState {
   createService: (data: ServiceCreateData) => Promise<void>;
   updateService: (id: string, data: Partial<ServiceCreateData>) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
+  
+  createServiceRequest: (data: ServiceRequestCreateData) => Promise<void>;
+  assignServiceRequest: (id: string, data: ServiceRequestAssignData) => Promise<void>;
+  updateServiceRequestStatus: (id: string, data: ServiceRequestStatusUpdateData) => Promise<void>;
+  deleteServiceRequest: (id: string) => Promise<void>;
 }
 
 export const useServiceStore = create<ServiceState>((set, get) => ({
   categories: [],
   services: [],
+  serviceRequests: [],
   isLoading: false,
   error: null,
 
@@ -103,6 +111,56 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServices();
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete service', isLoading: false });
+    }
+  },
+
+  fetchServiceRequests: async (filters) => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await ServiceRequestApi.list(filters);
+      set({ serviceRequests: data, isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to fetch service requests', isLoading: false });
+    }
+  },
+
+  createServiceRequest: async (data) => {
+    set({ isLoading: true, error: null });
+    try {
+      await ServiceRequestApi.create(data);
+      await get().fetchServiceRequests();
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to create service request', isLoading: false });
+    }
+  },
+
+  assignServiceRequest: async (id, data) => {
+    set({ isLoading: true, error: null });
+    try {
+      await ServiceRequestApi.assign(id, data);
+      await get().fetchServiceRequests();
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to assign service request', isLoading: false });
+    }
+  },
+
+  updateServiceRequestStatus: async (id, data) => {
+    set({ isLoading: true, error: null });
+    try {
+      await ServiceRequestApi.updateStatus(id, data);
+      await get().fetchServiceRequests();
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to update service request status', isLoading: false });
+    }
+  },
+
+  deleteServiceRequest: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      await ServiceRequestApi.delete(id);
+      await get().fetchServiceRequests();
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to delete service request', isLoading: false });
     }
   },
 }));

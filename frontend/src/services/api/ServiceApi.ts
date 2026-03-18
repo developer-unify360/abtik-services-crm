@@ -31,10 +31,53 @@ export interface ServiceCreateData {
   description?: string;
 }
 
+// Service Request Types
+export interface ServiceRequest {
+  id: string;
+  tenant: string;
+  booking: string;
+  booking_details?: {
+    id: string;
+    client_name?: string;
+    company_name?: string;
+    booking_date?: string;
+    status?: string;
+  };
+  service: string;
+  service_name: string;
+  category_name: string;
+  assigned_to: string | null;
+  assigned_user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  status: 'pending' | 'assigned' | 'in_progress' | 'waiting_client' | 'completed' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceRequestCreateData {
+  booking: string;
+  service: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+}
+
+export interface ServiceRequestAssignData {
+  assigned_to: string;
+}
+
+export interface ServiceRequestStatusUpdateData {
+  status: 'pending' | 'assigned' | 'in_progress' | 'waiting_client' | 'completed' | 'closed';
+}
+
 export const ServiceCategoryApi = {
   list: async () => {
     const response = await apiClient.get('/service-categories/');
-    return response.data;
+    // Handle Django REST Framework paginated response
+    return response.data.results || response.data;
   },
 
   get: async (id: string) => {
@@ -62,7 +105,8 @@ export const ServiceApi = {
   list: async (categoryId?: string) => {
     const params = categoryId ? { category_id: categoryId } : {};
     const response = await apiClient.get('/services/', { params });
-    return response.data;
+    // Handle Django REST Framework paginated response
+    return response.data.results || response.data;
   },
 
   get: async (id: string) => {
@@ -82,6 +126,45 @@ export const ServiceApi = {
 
   delete: async (id: string) => {
     const response = await apiClient.delete(`/services/${id}/`);
+    return response.data;
+  },
+};
+
+// Service Request API
+export const ServiceRequestApi = {
+  list: async (filters?: { status?: string; assigned_to?: string; priority?: string; booking_id?: string }) => {
+    const response = await apiClient.get('/service-requests/', { params: filters });
+    // Handle Django REST Framework paginated response
+    return response.data.results || response.data;
+  },
+
+  get: async (id: string) => {
+    const response = await apiClient.get(`/service-requests/${id}/`);
+    return response.data;
+  },
+
+  create: async (data: ServiceRequestCreateData) => {
+    const response = await apiClient.post('/service-requests/', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<ServiceRequestCreateData>) => {
+    const response = await apiClient.put(`/service-requests/${id}/`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/service-requests/${id}/`);
+    return response.data;
+  },
+
+  assign: async (id: string, data: ServiceRequestAssignData) => {
+    const response = await apiClient.put(`/service-requests/${id}/assign/`, data);
+    return response.data;
+  },
+
+  updateStatus: async (id: string, data: ServiceRequestStatusUpdateData) => {
+    const response = await apiClient.patch(`/service-requests/${id}/status/`, data);
     return response.data;
   },
 };
