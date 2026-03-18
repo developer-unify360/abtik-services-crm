@@ -13,7 +13,6 @@ import TaskQueue from './services/pages/TaskQueue';
 import { ClientService } from './clients/ClientService';
 import { BookingService } from './bookings/BookingService';
 import { useServiceStore } from './services/store/useServiceStore';
-import { Box, Typography, Paper, Grid } from '@mui/material';
 
 const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState({
@@ -25,34 +24,27 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { fetchServiceRequests, serviceRequests } = useServiceStore();
 
-  // Fetch service requests on mount
   useEffect(() => {
     fetchServiceRequests();
   }, [fetchServiceRequests]);
 
-  // Calculate stats when serviceRequests are loaded or change
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch clients count
         const clientsData = await ClientService.list({ page_size: '1' });
         const totalClients = clientsData.count || 0;
 
-        // Fetch all bookings
         const bookingsData = await BookingService.list({});
         const allBookings = bookingsData.results || bookingsData || [];
         
-        // Active bookings (non-completed, non-cancelled)
         const activeBookings = allBookings.filter((b: any) => 
           b.status !== 'completed' && b.status !== 'cancelled'
         ).length;
 
-        // Pending tasks from service requests
         const pendingTasks = serviceRequests.filter((r: any) => 
           r.status === 'pending' || r.status === 'assigned'
         ).length;
 
-        // Monthly revenue - calculate from completed bookings this month
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthlyRevenue = allBookings
@@ -75,25 +67,31 @@ const DashboardPage: React.FC = () => {
     fetchStats();
   }, [serviceRequests]);
 
+  const cards = [
+    { label: 'Total Clients', value: loading ? '...' : stats.totalClients, color: '#4f46e5', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-500' },
+    { label: 'Active Bookings', value: loading ? '...' : stats.activeBookings, color: '#059669', bgColor: 'bg-green-50', borderColor: 'border-green-500' },
+    { label: 'Pending Tasks', value: loading ? '...' : stats.pendingTasks, color: '#d97706', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-500' },
+    { label: 'Monthly Revenue', value: loading ? '...' : `${stats.monthlyRevenue.toLocaleString()}`, color: '#dc2626', bgColor: 'bg-red-50', borderColor: 'border-red-500' },
+  ];
+
   return (
-    <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a2e', mb: 3 }}>Dashboard</Typography>
-      <Grid container spacing={3}>
-        {[
-          { label: 'Total Clients', value: loading ? '...' : stats.totalClients, color: '#4f46e5' },
-          { label: 'Active Bookings', value: loading ? '...' : stats.activeBookings, color: '#059669' },
-          { label: 'Pending Tasks', value: loading ? '...' : stats.pendingTasks, color: '#d97706' },
-          { label: 'Monthly Revenue', value: loading ? '...' : `${stats.monthlyRevenue.toLocaleString()}`, color: '#dc2626' },
-        ].map((card) => (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={card.label}>
-            <Paper sx={{ p: 3, borderRadius: 2, borderLeft: `4px solid ${card.color}` }}>
-              <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>{card.label}</Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: card.color }}>{card.value}</Typography>
-            </Paper>
-          </Grid>
+    <div>
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {cards.map((card) => (
+          <div 
+            key={card.label}
+            className={`card ${card.bgColor} border-l-4`}
+            style={{ borderLeftColor: card.color }}
+          >
+            <p className="text-sm text-gray-500 mb-1">{card.label}</p>
+            <p className="text-3xl font-bold" style={{ color: card.color }}>
+              {card.value}
+            </p>
+          </div>
         ))}
-      </Grid>
-    </Box>
+      </div>
+    </div>
   );
 };
 
@@ -103,7 +101,6 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected routes with Layout */}
         <Route element={<PrivateRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -124,4 +121,3 @@ function App() {
 }
 
 export default App;
-

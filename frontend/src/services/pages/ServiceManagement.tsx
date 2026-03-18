@@ -1,14 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useServiceStore } from '../store/useServiceStore';
-import {
-  Box, Typography, Paper, Button, IconButton, Grid, TextField,
-  Dialog, DialogTitle, DialogContent, DialogActions, Chip,
-  List, ListItem, ListItemButton, ListItemText, Snackbar, Alert
-} from '@mui/material';
-import {
-  Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon,
-  ChevronRight as ChevronRightIcon, Settings as SettingsIcon
-} from '@mui/icons-material';
+import { Plus, Delete, Edit, ChevronRight, Settings, X } from 'lucide-react';
 
 const ServiceManagement: React.FC = () => {
   const {
@@ -21,8 +13,8 @@ const ServiceManagement: React.FC = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [modalData, setModalData] = useState<any>({});
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({
+    open: false, message: '', type: 'success',
   });
 
   useEffect(() => {
@@ -42,16 +34,16 @@ const ServiceManagement: React.FC = () => {
     try {
       if (modalData.id) {
         await updateCategory(modalData.id, modalData);
-        setSnackbar({ open: true, message: 'Category updated successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Category updated successfully', type: 'success' });
       } else {
         await createCategory(modalData);
-        setSnackbar({ open: true, message: 'Category created successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Category created successfully', type: 'success' });
       }
       setShowCategoryModal(false);
       setModalData({});
       fetchCategories();
     } catch (err: any) {
-      setSnackbar({ open: true, message: 'Operation failed', severity: 'error' });
+      setSnackbar({ open: true, message: 'Operation failed', type: 'error' });
     }
   };
 
@@ -61,16 +53,16 @@ const ServiceManagement: React.FC = () => {
     try {
       if (modalData.id) {
         await updateService(modalData.id, data);
-        setSnackbar({ open: true, message: 'Service updated successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Service updated successfully', type: 'success' });
       } else {
         await createService(data);
-        setSnackbar({ open: true, message: 'Service created successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Service created successfully', type: 'success' });
       }
       setShowServiceModal(false);
       setModalData({});
       fetchServices(selectedCategory || undefined);
     } catch (err: any) {
-      setSnackbar({ open: true, message: 'Operation failed', severity: 'error' });
+      setSnackbar({ open: true, message: 'Operation failed', type: 'error' });
     }
   };
 
@@ -78,13 +70,13 @@ const ServiceManagement: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
         await deleteCategory(id);
-        setSnackbar({ open: true, message: 'Category deleted successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Category deleted successfully', type: 'success' });
         if (selectedCategory === id) {
           setSelectedCategory(null);
         }
         fetchCategories();
       } catch (err: any) {
-        setSnackbar({ open: true, message: 'Failed to delete category', severity: 'error' });
+        setSnackbar({ open: true, message: 'Failed to delete category', type: 'error' });
       }
     }
   };
@@ -93,250 +85,269 @@ const ServiceManagement: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this service?')) {
       try {
         await deleteService(id);
-        setSnackbar({ open: true, message: 'Service deleted successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Service deleted successfully', type: 'success' });
         fetchServices(selectedCategory || undefined);
       } catch (err: any) {
-        setSnackbar({ open: true, message: 'Failed to delete service', severity: 'error' });
+        setSnackbar({ open: true, message: 'Failed to delete service', type: 'error' });
       }
     }
   };
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a2e' }}>Service Catalog</Typography>
-          <Typography variant="body2" sx={{ color: '#6b7280', mt: 0.5 }}>Manage your service offerings and categories</Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => { setModalData({}); setShowCategoryModal(true); }}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-        >
-          New Category
-        </Button>
-      </Box>
+  const categoryList = Array.isArray(categories) ? categories : [];
 
-      <Grid container spacing={3}>
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Service Catalog</h1>
+          <p className="text-gray-500 mt-1">Manage your service offerings and categories</p>
+        </div>
+        <button 
+          onClick={() => { setModalData({}); setShowCategoryModal(true); }}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus size={18} />
+          New Category
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Categories Sidebar */}
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Paper sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid #f3f4f6', bgcolor: '#f9fafb' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Categories</Typography>
-            </Box>
-            <List disablePadding>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={!selectedCategory}
-                  onClick={() => setSelectedCategory(null)}
-                  sx={{
-                    '&.Mui-selected': {
-                      bgcolor: '#eef2ff',
-                      borderRight: '4px solid #4f46e5',
-                      color: '#4f46e5',
-                      '&:hover': { bgcolor: '#eef2ff' }
-                    }
-                  }}
+        <div className="md:col-span-1">
+          <div className="card !p-0 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-semibold text-slate-800">Categories</h3>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                  !selectedCategory ? 'bg-indigo-50 text-indigo-600 border-r-2 border-indigo-600' : 'text-gray-600'
+                }`}
+              >
+                <span className="font-medium">All Services</span>
+                <ChevronRight size={16} />
+              </button>
+              {categoryList.map((cat) => (
+                <div
+                  key={cat.id}
+                  className={`flex items-center justify-between px-4 py-3 border-t border-gray-100 ${
+                    selectedCategory === cat.id 
+                      ? 'bg-indigo-50 text-indigo-600 border-r-2 border-indigo-600' 
+                      : 'hover:bg-gray-50 text-gray-600'
+                  }`}
                 >
-                  <ListItemText primary="All Services" />
-                  <ChevronRightIcon sx={{ fontSize: 18 }} />
-                </ListItemButton>
-              </ListItem>
-              {(Array.isArray(categories) ? categories : []).map((cat) => (
-                <ListItem key={cat.id} disablePadding secondaryAction={
-                  <Box>
-                    <IconButton edge="end" size="small" onClick={() => { setModalData(cat); setShowCategoryModal(true); }}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton edge="end" size="small" onClick={() => handleDeleteCategory(cat.id)} sx={{ color: '#dc2626' }}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                }>
-                  <ListItemButton
-                    selected={selectedCategory === cat.id}
+                  <button
                     onClick={() => setSelectedCategory(cat.id)}
-                    sx={{
-                      '&.Mui-selected': {
-                        bgcolor: '#eef2ff',
-                        borderRight: '4px solid #4f46e5',
-                        color: '#4f46e5',
-                        '&:hover': { bgcolor: '#eef2ff' }
-                      }
-                    }}
+                    className="flex-1 text-left font-medium"
                   >
-                    <ListItemText primary={cat.name} />
-                    <ChevronRightIcon sx={{ fontSize: 18 }} />
-                  </ListItemButton>
-                </ListItem>
+                    {cat.name}
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setModalData(cat); setShowCategoryModal(true); }}
+                      className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Delete size={14} />
+                    </button>
+                  </div>
+                </div>
               ))}
-            </List>
-          </Paper>
-        </Grid>
+            </div>
+          </div>
+        </div>
 
         {/* Services List */}
-        <Grid size={{ xs: 12, md: 9 }}>
-          <Paper sx={{ p: 2, mb: 2, borderRadius: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+        <div className="md:col-span-3">
+          {/* Services Header */}
+          <div className="card mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-800">
                 {selectedCategory
-                  ? (categories as any[]).find(c => c.id === selectedCategory)?.name
+                  ? categoryList.find(c => c.id === selectedCategory)?.name
                   : 'All Services'}
-              </Typography>
-              <Button
-                variant="text"
-                startIcon={<AddIcon />}
+              </h3>
+              <button
                 onClick={() => { setModalData({ category: selectedCategory }); setShowServiceModal(true); }}
-                sx={{ color: '#4f46e5', fontWeight: 500, '&:hover': { bgcolor: '#eef2ff' } }}
+                className="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1"
               >
+                <Plus size={18} />
                 Add Service
-              </Button>
-            </Box>
-          </Paper>
+              </button>
+            </div>
+          </div>
 
           {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
-              <Typography>Loading...</Typography>
-            </Box>
+            <div className="flex justify-center py-12">
+              <p className="text-gray-500">Loading...</p>
+            </div>
           ) : (
-            <Grid container spacing={2}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {(Array.isArray(services) ? services : []).map((service) => (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={service.id}>
-                  <Paper sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.1)' },
-                    position: 'relative',
-                    transition: 'box-shadow 0.2s'
-                  }}>
-                    <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5, opacity: 0, transition: 'opacity 0.2s', '.MuiPaper-root:hover &': { opacity: 1 } }}>
-                      <IconButton size="small" onClick={() => { setModalData(service); setShowServiceModal(true); }} sx={{ color: '#6b7280', '&:hover': { color: '#4f46e5', bgcolor: '#eef2ff' } }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleDeleteService(service.id)} sx={{ color: '#6b7280', '&:hover': { color: '#dc2626', bgcolor: '#fef2f2' } }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <Box sx={{ p: 1, bgcolor: '#eef2ff', borderRadius: 1, color: '#4f46e5' }}>
-                        <SettingsIcon sx={{ fontSize: 20 }} />
-                      </Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, pr: 3 }}>{service.name}</Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ color: '#6b7280', mb: 2, minHeight: 40, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {service.description || 'No description provided.'}
-                    </Typography>
-                    <Box sx={{ pt: 2, borderTop: '1px solid #f3f4f6' }}>
-                      <Chip label={service.category_name} size="small" sx={{ bgcolor: '#f3f4f6', color: '#6b7280', fontSize: 12 }} />
-                    </Box>
-                  </Paper>
-                </Grid>
+                <div key={service.id} className="card group relative hover:shadow-md transition-shadow">
+                  {/* Actions */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => { setModalData(service); setShowServiceModal(true); }}
+                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteService(service.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Delete size={16} />
+                    </button>
+                  </div>
+                  
+                  {/* Service Content */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                      <Settings size={20} />
+                    </div>
+                    <h4 className="font-semibold text-slate-800 pr-8">{service.name}</h4>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-3 min-h-[40px] line-clamp-2">
+                    {service.description || 'No description provided.'}
+                  </p>
+                  <div className="pt-3 border-t border-gray-100">
+                    <span className="badge badge-gray">{service.category_name}</span>
+                  </div>
+                </div>
               ))}
               {services.length === 0 && (
-                <Grid size={{ xs: 12 }}>
-                  <Paper sx={{ p: 6, borderRadius: 2, textAlign: 'center', border: '2px dashed #d1d5db' }}>
-                    <Box sx={{ mb: 1 }}>
-                      <AddIcon sx={{ fontSize: 40, color: '#d1d5db' }} />
-                    </Box>
-                    <Typography variant="body1" sx={{ color: '#6b7280' }}>No services found</Typography>
-                    <Typography variant="body2" sx={{ color: '#9ca3af', mt: 0.5 }}>Start by adding your first service to this category.</Typography>
-                  </Paper>
-                </Grid>
+                <div className="col-span-full">
+                  <div className="card border-2 border-dashed border-gray-200 text-center py-12">
+                    <div className="flex flex-col items-center">
+                      <Plus size={40} className="text-gray-300 mb-2" />
+                      <p className="text-gray-500 font-medium">No services found</p>
+                      <p className="text-gray-400 text-sm mt-1">Start by adding your first service to this category.</p>
+                    </div>
+                  </div>
+                </div>
               )}
-            </Grid>
+            </div>
           )}
-        </Grid>
-      </Grid>
+        </div>
+      </div>
 
       {/* Category Modal */}
-      <Dialog open={showCategoryModal} onClose={() => setShowCategoryModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{modalData.id ? 'Edit Category' : 'New Category'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Name"
-                value={modalData.name || ''}
-                onChange={(e) => setModalData({ ...modalData, name: e.target.value })}
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={modalData.description || ''}
-                onChange={(e) => setModalData({ ...modalData, description: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowCategoryModal(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveCategory}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">
+                {modalData.id ? 'Edit Category' : 'New Category'}
+              </h2>
+              <button 
+                onClick={() => setShowCategoryModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCategory} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={modalData.name || ''}
+                  onChange={(e) => setModalData({ ...modalData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="input-field min-h-[80px]"
+                  value={modalData.description || ''}
+                  onChange={(e) => setModalData({ ...modalData, description: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowCategoryModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Service Modal */}
-      <Dialog open={showServiceModal} onClose={() => setShowServiceModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{modalData.id ? 'Edit Service' : 'New Service'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                select
-                label="Category"
-                value={modalData.category || selectedCategory || ''}
-                onChange={(e) => setModalData({ ...modalData, category: e.target.value })}
-                SelectProps={{ native: true }}
+      {showServiceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">
+                {modalData.id ? 'Edit Service' : 'New Service'}
+              </h2>
+              <button 
+                onClick={() => setShowServiceModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <option value="">Select a category</option>
-                {(categories as any[]).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Service Name"
-                value={modalData.name || ''}
-                onChange={(e) => setModalData({ ...modalData, name: e.target.value })}
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={modalData.description || ''}
-                onChange={(e) => setModalData({ ...modalData, description: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowServiceModal(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveService}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            Save Service
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveService} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  className="input-field"
+                  value={modalData.category || selectedCategory || ''}
+                  onChange={(e) => setModalData({ ...modalData, category: e.target.value })}
+                >
+                  <option value="">Select a category</option>
+                  {categoryList.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={modalData.name || ''}
+                  onChange={(e) => setModalData({ ...modalData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="input-field min-h-[80px]"
+                  value={modalData.description || ''}
+                  onChange={(e) => setModalData({ ...modalData, description: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowServiceModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary">Save Service</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>{snackbar.message}</Alert>
-      </Snackbar>
-    </Box>
+      {/* Toast */}
+      {snackbar.open && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
+          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white flex items-center gap-3 z-50`}>
+          <span>{snackbar.message}</span>
+          <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

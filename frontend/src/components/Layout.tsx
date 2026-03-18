@@ -1,27 +1,26 @@
 import React from 'react';
-import { Box, Toolbar } from '@mui/material';
-import Sidebar, { DRAWER_WIDTH } from './Sidebar';
+import Sidebar from './Sidebar';
 import HeaderBar from './HeaderBar';
 import { Outlet } from 'react-router-dom';
 
+const DRAWER_WIDTH = 240;
+
 const Layout: React.FC = () => {
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f5f7' }}>
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <HeaderBar />
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: `calc(100% - ${DRAWER_WIDTH}px)`,
-        }}
+      <div 
+        className="flex-1 ml-60"
+        style={{ marginLeft: `${DRAWER_WIDTH}px` }}
       >
-        <Toolbar /> {/* Spacer for fixed AppBar */}
-        <Outlet />
-      </Box>
-    </Box>
+        <HeaderBar />
+        <main className="pt-16 px-6 pb-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 };
 
+export { DRAWER_WIDTH };
 export default Layout;

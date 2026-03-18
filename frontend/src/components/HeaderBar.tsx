@@ -1,6 +1,5 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, IconButton, Box, Avatar, Chip } from '@mui/material';
-import { Notifications as NotificationsIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { Bell, LogOut, Search } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
 import { useNavigate } from 'react-router-dom';
 import { DRAWER_WIDTH } from './Sidebar';
@@ -15,40 +14,59 @@ const HeaderBar: React.FC = () => {
   };
 
   return (
-    <AppBar
-      position="fixed"
-      sx={{
-        width: `calc(100% - ${DRAWER_WIDTH}px)`,
-        ml: `${DRAWER_WIDTH}px`,
-        bgcolor: '#fff',
-        color: '#333',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+    <header 
+      className="fixed top-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-40"
+      style={{ 
+        left: DRAWER_WIDTH,
+        width: `calc(100% - ${DRAWER_WIDTH}px)`
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
+      {/* Left - Title */}
+      <div className="flex items-center gap-4">
+        <h2 className="text-lg font-semibold text-slate-800">
           Business Service Management
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {user?.role && (
-            <Chip
-              label={user.role}
-              size="small"
-              sx={{ bgcolor: '#e8eaf6', color: '#3f51b5', fontWeight: 500 }}
-            />
-          )}
-          <IconButton size="small" sx={{ color: '#666' }}>
-            <NotificationsIcon />
-          </IconButton>
-          <Avatar sx={{ width: 32, height: 32, bgcolor: '#3f51b5', fontSize: 14 }}>
-            {user?.name?.[0] || 'U'}
-          </Avatar>
-          <IconButton onClick={handleLogout} size="small" sx={{ color: '#666' }}>
-            <LogoutIcon />
-          </IconButton>
-        </Box>
-      </Toolbar>
-    </AppBar>
+        </h2>
+      </div>
+
+      {/* Right - Actions */}
+      <div className="flex items-center gap-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search..."
+            className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-64"
+          />
+        </div>
+
+        {/* Role Badge */}
+        {user?.role && (
+          <span className="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-sm font-medium rounded-lg">
+            {user.role}
+          </span>
+        )}
+
+        {/* Notifications */}
+        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <Bell size={20} />
+        </button>
+
+        {/* User Avatar */}
+        <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          {user?.name?.[0] || 'U'}
+        </div>
+
+        {/* Logout */}
+        <button 
+          onClick={handleLogout}
+          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <LogOut size={20} />
+        </button>
+      </div>
+    </header>
   );
 };
 

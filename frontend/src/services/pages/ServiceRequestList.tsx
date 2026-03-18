@@ -2,19 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useServiceStore } from '../store/useServiceStore';
 import { BookingService } from '../../bookings/BookingService';
 import { UserService } from '../../users/UserService';
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TextField, Button, IconButton,
-  TablePagination, Dialog, DialogTitle, DialogContent,
-  DialogActions, Grid, MenuItem, Alert, Snackbar, InputAdornment, Chip,
-  FormControl, InputLabel, Select
-} from '@mui/material';
-import {
-  Search as SearchIcon, Add as AddIcon, Edit as EditIcon,
-  Delete as DeleteIcon, Person as PersonIcon, ArrowForward as ArrowRightIcon,
-  FilterList as FilterIcon, CheckCircle as CheckCircleIcon,
-  Schedule as ClockIcon, Error as AlertCircleIcon, Cancel as XCircleIcon
-} from '@mui/icons-material';
+import { 
+  Search, Plus, Edit, Trash2, User, ArrowRight, Filter, 
+  CheckCircle, Clock, AlertCircle, XCircle, X 
+} from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Pending', color: '#f59e0b', bg: '#fffbeb' },
@@ -61,8 +52,8 @@ const ServiceRequestList: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filters, setFilters] = useState({ status: '', priority: '' });
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({
+    open: false, message: '', type: 'success',
   });
 
   const [formData, setFormData] = useState({
@@ -119,9 +110,9 @@ const ServiceRequestList: React.FC = () => {
       });
       setShowCreateModal(false);
       setFormData({ booking: '', service: '', priority: 'medium', assigned_to: '', status: 'pending' });
-      setSnackbar({ open: true, message: 'Service request created successfully', severity: 'success' });
+      setSnackbar({ open: true, message: 'Service request created successfully', type: 'success' });
     } catch (err: any) {
-      setSnackbar({ open: true, message: 'Failed to create service request', severity: 'error' });
+      setSnackbar({ open: true, message: 'Failed to create service request', type: 'error' });
     }
   };
 
@@ -132,9 +123,9 @@ const ServiceRequestList: React.FC = () => {
         await assignServiceRequest(selectedRequest.id, { assigned_to: formData.assigned_to });
         setShowAssignModal(false);
         setSelectedRequest(null);
-        setSnackbar({ open: true, message: 'Service request assigned successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Service request assigned successfully', type: 'success' });
       } catch (err: any) {
-        setSnackbar({ open: true, message: 'Failed to assign service request', severity: 'error' });
+        setSnackbar({ open: true, message: 'Failed to assign service request', type: 'error' });
       }
     }
   };
@@ -146,9 +137,9 @@ const ServiceRequestList: React.FC = () => {
         await updateServiceRequestStatus(selectedRequest.id, { status: formData.status as 'pending' | 'assigned' | 'in_progress' | 'waiting_client' | 'completed' | 'closed' });
         setShowStatusModal(false);
         setSelectedRequest(null);
-        setSnackbar({ open: true, message: 'Status updated successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Status updated successfully', type: 'success' });
       } catch (err: any) {
-        setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+        setSnackbar({ open: true, message: 'Failed to update status', type: 'error' });
       }
     }
   };
@@ -165,306 +156,322 @@ const ServiceRequestList: React.FC = () => {
     setShowStatusModal(true);
   };
 
+  const getPriorityBadge = (priority: string) => {
+    const config = priorityConfig[priority] || { label: priority, color: '#64748b' };
+    return (
+      <span className="text-sm font-medium" style={{ color: config.color }}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config = statusConfig[status] || { label: status, color: '#64748b', bg: '#f8fafc' };
+    return (
+      <span className="badge" style={{ backgroundColor: config.bg, color: config.color }}>
+        {config.label}
+      </span>
+    );
+  };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a2e' }}>Service Requests</Typography>
-          <Typography variant="body2" sx={{ color: '#6b7280', mt: 0.5 }}>Manage client service requests and track progress</Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Service Requests</h1>
+          <p className="text-gray-500 mt-1">Manage client service requests and track progress</p>
+        </div>
+        <button 
           onClick={() => setShowCreateModal(true)}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          className="btn-primary flex items-center gap-2"
         >
+          <Plus size={18} />
           New Service Request
-        </Button>
-      </Box>
+        </button>
+      </div>
 
       {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <FilterIcon sx={{ color: '#9ca3af' }} />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filters.status}
-              label="Status"
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="assigned">Assigned</MenuItem>
-              <MenuItem value="in_progress">In Progress</MenuItem>
-              <MenuItem value="waiting_client">Waiting Client</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-              <MenuItem value="closed">Closed</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={filters.priority}
-              label="Priority"
-              onChange={(e) => handleFilterChange('priority', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-              <MenuItem value="urgent">Urgent</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Paper>
+      <div className="card mb-6">
+        <div className="flex items-center gap-4">
+          <Filter size={18} className="text-gray-400" />
+          <select
+            className="input-field w-40"
+            value={filters.status}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+          >
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="waiting_client">Waiting Client</option>
+            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select
+            className="input-field w-40"
+            value={filters.priority}
+            onChange={(e) => handleFilterChange('priority', e.target.value)}
+          >
+            <option value="">All</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
 
       {/* Stats Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {Object.entries(statusConfig).map(([key, config]) => {
           const count = serviceRequests.filter(r => r.status === key).length;
           return (
-            <Grid size={{ xs: 6, sm: 4, md: 2 }} key={key}>
-              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: config.bg }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: config.color }}>{config.label}</Typography>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: config.color, mt: 0.5 }}>{count}</Typography>
-              </Paper>
-            </Grid>
+            <div key={key} className="card !p-4" style={{ backgroundColor: config.bg }}>
+              <p className="text-sm font-semibold" style={{ color: config.color }}>{config.label}</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: config.color }}>{count}</p>
+            </div>
           );
         })}
-      </Grid>
+      </div>
 
-      {/* Service Requests Table */}
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+      {/* Table */}
+      <div className="table-container">
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
-            <Typography>Loading...</Typography>
-          </Box>
+          <div className="flex justify-center py-12">
+            <p className="text-gray-500">Loading...</p>
+          </div>
         ) : (
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Client / Booking</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Priority</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Assigned To</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-                <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+          <table className="w-full">
+            <thead>
+              <tr className="table-header">
+                <th className="text-left px-6 py-3 font-semibold">Service</th>
+                <th className="text-left px-6 py-3 font-semibold">Client / Booking</th>
+                <th className="text-left px-6 py-3 font-semibold">Priority</th>
+                <th className="text-left px-6 py-3 font-semibold">Assigned To</th>
+                <th className="text-left px-6 py-3 font-semibold">Status</th>
+                <th className="text-left px-6 py-3 font-semibold">Created</th>
+                <th className="text-right px-6 py-3 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
               {serviceRequests.map((request) => (
-                <TableRow key={request.id} hover sx={{ '&:hover': { bgcolor: '#f8f9ff' } }}>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{request.service_name}</Typography>
-                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>{request.category_name}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{request.booking_details?.company_name || 'N/A'}</Typography>
-                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                <tr key={request.id} className="table-row">
+                  <td className="px-6 py-4">
+                    <p className="font-medium text-slate-800">{request.service_name}</p>
+                    <p className="text-xs text-gray-500">{request.category_name}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-gray-600">{request.booking_details?.company_name || 'N/A'}</p>
+                    <p className="text-xs text-gray-500">
                       {request.booking_details?.booking_date ? new Date(request.booking_details.booking_date).toLocaleDateString() : 'N/A'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ color: priorityConfig[request.priority]?.color, fontWeight: 500 }}>
-                      {priorityConfig[request.priority]?.label || request.priority}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
+                    </p>
+                  </td>
+                  <td className="px-6 py-4">
+                    {getPriorityBadge(request.priority)}
+                  </td>
+                  <td className="px-6 py-4">
                     {request.assigned_user ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <PersonIcon sx={{ fontSize: 14, color: '#4f46e5' }} />
-                        </Box>
-                        <Typography variant="body2">{request.assigned_user.name}</Typography>
-                      </Box>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <User size={14} className="text-indigo-600" />
+                        </div>
+                        <span className="text-gray-600">{request.assigned_user.name}</span>
+                      </div>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#9ca3af' }}>Unassigned</Typography>
+                      <span className="text-gray-400">Unassigned</span>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={statusConfig[request.status]?.label || request.status}
-                      size="small"
-                      sx={{
-                        bgcolor: statusConfig[request.status]?.bg,
-                        color: statusConfig[request.status]?.color,
-                        fontWeight: 500
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ color: '#6b7280' }}>
-                      {new Date(request.created_at).toLocaleDateString()}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => openAssignModal(request)} sx={{ color: '#9ca3af', '&:hover': { color: '#4f46e5', bgcolor: '#eef2ff' } }}>
-                      <PersonIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => openStatusModal(request)} sx={{ color: '#9ca3af', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }}>
-                      <ArrowRightIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                  <td className="px-6 py-4">
+                    {getStatusBadge(request.status)}
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => openAssignModal(request)}
+                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                      title="Assign"
+                    >
+                      <User size={18} />
+                    </button>
+                    <button 
+                      onClick={() => openStatusModal(request)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
+                      title="Update Status"
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </td>
+                </tr>
               ))}
               {serviceRequests.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6, color: '#9ca3af' }}>
-                    <Box sx={{ mb: 1 }}>
-                      <AddIcon sx={{ fontSize: 40, color: '#d1d5db' }} />
-                    </Box>
-                    <Typography>No service requests found</Typography>
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center">
+                      <Plus size={40} className="text-gray-300 mb-2" />
+                      <p className="text-gray-500">No service requests found</p>
+                    </div>
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         )}
-      </TableContainer>
+      </div>
 
       {/* Create Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>New Service Request</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <FormControl fullWidth>
-                <InputLabel>Booking</InputLabel>
-                <Select
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">New Service Request</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Booking</label>
+                <select
+                  className="input-field"
                   value={formData.booking}
-                  label="Booking"
                   onChange={(e) => setFormData({ ...formData, booking: e.target.value })}
                 >
-                  <MenuItem value="">Select a booking</MenuItem>
+                  <option value="">Select a booking</option>
                   {bookings.map((booking) => (
-                    <MenuItem key={booking.id} value={booking.id}>
+                    <option key={booking.id} value={booking.id}>
                       {booking.company_name} - {new Date(booking.booking_date).toLocaleDateString()}
-                    </MenuItem>
+                    </option>
                   ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FormControl fullWidth>
-                <InputLabel>Service</InputLabel>
-                <Select
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+                <select
+                  className="input-field"
                   value={formData.service}
-                  label="Service"
                   onChange={(e) => setFormData({ ...formData, service: e.target.value })}
                 >
-                  <MenuItem value="">Select a service</MenuItem>
+                  <option value="">Select a service</option>
                   {services.map((service) => (
-                    <MenuItem key={service.id} value={service.id}>
+                    <option key={service.id} value={service.id}>
                       {service.name} ({service.category_name})
-                    </MenuItem>
+                    </option>
                   ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FormControl fullWidth>
-                <InputLabel>Priority</InputLabel>
-                <Select
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  className="input-field"
                   value={formData.priority}
-                  label="Priority"
                   onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 >
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
-                  <MenuItem value="urgent">Urgent</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowCreateModal(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateSubmit}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            Create Request
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary">Create Request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Assign Modal */}
-      <Dialog open={showAssignModal} onClose={() => setShowAssignModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>Assign Service Request</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <Typography variant="body2" sx={{ mb: 2 }}>
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">Assign Service Request</h2>
+              <button onClick={() => setShowAssignModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAssignSubmit} className="p-6 space-y-4">
+              <p className="text-gray-600">
                 Assign <strong>{selectedRequest?.service_name}</strong> to a team member.
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel>Assign To</InputLabel>
-                <Select
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                <select
+                  className="input-field"
                   value={formData.assigned_to}
-                  label="Assign To"
                   onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                 >
-                  <MenuItem value="">Select team member</MenuItem>
+                  <option value="">Select team member</option>
                   {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
+                    <option key={user.id} value={user.id}>
                       {user.name} ({user.role_name})
-                    </MenuItem>
+                    </option>
                   ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowAssignModal(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleAssignSubmit}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            Assign
-          </Button>
-        </DialogActions>
-      </Dialog>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowAssignModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary">Assign</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Status Update Modal */}
-      <Dialog open={showStatusModal} onClose={() => setShowStatusModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>Update Status</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <Typography variant="body2" sx={{ mb: 2 }}>
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">Update Status</h2>
+              <button onClick={() => setShowStatusModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleStatusSubmit} className="p-6 space-y-4">
+              <p className="text-gray-600">
                 Update status for <strong>{selectedRequest?.service_name}</strong>
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  className="input-field"
                   value={formData.status}
-                  label="Status"
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="assigned">Assigned</MenuItem>
-                  <MenuItem value="in_progress">In Progress</MenuItem>
-                  <MenuItem value="waiting_client">Waiting for Client</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="closed">Closed</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowStatusModal(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleStatusSubmit}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            Update Status
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  <option value="pending">Pending</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="waiting_client">Waiting for Client</option>
+                  <option value="completed">Completed</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowStatusModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary">Update Status</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>{snackbar.message}</Alert>
-      </Snackbar>
-    </Box>
+      {/* Toast */}
+      {snackbar.open && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
+          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white flex items-center gap-3 z-50`}>
+          <span>{snackbar.message}</span>
+          <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

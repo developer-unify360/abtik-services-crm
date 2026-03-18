@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TextField, Button, Chip, IconButton,
-  TablePagination, Dialog, DialogTitle, DialogContent,
-  DialogActions, Grid, MenuItem, Alert, Snackbar, InputAdornment, FormControl, InputLabel, Select,
-} from '@mui/material';
-import { Search as SearchIcon, Add as AddIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { Search, Plus, Edit, Eye, X, Filter } from 'lucide-react';
 import { BookingService, type Booking, type BookingCreateData } from './BookingService';
 import { ClientService, type Client } from '../clients/ClientService';
 
@@ -17,12 +11,12 @@ const paymentTypes = [
   { value: 'transfer', label: 'Transfer' },
 ];
 
-const statusColors: Record<string, { bg: string; color: string }> = {
-  pending: { bg: '#fff8e1', color: '#f9a825' },
-  confirmed: { bg: '#e3f2fd', color: '#1565c0' },
-  in_progress: { bg: '#e3f2fd', color: '#1976d2' },
-  completed: { bg: '#e8f5e9', color: '#2e7d32' },
-  cancelled: { bg: '#ffebee', color: '#c62828' },
+const statusColors: Record<string, { bg: string; color: string; label: string }> = {
+  pending: { bg: 'bg-yellow-100', color: 'text-yellow-700', label: 'Pending' },
+  confirmed: { bg: 'bg-blue-100', color: 'text-blue-700', label: 'Confirmed' },
+  in_progress: { bg: 'bg-blue-100', color: 'text-blue-700', label: 'In Progress' },
+  completed: { bg: 'bg-green-100', color: 'text-green-700', label: 'Completed' },
+  cancelled: { bg: 'bg-red-100', color: 'text-red-700', label: 'Cancelled' },
 };
 
 const BookingListPage: React.FC = () => {
@@ -36,8 +30,8 @@ const BookingListPage: React.FC = () => {
   const [viewingBooking, setViewingBooking] = useState<Booking | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({
+    open: false, message: '', type: 'success',
   });
 
   const [formData, setFormData] = useState<BookingCreateData>({
@@ -95,198 +89,296 @@ const BookingListPage: React.FC = () => {
     try {
       if (editingBooking) {
         await BookingService.update(editingBooking.id, formData);
-        setSnackbar({ open: true, message: 'Booking updated successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Booking updated successfully', type: 'success' });
       } else {
         await BookingService.create(formData);
-        setSnackbar({ open: true, message: 'Booking created successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Booking created successfully', type: 'success' });
       }
       setOpenForm(false);
       fetchBookings();
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || 'Operation failed';
-      setSnackbar({ open: true, message: msg, severity: 'error' });
+      setSnackbar({ open: true, message: msg, type: 'error' });
     }
   };
 
   const getStatusChip = (status: string, display: string) => {
-    const style = statusColors[status] || { bg: '#f5f5f5', color: '#666' };
-    return <Chip label={display} size="small" sx={{ bgcolor: style.bg, color: style.color, fontWeight: 500 }} />;
+    const style = statusColors[status] || { bg: 'bg-gray-100', color: 'text-gray-700', label: display };
+    return (
+      <span className={`badge ${style.bg} ${style.color}`}>
+        {style.label}
+      </span>
+    );
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a2e' }}>Bookings</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
+        <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2">
+          <Plus size={18} />
           Add Booking
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <Paper sx={{ mb: 2, p: 2, borderRadius: 2, display: 'flex', gap: 2 }}>
-        <TextField
-          select label="Status" size="small" value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-          sx={{ minWidth: 180 }}
-        >
-          <MenuItem value="">All Statuses</MenuItem>
-          <MenuItem value="pending">Pending</MenuItem>
-          <MenuItem value="confirmed">Confirmed</MenuItem>
-          <MenuItem value="in_progress">In Progress</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-          <MenuItem value="cancelled">Cancelled</MenuItem>
-        </TextField>
-      </Paper>
+      {/* Toolbar */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-400" />
+            <select
+              className="input-field w-48"
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#f9fafb' }}>
-              <TableCell sx={{ fontWeight: 600 }}>Client</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Company</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Payment Type</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Booking Date</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-              <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      {/* Table */}
+      <div className="table-container">
+        <table className="w-full">
+          <thead>
+            <tr className="table-header">
+              <th className="text-left px-6 py-3 font-semibold">Client</th>
+              <th className="text-left px-6 py-3 font-semibold">Company</th>
+              <th className="text-left px-6 py-3 font-semibold">Payment Type</th>
+              <th className="text-left px-6 py-3 font-semibold">Booking Date</th>
+              <th className="text-left px-6 py-3 font-semibold">Status</th>
+              <th className="text-left px-6 py-3 font-semibold">Created</th>
+              <th className="text-right px-6 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {bookings.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 6, color: '#999' }}>
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                   No bookings found. Create a new booking to get started.
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               bookings.map((booking) => (
-                <TableRow key={booking.id} hover sx={{ '&:hover': { bgcolor: '#f8f9ff' } }}>
-                  <TableCell sx={{ fontWeight: 500 }}>{booking.client_name}</TableCell>
-                  <TableCell>{booking.company_name}</TableCell>
-                  <TableCell>{booking.payment_type_display}</TableCell>
-                  <TableCell>{new Date(booking.booking_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{getStatusChip(booking.status, booking.status_display)}</TableCell>
-                  <TableCell>{new Date(booking.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setViewingBooking(booking)}><ViewIcon fontSize="small" /></IconButton>
-                    <IconButton size="small" onClick={() => handleOpenEdit(booking)}><EditIcon fontSize="small" /></IconButton>
-                  </TableCell>
-                </TableRow>
+                <tr key={booking.id} className="table-row">
+                  <td className="px-6 py-4 font-medium text-slate-800">{booking.client_name}</td>
+                  <td className="px-6 py-4 text-gray-600">{booking.company_name}</td>
+                  <td className="px-6 py-4 text-gray-600">{booking.payment_type_display}</td>
+                  <td className="px-6 py-4 text-gray-600">{new Date(booking.booking_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">{getStatusChip(booking.status, booking.status_display)}</td>
+                  <td className="px-6 py-4 text-gray-600">{new Date(booking.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => setViewingBooking(booking)}
+                      className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleOpenEdit(booking)}
+                      className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block ml-1"
+                    >
+                      <Edit size={18} />
+                    </button>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div" count={totalCount} page={page}
-          onPageChange={(_, p) => setPage(p)} rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
-        />
-      </TableContainer>
+          </tbody>
+        </table>
+        
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+          <span className="text-sm text-gray-500">
+            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
+              disabled={(page + 1) * rowsPerPage >= totalCount}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{editingBooking ? 'Edit Booking' : 'New Booking'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {!editingBooking && (
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth required error={!formData.client_id}>
-                  <InputLabel>Client</InputLabel>
-                  <Select
+      {/* Create / Edit Modal */}
+      {openForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
+              <h2 className="text-lg font-semibold text-slate-800">
+                {editingBooking ? 'Edit Booking' : 'New Booking'}
+              </h2>
+              <button 
+                onClick={() => setOpenForm(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {!editingBooking && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
+                  <select
+                    className="input-field"
                     value={formData.client_id}
-                    label="Client"
                     onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
                     disabled={clientsLoading}
                   >
+                    <option value="">Select a client</option>
                     {clients.length === 0 ? (
-                      <MenuItem disabled>No clients available</MenuItem>
+                      <option disabled>No clients available</option>
                     ) : (
                       clients.map((client) => (
-                        <MenuItem key={client.id} value={client.id}>
+                        <option key={client.id} value={client.id}>
                           {client.client_name} - {client.company_name}
-                        </MenuItem>
+                        </option>
                       ))
                     )}
-                  </Select>
-                  {!formData.client_id && <Typography variant="caption" color="error">Please select a client</Typography>}
-                </FormControl>
-              </Grid>
-            )}
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth select label="Payment Type" required value={formData.payment_type}
-                onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}>
-                {paymentTypes.map((pt) => <MenuItem key={pt.value} value={pt.value}>{pt.label}</MenuItem>)}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Bank Account" value={formData.bank_account || ''}
-                onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Booking Date" type="date" required value={formData.booking_date}
-                onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
-                InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Payment Date" type="date" value={formData.payment_date || ''}
-                onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                InputLabelProps={{ shrink: true }} />
-            </Grid>
-            {editingBooking && (
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField fullWidth select label="Status" value={formData.status || 'pending'}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="confirmed">Confirmed</MenuItem>
-                  <MenuItem value="in_progress">In Progress</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </TextField>
-              </Grid>
-            )}
-            <Grid size={{ xs: 12 }}>
-              <TextField fullWidth multiline rows={3} label="Remarks" value={formData.remarks || ''}
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenForm(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            {editingBooking ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  </select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type *</label>
+                  <select
+                    className="input-field"
+                    value={formData.payment_type}
+                    onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
+                  >
+                    {paymentTypes.map((pt) => (
+                      <option key={pt.value} value={pt.value}>{pt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Account</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={formData.bank_account || ''}
+                    onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Booking Date *</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={formData.booking_date}
+                    onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={formData.payment_date || ''}
+                    onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                  />
+                </div>
+                {editingBooking && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                      className="input-field"
+                      value={formData.status || 'pending'}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                <textarea
+                  className="input-field min-h-[80px]"
+                  value={formData.remarks || ''}
+                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 sticky bottom-0 bg-white">
+              <button onClick={() => setOpenForm(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button onClick={handleSubmit} className="btn-primary">
+                {editingBooking ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* View Detail Dialog */}
-      <Dialog open={!!viewingBooking} onClose={() => setViewingBooking(null)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>Booking Details</DialogTitle>
-        <DialogContent>
-          {viewingBooking && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-              <Typography><strong>Client:</strong> {viewingBooking.client_name}</Typography>
-              <Typography><strong>Company:</strong> {viewingBooking.company_name}</Typography>
-              <Typography><strong>BDE:</strong> {viewingBooking.bde_name || '—'}</Typography>
-              <Typography><strong>Payment Type:</strong> {viewingBooking.payment_type_display}</Typography>
-              <Typography><strong>Bank Account:</strong> {viewingBooking.bank_account || '—'}</Typography>
-              <Typography><strong>Booking Date:</strong> {viewingBooking.booking_date}</Typography>
-              <Typography><strong>Payment Date:</strong> {viewingBooking.payment_date || '—'}</Typography>
-              <Box><strong>Status:</strong> {getStatusChip(viewingBooking.status, viewingBooking.status_display)}</Box>
-              <Typography><strong>Remarks:</strong> {viewingBooking.remarks || '—'}</Typography>
-              <Typography><strong>Created:</strong> {new Date(viewingBooking.created_at).toLocaleString()}</Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewingBooking(null)} sx={{ textTransform: 'none' }}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {/* View Detail Modal */}
+      {viewingBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">Booking Details</h2>
+              <button 
+                onClick={() => setViewingBooking(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p><strong className="text-gray-700">Client:</strong> <span className="text-gray-600">{viewingBooking.client_name}</span></p>
+              <p><strong className="text-gray-700">Company:</strong> <span className="text-gray-600">{viewingBooking.company_name}</span></p>
+              <p><strong className="text-gray-700">BDE:</strong> <span className="text-gray-600">{viewingBooking.bde_name || '—'}</span></p>
+              <p><strong className="text-gray-700">Payment Type:</strong> <span className="text-gray-600">{viewingBooking.payment_type_display}</span></p>
+              <p><strong className="text-gray-700">Bank Account:</strong> <span className="text-gray-600">{viewingBooking.bank_account || '—'}</span></p>
+              <p><strong className="text-gray-700">Booking Date:</strong> <span className="text-gray-600">{viewingBooking.booking_date}</span></p>
+              <p><strong className="text-gray-700">Payment Date:</strong> <span className="text-gray-600">{viewingBooking.payment_date || '—'}</span></p>
+              <p><strong className="text-gray-700">Status:</strong> {getStatusChip(viewingBooking.status, viewingBooking.status_display)}</p>
+              <p><strong className="text-gray-700">Remarks:</strong> <span className="text-gray-600">{viewingBooking.remarks || '—'}</span></p>
+              <p><strong className="text-gray-700">Created:</strong> <span className="text-gray-600">{new Date(viewingBooking.created_at).toLocaleString()}</span></p>
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setViewingBooking(null)} className="btn-secondary">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>{snackbar.message}</Alert>
-      </Snackbar>
-    </Box>
+      {/* Toast */}
+      {snackbar.open && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
+          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white flex items-center gap-3 z-50`}>
+          <span>{snackbar.message}</span>
+          <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

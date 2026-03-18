@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TextField, Button, IconButton,
-  TablePagination, Dialog, DialogTitle, DialogContent,
-  DialogActions, Grid, MenuItem, Alert, Snackbar, InputAdornment, Chip
-} from '@mui/material';
-import { Search as SearchIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
 import { UserService, RoleService, type User, type UserCreateData, type Role } from './UserService';
 
 const UserListPage: React.FC = () => {
@@ -17,12 +11,12 @@ const UserListPage: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [openForm, setOpenForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({
+    open: false, message: '', type: 'success',
   });
 
-  const [formData, setFormData] = useState<UserCreateData>({
-    name: '', email: '', phone: '', role: '', password: '',
+  const [formData, setFormData] = useState<{ name: string; email: string; phone: string; role: string; role_name: string; password: string }>({
+    name: '', email: '', phone: '', role: '', role_name: '', password: '',
   });
 
   const fetchUsers = async () => {
@@ -53,7 +47,7 @@ const UserListPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', phone: '', role: '', password: '' });
+    setFormData({ name: '', email: '', phone: '', role: '', role_name: '', password: '' });
     setOpenForm(true);
   };
 
@@ -63,8 +57,9 @@ const UserListPage: React.FC = () => {
       name: user.name || '',
       email: user.email,
       phone: user.phone || '',
-      role: user.role_name || '',  // Use role_name for editing
-      password: '', // Don't show existing password
+      role: user.role || '',
+      role_name: user.role_name || '',
+      password: '',
     });
     setOpenForm(true);
   };
@@ -75,18 +70,17 @@ const UserListPage: React.FC = () => {
     }
     try {
       await UserService.delete(user.id);
-      setSnackbar({ open: true, message: 'User deleted successfully', severity: 'success' });
+      setSnackbar({ open: true, message: 'User deleted successfully', type: 'success' });
       fetchUsers();
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Delete failed';
-      setSnackbar({ open: true, message: msg, severity: 'error' });
+      setSnackbar({ open: true, message: msg, type: 'error' });
     }
   };
 
   const handleSubmit = async () => {
     try {
       if (editingUser) {
-        // For updates, only send non-empty fields
         const updateData: Partial<UserCreateData> = {};
         if (formData.name) updateData.name = formData.name;
         if (formData.phone) updateData.phone = formData.phone;
@@ -94,158 +88,221 @@ const UserListPage: React.FC = () => {
         if (formData.password) updateData.password = formData.password;
         
         await UserService.update(editingUser.id, updateData);
-        setSnackbar({ open: true, message: 'User updated successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'User updated successfully', type: 'success' });
       } else {
         await UserService.create(formData);
-        setSnackbar({ open: true, message: 'User created successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'User created successfully', type: 'success' });
       }
       setOpenForm(false);
       fetchUsers();
     } catch (err: any) {
       const msg = err.response?.data?.error || err.response?.data?.detail || 'Operation failed';
-      setSnackbar({ open: true, message: msg, severity: 'error' });
+      setSnackbar({ open: true, message: msg, type: 'error' });
     }
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a2e' }}>Users</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Users</h1>
+        <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2">
+          <Plus size={18} />
           Add User
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <Paper sx={{ mb: 2, p: 2, borderRadius: 2 }}>
-        <TextField
-          placeholder="Search users..."
-          size="small"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#999' }} /></InputAdornment> }}
-          sx={{ width: 350 }}
-        />
-      </Paper>
+      {/* Toolbar */}
+      <div className="card mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search users..."
+            className="input-field pl-10"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+          />
+        </div>
+      </div>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#f9fafb' }}>
-              <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-              <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      {/* Table */}
+      <div className="table-container">
+        <table className="w-full">
+          <thead>
+            <tr className="table-header">
+              <th className="text-left px-6 py-3 font-semibold">Name</th>
+              <th className="text-left px-6 py-3 font-semibold">Email</th>
+              <th className="text-left px-6 py-3 font-semibold">Phone</th>
+              <th className="text-left px-6 py-3 font-semibold">Role</th>
+              <th className="text-left px-6 py-3 font-semibold">Status</th>
+              <th className="text-left px-6 py-3 font-semibold">Created</th>
+              <th className="text-right px-6 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {users.map((user) => (
-              <TableRow key={user.id} hover sx={{ '&:hover': { bgcolor: '#f8f9ff' } }}>
-                <TableCell sx={{ fontWeight: 500 }}>{user.name || '—'}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.phone || '—'}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={user.role_name || 'No Role'}
-                    size="small"
-                    sx={{
-                      bgcolor: '#e3f2fd',
-                      color: '#1565c0',
-                      fontWeight: 500
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={user.status ? 'Active' : 'Inactive'}
-                    size="small"
-                    sx={{
-                      bgcolor: user.status ? '#e8f5e9' : '#ffebee',
-                      color: user.status ? '#2e7d32' : '#c62828',
-                      fontWeight: 500
-                    }}
-                  />
-                </TableCell>
-                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => handleOpenEdit(user)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(user)} sx={{ color: '#dc2626' }}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
+              <tr key={user.id} className="table-row">
+                <td className="px-6 py-4 font-medium text-slate-800">{user.name || '—'}</td>
+                <td className="px-6 py-4 text-gray-600">{user.email}</td>
+                <td className="px-6 py-4 text-gray-600">{user.phone || '—'}</td>
+                <td className="px-6 py-4">
+                  <span className="badge badge-info">{user.role_name || 'No Role'}</span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`badge ${user.status ? 'badge-success' : 'badge-error'}`}>
+                    {user.status ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-gray-600">{new Date(user.created_at).toLocaleDateString()}</td>
+                <td className="px-6 py-4 text-right">
+                  <button 
+                    onClick={() => handleOpenEdit(user)}
+                    className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(user)}
+                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block ml-1"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </td>
+              </tr>
             ))}
             {users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 6, color: '#999' }}>
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                   No users found.
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div" count={totalCount} page={page}
-          onPageChange={(_, p) => setPage(p)} rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
-        />
-      </TableContainer>
+          </tbody>
+        </table>
+        
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+          <span className="text-sm text-gray-500">
+            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
+              disabled={(page + 1) * rowsPerPage >= totalCount}
+              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{editingUser ? 'Edit User' : 'New User'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Name" required value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Email" type="email" required value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                disabled={!!editingUser} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Phone" value={formData.phone || ''}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth select label="Role" required value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                {roles.map((role) => (
-                  <MenuItem key={role.id} value={role.id}>
-                    {role.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Password" type="password" 
-                required={!editingUser}
-                value={formData.password || ''}
-                placeholder={editingUser ? 'Leave blank to keep current password' : ''}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenForm(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', fontWeight: 600 }}>
-            {editingUser ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Create / Edit Modal */}
+      {openForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-slate-800">
+                {editingUser ? 'Edit User' : 'New User'}
+              </h2>
+              <button 
+                onClick={() => setOpenForm(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  className="input-field"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={!!editingUser}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={formData.phone || ''}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                  <select
+                    className="input-field"
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  >
+                    <option value="">Select a role</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password {editingUser ? '' : '*'}
+                </label>
+                <input
+                  type="password"
+                  className="input-field"
+                  value={formData.password || ''}
+                  placeholder={editingUser ? 'Leave blank to keep current password' : ''}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setOpenForm(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button onClick={handleSubmit} className="btn-primary">
+                {editingUser ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>{snackbar.message}</Alert>
-      </Snackbar>
-    </Box>
+      {/* Toast */}
+      {snackbar.open && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
+          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white flex items-center gap-3 z-50`}>
+          <span>{snackbar.message}</span>
+          <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
