@@ -6,6 +6,9 @@ import Layout from './components/Layout';
 import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
 import TenantListPage from './tenants/TenantListPage';
+import UserListPage from './users/UserListPage';
+import ServiceManagement from './services/pages/ServiceManagement';
+import TaskQueue from './services/pages/TaskQueue';
 import { Box, Typography, Paper, Grid } from '@mui/material';
 
 const DashboardPage: React.FC = () => (
@@ -41,7 +44,10 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/bookings" element={<BookingListPage />} />
+            <Route path="/users" element={<UserListPage />} />
             <Route path="/tenants" element={<TenantListPage />} />
+            <Route path="/services" element={<ServiceManagement />} />
+            <Route path="/tasks" element={<TaskQueue />} />
           </Route>
         </Route>
 

@@ -3,6 +3,8 @@ from users.models import User
 from roles.models import Role
 
 class UserSerializer(serializers.ModelSerializer):
+    # Return role name instead of UUID for easier frontend handling
+    role = serializers.CharField(source='role.name', read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
     
     class Meta:
@@ -13,6 +15,9 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 class UserCreateUpdateSerializer(serializers.ModelSerializer):
+    # Accept role as a role name string (e.g., 'BDE', 'Admin') instead of UUID
+    role = serializers.CharField(required=True)
+    
     class Meta:
         model = User
         fields = ['name', 'email', 'phone', 'role', 'password']

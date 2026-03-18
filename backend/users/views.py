@@ -13,7 +13,10 @@ class UserViewSet(viewsets.ModelViewSet):
     required_permission = 'users.view' # Base permission for the viewset
 
     def get_queryset(self):
-        # Tenant isolation
+        # Super Admin can see all users across all tenants
+        if self.request.user.role and self.request.user.role.name == 'Super Admin':
+            return User.objects.all()
+        # Tenant isolation for regular users
         return User.objects.filter(tenant_id=self.request.tenant_id, status=True)
 
     def create(self, request, *args, **kwargs):

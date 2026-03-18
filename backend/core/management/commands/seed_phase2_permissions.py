@@ -23,6 +23,11 @@ PHASE2_PERMISSIONS = [
     ('booking', 'view', 'View bookings'),
     ('booking', 'update', 'Update booking'),
     ('booking', 'delete', 'Delete booking'),
+    # User management
+    ('users', 'view', 'View users'),
+    ('users', 'create', 'Create user'),
+    ('users', 'update', 'Update user'),
+    ('users', 'delete', 'Delete user'),
 ]
 
 # Role → permission mapping per Role & Permission Matrix document
@@ -33,11 +38,13 @@ ROLE_PERMISSIONS = {
         'tenants.create', 'tenants.view', 'tenants.update', 'tenants.delete',
         'client.create', 'client.view', 'client.update', 'client.delete',
         'booking.create', 'booking.view', 'booking.update', 'booking.delete',
+        'users.view', 'users.create', 'users.update', 'users.delete',
     ],
     'Admin': [
         'tenants.view',
         'client.create', 'client.view', 'client.update', 'client.delete',
         'booking.create', 'booking.view', 'booking.update', 'booking.delete',
+        'users.view', 'users.create', 'users.update', 'users.delete',
     ],
     'BDE': [
         'client.create', 'client.view', 'client.update',

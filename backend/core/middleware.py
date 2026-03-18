@@ -1,6 +1,7 @@
 import jwt
 from django.conf import settings
 from django.http import JsonResponse
+from django.core.exceptions import ValidationError
 from tenants.models import Tenant
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -36,7 +37,7 @@ class TenantMiddleware:
                 try:
                     request.tenant = Tenant.objects.get(id=tenant_id_header)
                     request.tenant_id = request.tenant.id
-                except Tenant.DoesNotExist:
+                except (Tenant.DoesNotExist, ValidationError):
                      pass
 
         response = self.get_response(request)

@@ -36,8 +36,13 @@ class HasModulePermission(permissions.BasePermission):
 class IsTenantUser(permissions.BasePermission):
     """
     Ensures user belongs to the current tenant scope.
+    Super Admin bypasses this check.
     """
     def has_permission(self, request, view):
+        # Allow Super Admin full access globally (no tenant isolation)
+        if request.user.role and request.user.role.name == 'Super Admin':
+            return True
+            
         return bool(request.user and request.tenant_id and str(request.user.tenant_id) == str(request.tenant_id))
 
     def has_object_permission(self, request, view, obj):
