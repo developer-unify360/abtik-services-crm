@@ -20,8 +20,8 @@ const TenantListPage: React.FC = () => {
     open: false, message: '', severity: 'success',
   });
 
-  const [formData, setFormData] = useState<TenantCreateData>({
-    name: '', industry: '', status: 'active',
+  const [formData, setFormData] = useState<{ name: string; industry: string; status: boolean }>({
+    name: '', industry: '', status: true,
   });
 
   const fetchTenants = async () => {
@@ -40,14 +40,14 @@ const TenantListPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingTenant(null);
-    setFormData({ name: '', industry: '', status: 'active' });
+    setFormData({ name: '', industry: '', status: true });
     setOpenForm(true);
   };
 
   const handleOpenEdit = (tenant: Tenant) => {
     setEditingTenant(tenant);
     setFormData({
-      name: tenant.name, industry: tenant.industry || '', status: tenant.status,
+      name: tenant.name, industry: tenant.industry || '', status: tenant.status === true,
     });
     setOpenForm(true);
   };
@@ -108,11 +108,11 @@ const TenantListPage: React.FC = () => {
                 <TableCell>{tenant.industry || '—'}</TableCell>
                 <TableCell>
                   <Chip
-                    label={tenant.status}
+                    label={tenant.status ? 'Active' : 'Inactive'}
                     size="small"
                     sx={{
-                      bgcolor: tenant.status === 'active' ? '#e8f5e9' : '#ffebee',
-                      color: tenant.status === 'active' ? '#2e7d32' : '#c62828',
+                      bgcolor: tenant.status ? '#e8f5e9' : '#ffebee',
+                      color: tenant.status ? '#2e7d32' : '#c62828',
                       fontWeight: 500
                     }}
                   />
@@ -155,11 +155,17 @@ const TenantListPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth select label="Status" value={formData.status || 'active'}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="suspended">Suspended</MenuItem>
+              <TextField
+                fullWidth
+                select
+                label="Status"
+                value={formData.status ? 'true' : 'false'}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value === 'true' })
+                }
+              >
+                <MenuItem value="true">Active</MenuItem>
+                <MenuItem value="false">Inactive</MenuItem>
               </TextField>
             </Grid>
           </Grid>

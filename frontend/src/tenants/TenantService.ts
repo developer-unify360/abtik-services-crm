@@ -4,7 +4,7 @@ export interface Tenant {
   id: string;
   name: string;
   industry?: string;
-  status: string;
+  status: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -19,7 +19,7 @@ export interface TenantSettings {
 export interface TenantCreateData {
   name: string;
   industry?: string;
-  status?: string;
+  status: boolean;
   settings?: Partial<TenantSettings>;
 }
 

@@ -11,6 +11,7 @@ class TenantService:
         tenant = Tenant.objects.create(
             name=data['name'],
             industry=data.get('industry', ''),
+            status=data.get('status', True),
         )
 
         TenantSettings.objects.create(
