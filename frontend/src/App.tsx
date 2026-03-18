@@ -25,23 +25,29 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { fetchServiceRequests, serviceRequests } = useServiceStore();
 
+  // Fetch service requests on mount
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    fetchServiceRequests();
+  }, [fetchServiceRequests]);
+
+  // Calculate stats when serviceRequests are loaded or change
+  useEffect(() => {
+    const fetchStats = async () => {
       try {
-        setLoading(true);
         // Fetch clients count
         const clientsData = await ClientService.list({ page_size: '1' });
         const totalClients = clientsData.count || 0;
 
-        // Fetch active bookings (non-completed, non-cancelled)
+        // Fetch all bookings
         const bookingsData = await BookingService.list({});
-        const allBookings = bookingsData.results || bookingsData;
+        const allBookings = bookingsData.results || bookingsData || [];
+        
+        // Active bookings (non-completed, non-cancelled)
         const activeBookings = allBookings.filter((b: any) => 
           b.status !== 'completed' && b.status !== 'cancelled'
         ).length;
 
-        // Fetch service requests for pending tasks
-        await fetchServiceRequests();
+        // Pending tasks from service requests
         const pendingTasks = serviceRequests.filter((r: any) => 
           r.status === 'pending' || r.status === 'assigned'
         ).length;
@@ -51,7 +57,7 @@ const DashboardPage: React.FC = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthlyRevenue = allBookings
           .filter((b: any) => b.status === 'completed' && new Date(b.booking_date) >= startOfMonth)
-          .length * 5000; // Assuming average revenue of 5000 per booking (placeholder)
+          .length * 5000;
 
         setStats({
           totalClients,
@@ -66,8 +72,8 @@ const DashboardPage: React.FC = () => {
       }
     };
 
-    fetchDashboardStats();
-  }, [fetchServiceRequests]);
+    fetchStats();
+  }, [serviceRequests]);
 
   return (
     <Box>
