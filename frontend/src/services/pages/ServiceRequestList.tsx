@@ -75,7 +75,7 @@ const ServiceRequestList: React.FC = () => {
   const fetchBookings = async () => {
     try {
       const data = await BookingService.list();
-      setBookings(data);
+      setBookings(data.results);
     } catch (error) {
       console.error('Failed to fetch bookings:', error);
     }

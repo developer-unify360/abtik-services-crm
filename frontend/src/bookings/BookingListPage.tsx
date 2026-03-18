@@ -3,10 +3,11 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TextField, Button, Chip, IconButton,
   TablePagination, Dialog, DialogTitle, DialogContent,
-  DialogActions, Grid, MenuItem, Alert, Snackbar, InputAdornment,
+  DialogActions, Grid, MenuItem, Alert, Snackbar, InputAdornment, FormControl, InputLabel, Select,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { BookingService, type Booking, type BookingCreateData } from './BookingService';
+import { ClientService, type Client } from '../clients/ClientService';
 
 const paymentTypes = [
   { value: 'new_payment', label: 'New Payment' },
@@ -33,6 +34,8 @@ const BookingListPage: React.FC = () => {
   const [openForm, setOpenForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [viewingBooking, setViewingBooking] = useState<Booking | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success',
   });
@@ -54,7 +57,20 @@ const BookingListPage: React.FC = () => {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      setClientsLoading(true);
+      const data = await ClientService.list({ page_size: '100' });
+      setClients(data.results || data);
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
+    } finally {
+      setClientsLoading(false);
+    }
+  };
+
   useEffect(() => { fetchBookings(); }, [page, statusFilter]);
+  useEffect(() => { fetchClients(); }, []);
 
   const handleOpenCreate = () => {
     setEditingBooking(null);
@@ -174,9 +190,26 @@ const BookingListPage: React.FC = () => {
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             {!editingBooking && (
               <Grid size={{ xs: 12 }}>
-                <TextField fullWidth label="Client ID" required value={formData.client_id}
-                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                  helperText="Enter the client UUID" />
+                <FormControl fullWidth required error={!formData.client_id}>
+                  <InputLabel>Client</InputLabel>
+                  <Select
+                    value={formData.client_id}
+                    label="Client"
+                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                    disabled={clientsLoading}
+                  >
+                    {clients.length === 0 ? (
+                      <MenuItem disabled>No clients available</MenuItem>
+                    ) : (
+                      clients.map((client) => (
+                        <MenuItem key={client.id} value={client.id}>
+                          {client.client_name} - {client.company_name}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                  {!formData.client_id && <Typography variant="caption" color="error">Please select a client</Typography>}
+                </FormControl>
               </Grid>
             )}
             <Grid size={{ xs: 12, sm: 6 }}>
