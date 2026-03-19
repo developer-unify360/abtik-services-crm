@@ -9,7 +9,10 @@ import {
   UserCircle,
   Building2,
   Kanban,
+  FilePlus2,
 } from 'lucide-react';
+import { useAuthStore } from '../auth/authStore';
+import { isBDEUser } from '../auth/roleUtils';
 
 const DRAWER_WIDTH = 240;
 
@@ -17,9 +20,10 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
+  isActive?: (pathname: string) => boolean;
 }
 
-const navItems: NavItem[] = [
+const defaultNavItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { label: 'Clients', path: '/clients', icon: <Users size={20} /> },
   { label: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
@@ -30,9 +34,26 @@ const navItems: NavItem[] = [
   { label: 'Tenants', path: '/tenants', icon: <Building2 size={20} /> },
 ];
 
+const bdeNavItems: NavItem[] = [
+  {
+    label: 'Booking List',
+    path: '/bookings',
+    icon: <Calendar size={20} />,
+    isActive: (pathname) => pathname === '/bookings',
+  },
+  {
+    label: 'Booking Form',
+    path: '/bookings/new',
+    icon: <FilePlus2 size={20} />,
+    isActive: (pathname) => pathname === '/bookings/new' || /^\/bookings\/[^/]+\/edit$/.test(pathname),
+  },
+];
+
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const user = useAuthStore((state) => state.user);
+  const navItems = isBDEUser(user) ? bdeNavItems : defaultNavItems;
 
   return (
     <aside 
@@ -50,7 +71,9 @@ const Sidebar: React.FC = () => {
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = location.pathname.startsWith(item.path);
+            const isActive = item.isActive
+              ? item.isActive(location.pathname)
+              : location.pathname.startsWith(item.path);
             return (
               <li key={item.path}>
                 <button

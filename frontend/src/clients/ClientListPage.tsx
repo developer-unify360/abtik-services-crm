@@ -8,7 +8,7 @@ const ClientListPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [openForm, setOpenForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);

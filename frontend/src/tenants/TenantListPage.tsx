@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Edit, X, Check } from 'lucide-react';
-import { TenantService, type Tenant, type TenantCreateData } from './TenantService';
+import { Search, Plus, Edit, X } from 'lucide-react';
+import { TenantService, type Tenant } from './TenantService';
 
 const TenantListPage: React.FC = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [openForm, setOpenForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);

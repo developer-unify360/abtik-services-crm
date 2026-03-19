@@ -18,7 +18,6 @@ const TaskModal: React.FC = () => {
     deleteSubtask,
     addComment,
     deleteComment,
-    isLoading,
   } = useTaskStore();
 
   const { user } = useAuthStore();

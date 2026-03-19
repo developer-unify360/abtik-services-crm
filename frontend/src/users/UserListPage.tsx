@@ -7,7 +7,7 @@ const UserListPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [openForm, setOpenForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);

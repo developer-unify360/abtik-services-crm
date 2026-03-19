@@ -7,6 +7,25 @@ from audit.models import AuditLog
 
 class BookingService:
     @staticmethod
+    def _resolve_remaining_amount(data, booking=None):
+        if 'remaining_amount' in data:
+            return data.get('remaining_amount')
+
+        total_payment_amount = data.get(
+            'total_payment_amount',
+            getattr(booking, 'total_payment_amount', None) if booking else None,
+        )
+        received_amount = data.get(
+            'received_amount',
+            getattr(booking, 'received_amount', None) if booking else None,
+        )
+
+        if total_payment_amount is not None and received_amount is not None:
+            return total_payment_amount - received_amount
+
+        return getattr(booking, 'remaining_amount', None) if booking else None
+
+    @staticmethod
     @transaction.atomic
     def create_booking(tenant_id, data, user):
         """
@@ -27,6 +46,15 @@ class BookingService:
             bank_account=data.get('bank_account', ''),
             booking_date=data['booking_date'],
             payment_date=data.get('payment_date'),
+            total_payment_amount=data.get('total_payment_amount'),
+            total_payment_remarks=data.get('total_payment_remarks', ''),
+            received_amount=data.get('received_amount'),
+            received_amount_remarks=data.get('received_amount_remarks', ''),
+            remaining_amount=BookingService._resolve_remaining_amount(data),
+            remaining_amount_remarks=data.get('remaining_amount_remarks', ''),
+            after_fund_disbursement_percentage=data.get('after_fund_disbursement_percentage'),
+            after_fund_disbursement_remarks=data.get('after_fund_disbursement_remarks', ''),
+            attachment=data.get('attachment'),
             remarks=data.get('remarks', ''),
             status=data.get('status', 'pending'),
         )
@@ -52,7 +80,12 @@ class BookingService:
         """Update an existing booking record."""
         updatable_fields = [
             'payment_type', 'bank_account', 'booking_date',
-            'payment_date', 'remarks', 'status',
+            'payment_date',
+            'total_payment_amount', 'total_payment_remarks',
+            'received_amount', 'received_amount_remarks',
+            'remaining_amount', 'remaining_amount_remarks',
+            'after_fund_disbursement_percentage', 'after_fund_disbursement_remarks',
+            'remarks', 'status',
         ]
         updated_fields = []
 
@@ -60,6 +93,23 @@ class BookingService:
             if field in data:
                 setattr(booking, field, data[field])
                 updated_fields.append(field)
+
+        if 'total_payment_amount' in data or 'received_amount' in data or 'remaining_amount' in data:
+            booking.remaining_amount = BookingService._resolve_remaining_amount(data, booking)
+            if 'remaining_amount' not in updated_fields:
+                updated_fields.append('remaining_amount')
+
+        if data.get('remove_attachment'):
+            if booking.attachment:
+                booking.attachment.delete(save=False)
+            booking.attachment = None
+            updated_fields.append('attachment')
+
+        if 'attachment' in data:
+            if booking.attachment and data['attachment'] and booking.attachment.name != data['attachment'].name:
+                booking.attachment.delete(save=False)
+            booking.attachment = data['attachment']
+            updated_fields.append('attachment')
 
         booking.full_clean()  # Run model-level validation
         booking.save()

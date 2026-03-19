@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useTaskStore } from '../store/useTaskStore';
 import { useServiceStore } from '../store/useServiceStore';
-import { Filter, UserPlus, Clock, CheckCircle2, AlertCircle, Search, MoreVertical } from 'lucide-react';
+import { UserPlus, Clock, CheckCircle2, AlertCircle, Search, MoreVertical } from 'lucide-react';
 
 const TaskQueue: React.FC = () => {
-  const { tasks, isLoading, fetchTasks, assignTask, updateTaskStatus } = useTaskStore();
-  const { categories, fetchCategories } = useServiceStore();
+  const { tasks, isLoading, fetchTasks, updateTaskStatus } = useTaskStore();
+  const { fetchCategories } = useServiceStore();
   
   const [filters, setFilters] = useState({
     status: '',
@@ -14,7 +14,6 @@ const TaskQueue: React.FC = () => {
   });
 
   const [showStatusModal, setShowStatusModal] = useState<string | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks(filters);
@@ -142,7 +141,7 @@ const TaskQueue: React.FC = () => {
                       </div>
                     ) : (
                       <button 
-                        onClick={() => setShowAssignModal(task.id)}
+                        onClick={() => {}}
                         className="flex items-center space-x-1.5 text-slate-400 hover:text-indigo-600 transition-colors text-sm font-medium"
                       >
                         <UserPlus size={16} />
