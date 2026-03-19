@@ -1,11 +1,22 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from bookings.models import Booking
+from bookings.models import Booking, Bank
 from clients.models import Client
 from audit.models import AuditLog
 
 
 class BookingService:
+    @staticmethod
+    def _resolve_bank(data):
+        """Resolve bank from data - either UUID or None."""
+        bank_id = data.get('bank')
+        if bank_id:
+            try:
+                return Bank.objects.get(id=bank_id)
+            except Bank.DoesNotExist:
+                return None
+        return None
+
     @staticmethod
     def _resolve_remaining_amount(data, booking=None):
         if 'remaining_amount' in data:
@@ -38,12 +49,15 @@ class BookingService:
         except Client.DoesNotExist:
             raise ValidationError("Client not found or does not belong to your organization.")
 
+        # Resolve bank if provided
+        bank = BookingService._resolve_bank(data)
+
         booking = Booking.objects.create(
             tenant_id=tenant_id,
             client=client,
             bde_user=user,
             payment_type=data['payment_type'],
-            bank_account=data.get('bank_account', ''),
+            bank=bank,
             booking_date=data['booking_date'],
             payment_date=data.get('payment_date'),
             total_payment_amount=data.get('total_payment_amount'),
@@ -79,7 +93,7 @@ class BookingService:
     def update_booking(booking, data, user):
         """Update an existing booking record."""
         updatable_fields = [
-            'payment_type', 'bank_account', 'booking_date',
+            'payment_type', 'bank', 'booking_date',
             'payment_date',
             'total_payment_amount', 'total_payment_remarks',
             'received_amount', 'received_amount_remarks',
@@ -91,8 +105,12 @@ class BookingService:
 
         for field in updatable_fields:
             if field in data:
-                setattr(booking, field, data[field])
-                updated_fields.append(field)
+                if field == 'bank':
+                    booking.bank = BookingService._resolve_bank(data)
+                    updated_fields.append(field)
+                else:
+                    setattr(booking, field, data[field])
+                    updated_fields.append(field)
 
         if 'total_payment_amount' in data or 'received_amount' in data or 'remaining_amount' in data:
             booking.remaining_amount = BookingService._resolve_remaining_amount(data, booking)
@@ -135,7 +153,7 @@ class BookingService:
         Supports: client_id, status, date_from, date_to
         """
         queryset = Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bde_user'
+            'client', 'bde_user', 'bank'
         )
 
         if user and getattr(user, 'role', None) and user.role.name == 'BDE':
@@ -157,7 +175,7 @@ class BookingService:
     def get_booking(booking_id, tenant_id):
         """Get a single booking within a tenant."""
         return Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bde_user'
+            'client', 'bde_user', 'bank'
         ).get(id=booking_id)
 
     @staticmethod

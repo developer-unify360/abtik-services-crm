@@ -4,6 +4,7 @@ import LoginPage from './auth/LoginPage';
 import PrivateRoute from './auth/PrivateRoute';
 import { useAuthStore } from './auth/authStore';
 import { getDefaultRouteForUser } from './auth/roleUtils';
+import { getStoredAuthData, userNeedsTenantSelection } from './auth/tenantSelection';
 import Layout from './components/Layout';
 import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
@@ -18,10 +19,13 @@ import ServiceDashboard from './services/pages/ServiceDashboard';
 
 function HomeRedirect() {
   const user = useAuthStore((state) => state.user);
-  const stored = JSON.parse(localStorage.getItem('user') || 'null');
+  const stored = getStoredAuthData();
   const currentUser = user || stored?.user || stored || null;
+  const nextRoute = userNeedsTenantSelection(currentUser, stored)
+    ? '/tenants'
+    : getDefaultRouteForUser(currentUser);
 
-  return <Navigate to={getDefaultRouteForUser(currentUser)} replace />;
+  return <Navigate to={nextRoute} replace />;
 }
 
 function App() {

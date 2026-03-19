@@ -13,7 +13,7 @@ export interface ServiceRequest {
   booking_details?: any; // Consider typing properly using Booking type
   service: string;
   service_name: string;
-  category_name: string;
+  category_name: string | null;
   assigned_to: string | null;
   assigned_user: AssignedUser | null;
   status: 'pending' | 'assigned' | 'in_progress' | 'waiting_client' | 'completed' | 'closed';
@@ -32,7 +32,8 @@ export interface ServiceRequestCreateData {
 export const TaskApi = {
   list: async (filters?: Record<string, string>) => {
     const response = await apiClient.get('/service-requests/', { params: filters });
-    return response.data;
+    const payload = response.data;
+    return payload.data || payload.results || payload || [];
   },
 
   get: async (id: string) => {

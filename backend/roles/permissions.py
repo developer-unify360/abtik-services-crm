@@ -8,6 +8,9 @@ class HasModulePermission(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         # Allow Super Admin full access globally
+        if getattr(request.user, 'is_superuser', False):
+            return True
+
         if request.user.role and request.user.role.name == 'Super Admin':
             return True
             
@@ -40,10 +43,19 @@ class IsTenantUser(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         # Allow Super Admin full access globally (no tenant isolation)
+        if getattr(request.user, 'is_superuser', False):
+            return True
+
         if request.user.role and request.user.role.name == 'Super Admin':
             return True
             
         return bool(request.user and request.tenant_id and str(request.user.tenant_id) == str(request.tenant_id))
 
     def has_object_permission(self, request, view, obj):
+        if getattr(request.user, 'is_superuser', False):
+            return True
+
+        if request.user.role and request.user.role.name == 'Super Admin':
+            return True
+
         return hasattr(obj, 'tenant_id') and str(obj.tenant_id) == str(request.user.tenant_id)

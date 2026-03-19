@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Edit, X } from 'lucide-react';
+import { CheckCircle2, Edit, Plus, Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../auth/authStore';
+import { canManageServicesCatalog } from '../auth/roleUtils';
+import { getSelectedTenant, setSelectedTenant, userNeedsTenantSelection } from '../auth/tenantSelection';
 import { TenantService, type Tenant } from './TenantService';
 
 const TenantListPage: React.FC = () => {
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedTenantId, setSelectedTenantId] = useState(getSelectedTenant()?.id || '');
   const [openForm, setOpenForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; type: 'success' | 'error' }>({
@@ -32,6 +39,8 @@ const TenantListPage: React.FC = () => {
 
   useEffect(() => { fetchTenants(); }, [page, search]);
 
+  const requiresTenantSelection = userNeedsTenantSelection(user);
+
   const handleOpenCreate = () => {
     setEditingTenant(null);
     setFormData({ name: '', industry: '', status: true });
@@ -44,6 +53,13 @@ const TenantListPage: React.FC = () => {
       name: tenant.name, industry: tenant.industry || '', status: tenant.status === true,
     });
     setOpenForm(true);
+  };
+
+  const handleSelectTenant = (tenant: Tenant) => {
+    setSelectedTenant({ id: tenant.id, name: tenant.name });
+    setSelectedTenantId(tenant.id);
+    setSnackbar({ open: true, message: `${tenant.name} selected successfully`, type: 'success' });
+    navigate(canManageServicesCatalog(user) ? '/services' : '/dashboard');
   };
 
   const handleSubmit = async () => {
@@ -65,6 +81,15 @@ const TenantListPage: React.FC = () => {
 
   return (
     <div>
+      {requiresTenantSelection && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900">
+          <p className="text-sm font-semibold">Select an organization to continue</p>
+          <p className="mt-1 text-sm text-amber-800">
+            Your account can work across tenants, so we need an active organization before creating services, clients, or bookings.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Organizations (Tenants)</h1>
@@ -112,9 +137,25 @@ const TenantListPage: React.FC = () => {
                   <span className={`badge ${tenant.status ? 'badge-success' : 'badge-error'}`}>
                     {tenant.status ? 'Active' : 'Inactive'}
                   </span>
+                  {selectedTenantId === tenant.id && (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      <CheckCircle2 size={14} />
+                      Selected
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-gray-600">{new Date(tenant.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSelectTenant(tenant)}
+                    className={`mr-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      selectedTenantId === tenant.id
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {selectedTenantId === tenant.id ? 'Selected' : 'Use Organization'}
+                  </button>
                   <button 
                     onClick={() => handleOpenEdit(tenant)}
                     className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"

@@ -17,8 +17,10 @@ class ServiceCategory(TenantAwareModel):
 class Service(TenantAwareModel):
     category = models.ForeignKey(
         ServiceCategory,
-        on_delete=models.CASCADE,
-        related_name='services'
+        on_delete=models.SET_NULL,
+        related_name='services',
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
@@ -27,7 +29,7 @@ class Service(TenantAwareModel):
         ordering = ['name']
 
     def __str__(self):
-        return f"{self.name} ({self.category.name})"
+        return f"{self.name} ({self.category.name})" if self.category else self.name
 
 
 class ServiceRequest(TenantAwareModel):
@@ -54,7 +56,7 @@ class ServiceRequest(TenantAwareModel):
     )
     service = models.ForeignKey(
         Service,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='requests'
     )
     assigned_to = models.ForeignKey(

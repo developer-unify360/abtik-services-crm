@@ -62,6 +62,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchCategories();
     } catch (err: any) {
       set({ error: err.message || 'Failed to create category', isLoading: false });
+      throw err;
     }
   },
 
@@ -72,6 +73,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchCategories();
     } catch (err: any) {
       set({ error: err.message || 'Failed to update category', isLoading: false });
+      throw err;
     }
   },
 
@@ -82,6 +84,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchCategories();
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete category', isLoading: false });
+      throw err;
     }
   },
 
@@ -92,6 +95,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServices();
     } catch (err: any) {
       set({ error: err.message || 'Failed to create service', isLoading: false });
+      throw err;
     }
   },
 
@@ -102,6 +106,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServices();
     } catch (err: any) {
       set({ error: err.message || 'Failed to update service', isLoading: false });
+      throw err;
     }
   },
 
@@ -112,6 +117,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServices();
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete service', isLoading: false });
+      throw err;
     }
   },
 
@@ -132,6 +138,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to create service request', isLoading: false });
+      throw err;
     }
   },
 
@@ -142,6 +149,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to assign service request', isLoading: false });
+      throw err;
     }
   },
 
@@ -152,6 +160,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to update service request status', isLoading: false });
+      throw err;
     }
   },
 
@@ -162,6 +171,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to create task from request', isLoading: false });
+      throw err;
     }
   },
 
@@ -172,6 +182,7 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete service request', isLoading: false });
+      throw err;
     }
   },
 }));

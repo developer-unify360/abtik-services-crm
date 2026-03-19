@@ -8,14 +8,37 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from bookings.models import Booking, Bank
 from bookings.permissions import CanCreateBooking, CanDeleteBooking, CanUpdateBooking
-from bookings.serializers import BookingCreateUpdateSerializer, BookingListSerializer, BookingSerializer
+from bookings.serializers import (
+    BankSerializer,
+    BookingCreateUpdateSerializer,
+    BookingListSerializer,
+    BookingSerializer,
+)
 from bookings.services import BookingService
 from clients.serializers import ClientCreateUpdateSerializer, ClientSerializer
 from clients.services import ClientService
 from roles.permissions import IsTenantUser
 from services.serializers import ServiceRequestCreateUpdateSerializer, ServiceRequestSerializer
 from services.services import ServiceRequestService
+
+
+class BankViewSet(viewsets.ModelViewSet):
+    """ViewSet for Bank model."""
+    serializer_class = BankSerializer
+    permission_classes = [IsAuthenticated, IsTenantUser]
+
+    def get_queryset(self):
+        return Bank.tenant_objects.for_tenant(self.request.tenant_id).filter(
+            is_active=True
+        ).order_by('bank_name', 'account_number')
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.tenant_id)
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -156,9 +179,25 @@ class BookingViewSet(viewsets.ModelViewSet):
             client_serializer, booking_serializer, service_serializer = self._validate_full_form_payload()
             if not client_serializer:
                 return Response(
-                    {"success": False, "error": {"code": "INVALID_INPUT", "message": "{'client': ['Client information is required.']}"}},
+                    {"success": False, "error": {"code": "INVALID_INPUT", "message": "Client information is required.", "details": {"client": ["Client details are required."]}}},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            
+            # Check for validation errors in serializers
+            client_errors = client_serializer.errors if client_serializer else {}
+            booking_errors = booking_serializer.errors
+            
+            if client_errors or booking_errors:
+                error_details = {}
+                if client_errors:
+                    error_details['client'] = client_errors
+                if booking_errors:
+                    error_details['booking'] = booking_errors
+                return Response(
+                    {"success": False, "error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": error_details}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
             booking_payload = dict(booking_serializer.validated_data)
             client_payload = dict(client_serializer.validated_data) if client_serializer else {}
             request_payload = dict(service_serializer.validated_data) if service_serializer else {}
@@ -188,7 +227,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"success": False, "error": {"code": "INVALID_INPUT", "message": str(e)}},
+                {"success": False, "error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": str(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

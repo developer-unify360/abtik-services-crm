@@ -19,6 +19,11 @@ export const getRoleName = (user: any | null | undefined): string => {
 };
 
 export const isBDEUser = (user: any | null | undefined): boolean => getRoleName(user) === 'BDE';
+export const isAdminUser = (user: any | null | undefined): boolean => getRoleName(user) === 'Admin';
+export const isSuperAdminUser = (user: any | null | undefined): boolean => getRoleName(user) === 'Super Admin';
+export const canManageServicesCatalog = (user: any | null | undefined): boolean => (
+  isAdminUser(user) || isSuperAdminUser(user)
+);
 
 export const getDefaultRouteForUser = (user: any | null | undefined): string => (
   isBDEUser(user) ? '/bookings' : '/dashboard'

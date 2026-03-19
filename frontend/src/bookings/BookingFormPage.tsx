@@ -6,7 +6,8 @@ import { useAuthStore } from '../auth/authStore';
 import BookingNavigation from './BookingNavigation';
 import { BookingService } from './BookingService';
 import { ClientService } from '../clients/ClientService';
-import { ServiceApi, ServiceCategoryApi, ServiceRequestApi, type Service, type ServiceCategory, type ServiceRequest } from '../services/api/ServiceApi';
+import { ServiceApi, ServiceRequestApi, type Service, type ServiceRequest } from '../services/api/ServiceApi';
+import { BankApi, type Bank } from './api/BankApi';
 
 const paymentTypes = [
   { value: 'new_payment', label: 'New Payment' },
@@ -24,10 +25,9 @@ interface BookingFormState {
   mobile: string;
   industry: string;
   payment_type: string;
-  bank_account: string;
+  bank: string;
   booking_date: string;
   payment_date: string;
-  service_type: string;
   service: string;
   total_payment_amount: string;
   total_payment_remarks: string;
@@ -51,10 +51,9 @@ const emptyFormState = (): BookingFormState => ({
   mobile: '',
   industry: '',
   payment_type: 'new_payment',
-  bank_account: '',
+  bank: '',
   booking_date: new Date().toISOString().split('T')[0],
   payment_date: '',
-  service_type: '',
   service: '',
   total_payment_amount: '',
   total_payment_remarks: '',
@@ -132,8 +131,8 @@ const BookingFormPage: React.FC = () => {
 
   const isEditMode = Boolean(bookingId);
   const [formState, setFormState] = useState<BookingFormState>(emptyFormState);
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [existingServiceRequest, setExistingServiceRequest] = useState<ServiceRequest | null>(null);
   const [displayBdeName, setDisplayBdeName] = useState(authUser?.name || '');
   const [loading, setLoading] = useState(true);
@@ -146,8 +145,12 @@ const BookingFormPage: React.FC = () => {
         setLoading(true);
         setPageError('');
 
-        const categoryData = await ServiceCategoryApi.list();
-        setCategories(categoryData);
+        const [serviceData, bankData] = await Promise.all([
+          ServiceApi.list(),
+          BankApi.list(),
+        ]);
+        setServices(serviceData);
+        setBanks(bankData);
 
         if (!isEditMode || !bookingId) {
           setDisplayBdeName(authUser?.name || '');
@@ -167,14 +170,7 @@ const BookingFormPage: React.FC = () => {
           : null;
         setExistingServiceRequest(currentServiceRequest);
 
-        let selectedCategoryId = '';
         let selectedServiceId = currentServiceRequest?.service || '';
-        if (selectedServiceId) {
-          const currentService = await ServiceApi.get(selectedServiceId);
-          selectedCategoryId = currentService.category;
-          const serviceList = await ServiceApi.list(selectedCategoryId);
-          setServices(serviceList);
-        }
 
         setFormState({
           client_name: client.client_name || '',
@@ -184,10 +180,9 @@ const BookingFormPage: React.FC = () => {
           mobile: client.mobile || '',
           industry: client.industry || '',
           payment_type: booking.payment_type || 'new_payment',
-          bank_account: booking.bank_account || '',
+          bank: booking.bank || '',
           booking_date: booking.booking_date || '',
           payment_date: booking.payment_date || '',
-          service_type: selectedCategoryId,
           service: selectedServiceId,
           total_payment_amount: toInputValue(booking.total_payment_amount),
           total_payment_remarks: booking.total_payment_remarks || '',
@@ -213,24 +208,6 @@ const BookingFormPage: React.FC = () => {
     loadPage();
   }, [authUser?.name, bookingId, isEditMode]);
 
-  useEffect(() => {
-    const loadServices = async () => {
-      if (!formState.service_type) {
-        setServices([]);
-        return;
-      }
-
-      try {
-        const serviceList = await ServiceApi.list(formState.service_type);
-        setServices(serviceList);
-      } catch (error) {
-        console.error('Failed to fetch services:', error);
-      }
-    };
-
-    loadServices();
-  }, [formState.service_type]);
-
   const handleFieldChange = (field: keyof BookingFormState, value: string | boolean | File | null) => {
     setFormState((previous) => {
       const nextState = { ...previous, [field]: value } as BookingFormState;
@@ -240,10 +217,6 @@ const BookingFormPage: React.FC = () => {
           field === 'total_payment_amount' ? String(value) : previous.total_payment_amount,
           field === 'received_amount' ? String(value) : previous.received_amount,
         );
-      }
-
-      if (field === 'service_type') {
-        nextState.service = '';
       }
 
       if (field === 'attachment' && value) {
@@ -272,7 +245,7 @@ const BookingFormPage: React.FC = () => {
         },
         booking: {
           payment_type: formState.payment_type,
-          bank_account: formState.bank_account,
+          bank: formState.bank || null,
           booking_date: formState.booking_date,
           payment_date: formState.payment_date || null,
           total_payment_amount: formState.total_payment_amount || null,
@@ -310,11 +283,52 @@ const BookingFormPage: React.FC = () => {
       });
     } catch (error: any) {
       console.error('Booking form submission failed:', error);
-      setPageError(
-        error.response?.data?.error?.message ||
-        error.response?.data?.detail ||
-        'Unable to save the booking right now.',
-      );
+      
+      // Try to extract detailed validation errors
+      const errorData = error.response?.data?.error;
+      let errorMessage = 'Unable to save the booking right now.';
+      
+      if (errorData?.details) {
+        // Build detailed error message from validation details
+        const details = errorData.details;
+        const errorParts: string[] = [];
+        
+        if (details.client) {
+          const clientErrors = details.client;
+          Object.entries(clientErrors).forEach(([field, messages]: [string, any]) => {
+            if (Array.isArray(messages)) {
+              errorParts.push(`Client ${field}: ${messages.join(', ')}`);
+            } else if (typeof messages === 'object') {
+              Object.entries(messages).forEach(([subField, subMessages]: [string, any]) => {
+                errorParts.push(`Client ${field}.${subField}: ${Array.isArray(subMessages) ? subMessages.join(', ') : subMessages}`);
+              });
+            }
+          });
+        }
+        
+        if (details.booking) {
+          const bookingErrors = details.booking;
+          Object.entries(bookingErrors).forEach(([field, messages]: [string, any]) => {
+            if (Array.isArray(messages)) {
+              errorParts.push(`Booking ${field}: ${messages.join(', ')}`);
+            } else if (typeof messages === 'object') {
+              Object.entries(messages).forEach(([subField, subMessages]: [string, any]) => {
+                errorParts.push(`Booking ${field}.${subField}: ${Array.isArray(subMessages) ? subMessages.join(', ') : subMessages}`);
+              });
+            }
+          });
+        }
+        
+        if (errorParts.length > 0) {
+          errorMessage = errorParts.join('\n');
+        } else {
+          errorMessage = errorData.message || errorMessage;
+        }
+      } else {
+        errorMessage = errorData?.message || error.response?.data?.detail || errorMessage;
+      }
+      
+      setPageError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -367,12 +381,18 @@ const BookingFormPage: React.FC = () => {
                     />
                   </Field>
                   <Field label="Bank Account">
-                    <input
+                    <select
                       className="input-field"
-                      value={formState.bank_account}
-                      onChange={(event) => handleFieldChange('bank_account', event.target.value)}
-                      placeholder="Enter bank account"
-                    />
+                      value={formState.bank}
+                      onChange={(event) => handleFieldChange('bank', event.target.value)}
+                    >
+                      <option value="">Select bank account</option>
+                      {banks.map((bank) => (
+                        <option key={bank.id} value={bank.id}>
+                          {bank.bank_name} - {bank.account_number}
+                        </option>
+                      ))}
+                    </select>
                   </Field>
                   <Field label="Payment Type" required>
                     <select
@@ -462,26 +482,11 @@ const BookingFormPage: React.FC = () => {
 
               <SectionCard title="Service Details" icon={<Wrench size={20} />}>
                 <div className="grid gap-5 md:grid-cols-2">
-                  <Field label="Services Type">
-                    <select
-                      className="input-field"
-                      value={formState.service_type}
-                      onChange={(event) => handleFieldChange('service_type', event.target.value)}
-                    >
-                      <option value="">Select service type</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Services">
+                  <Field label="Service">
                     <select
                       className="input-field"
                       value={formState.service}
                       onChange={(event) => handleFieldChange('service', event.target.value)}
-                      disabled={!formState.service_type}
                     >
                       <option value="">Select service</option>
                       {services.map((service) => (
@@ -491,6 +496,11 @@ const BookingFormPage: React.FC = () => {
                       ))}
                     </select>
                   </Field>
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                    {services.length > 0
+                      ? 'Choose the service that should be linked to this booking.'
+                      : 'No services are available yet. Ask an Admin or Super Admin to add one from the Services page.'}
+                  </div>
                 </div>
               </SectionCard>
 

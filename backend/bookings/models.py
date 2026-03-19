@@ -8,6 +8,25 @@ def booking_attachment_upload_to(instance, filename):
     return f"bookings/attachments/{instance.tenant_id}/{filename}"
 
 
+class Bank(TenantAwareModel):
+    """
+    Represents a bank with account details for booking transactions.
+    """
+    bank_name = models.CharField(max_length=200)
+    account_number = models.CharField(max_length=50)
+    branch_name = models.CharField(max_length=200, blank=True)
+    ifsc_code = models.CharField(max_length=20, blank=True)
+    account_holder_name = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['bank_name', 'account_number']
+        unique_together = [['tenant', 'bank_name', 'account_number']]
+
+    def __str__(self):
+        return f"{self.bank_name} - {self.account_number}"
+
+
 class Booking(TenantAwareModel):
     """
     Represents a service engagement/booking initiated by BDE for a client.
@@ -41,7 +60,13 @@ class Booking(TenantAwareModel):
         related_name='bde_bookings',
     )
     payment_type = models.CharField(max_length=30, choices=PAYMENT_TYPE_CHOICES)
-    bank_account = models.CharField(max_length=255, null=True, blank=True)
+    bank = models.ForeignKey(
+        'Bank',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bookings',
+    )
     booking_date = models.DateField()
     payment_date = models.DateField(null=True, blank=True)
     total_payment_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)

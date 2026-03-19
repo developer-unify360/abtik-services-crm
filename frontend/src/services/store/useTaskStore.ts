@@ -23,9 +23,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await TaskApi.list(filters);
-      // Backend returns drf paginated response sometimes if configured, 
-      // but based on API spec it might be direct data or results: []
-      set({ tasks: Array.isArray(data) ? data : (data.results || []), isLoading: false });
+      set({ tasks: Array.isArray(data) ? data : (data.data || data.results || []), isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to fetch tasks', isLoading: false });
     }

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { clearSelectedTenant } from './tenantSelection';
 
 interface AuthState {
     user: any | null;
@@ -16,10 +17,12 @@ export const useAuthStore = create<AuthState>((set) => {
       user: initialUser,
       isAuthenticated: initialIsAuthenticated,
       login: (userData) => {
+        clearSelectedTenant();
         localStorage.setItem('user', JSON.stringify(userData));
         set({ user: userData.user || userData, isAuthenticated: true });
       },
       logout: () => {
+        clearSelectedTenant();
         localStorage.removeItem('user');
         set({ user: null, isAuthenticated: false });
       }

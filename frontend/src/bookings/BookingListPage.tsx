@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Filter, PencilLine, Plus } from 'lucide-react';
+import { Filter, PencilLine } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import BookingNavigation from './BookingNavigation';

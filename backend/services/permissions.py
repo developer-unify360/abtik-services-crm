@@ -9,7 +9,7 @@ class CanManageServices(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_authenticated and request.user.role:
             role_name = request.user.role.name
-            if role_name in ['Super Admin', 'Admin', 'IT Manager']:
+            if role_name in ['Super Admin', 'Admin']:
                 return True
         return False
 

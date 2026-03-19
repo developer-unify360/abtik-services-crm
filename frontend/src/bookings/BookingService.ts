@@ -10,7 +10,8 @@ export interface Booking {
   bde_name?: string;
   payment_type: string;
   payment_type_display: string;
-  bank_account?: string;
+  bank?: string | null;
+  bank_name?: string | null;
   booking_date: string;
   payment_date?: string | null;
   total_payment_amount?: string | null;
@@ -32,7 +33,7 @@ export interface Booking {
 export interface BookingCreateData {
   client_id?: string;
   payment_type: string;
-  bank_account?: string;
+  bank?: string | null;
   booking_date: string;
   payment_date?: string | null;
   total_payment_amount?: string | null;

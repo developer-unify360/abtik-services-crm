@@ -4,6 +4,7 @@ import { AuthService } from './AuthService';
 import { useAuthStore } from './authStore';
 import { useNavigate } from 'react-router-dom';
 import { getDefaultRouteForUser } from './roleUtils';
+import { userNeedsTenantSelection } from './tenantSelection';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -17,7 +18,10 @@ const LoginPage: React.FC = () => {
         try {
             const data = await AuthService.login(email, password);
             login(data);
-            navigate(getDefaultRouteForUser(data.user), { replace: true });
+            const nextRoute = userNeedsTenantSelection(data.user, data)
+                ? '/tenants'
+                : getDefaultRouteForUser(data.user);
+            navigate(nextRoute, { replace: true });
         } catch (err) {
             setError('Invalid email or password');
         }

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from django.db import models
+from django.db.models import ProtectedError
 from .models import ServiceCategory, Service, ServiceRequest
 from .serializers import (
     ServiceCategorySerializer, ServiceSerializer, ServiceRequestSerializer,
@@ -19,16 +20,25 @@ class ServiceCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceCategorySerializer
     permission_classes = [IsAuthenticated, IsTenantUser]
 
+    def get_permissions(self):
+        # Allow list/retrieve for all authenticated users, restrict mutations to admins
+        if self.action in ['list', 'retrieve']:
+            return []
+        return [CanManageServices()]
+
     def get_queryset(self):
         return ServiceManagementService.get_categories(self.request.tenant_id)
 
-    def create(self, request, *args, **kwargs):
-        if not CanManageServices().has_permission(request, self):
-            return Response(
-                {"success": False, "error": {"code": "FORBIDDEN", "message": "You do not have permission to manage service categories"}},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "success": True,
+            "data": serializer.data,
+            "message": "Categories retrieved successfully"
+        })
 
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         category = ServiceManagementService.create_category(
@@ -46,17 +56,26 @@ class ServiceViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated, IsTenantUser]
 
+    def get_permissions(self):
+        # Allow list/retrieve for all authenticated users, restrict mutations to admins
+        if self.action in ['list', 'retrieve']:
+            return []
+        return [CanManageServices()]
+
     def get_queryset(self):
         category_id = self.request.query_params.get('category_id')
         return ServiceManagementService.get_services(self.request.tenant_id, category_id)
 
-    def create(self, request, *args, **kwargs):
-        if not CanManageServices().has_permission(request, self):
-            return Response(
-                {"success": False, "error": {"code": "FORBIDDEN", "message": "You do not have permission to manage services"}},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "success": True,
+            "data": serializer.data,
+            "message": "Services retrieved successfully"
+        })
 
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = ServiceManagementService.create_service(
@@ -68,6 +87,24 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"success": True, "data": ServiceSerializer(service).data, "message": "Service created successfully"},
             status=status.HTTP_201_CREATED,
         )
+
+    def destroy(self, request, *args, **kwargs):
+        service = self.get_object()
+        try:
+            service.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "SERVICE_IN_USE",
+                        "message": "This service is already linked to service requests, so it cannot be deleted.",
+                    },
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ServiceRequestViewSet(viewsets.ModelViewSet):

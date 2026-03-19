@@ -39,7 +39,7 @@ interface User {
 const ServiceRequestList: React.FC = () => {
   const {
     serviceRequests, services, isLoading,
-    fetchServiceRequests, fetchServices, fetchCategories,
+    fetchServiceRequests, fetchServices,
     createServiceRequest, assignServiceRequest, updateServiceRequestStatus,
     createTaskFromRequest
   } = useServiceStore();
@@ -94,7 +94,6 @@ const ServiceRequestList: React.FC = () => {
   useEffect(() => {
     fetchServiceRequests();
     fetchServices();
-    fetchCategories();
     fetchBookings();
     fetchUsers();
   }, []);
@@ -277,7 +276,9 @@ const ServiceRequestList: React.FC = () => {
                 <tr key={request.id} className="table-row">
                   <td className="px-6 py-4">
                     <p className="font-medium text-slate-800">{request.service_name}</p>
-                    <p className="text-xs text-gray-500">{request.category_name}</p>
+                    {request.category_name ? (
+                      <p className="text-xs text-gray-500">{request.category_name}</p>
+                    ) : null}
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-gray-600">{request.booking_details?.company_name || 'N/A'}</p>
@@ -390,10 +391,15 @@ const ServiceRequestList: React.FC = () => {
                   <option value="">Select a service</option>
                   {services.map((service) => (
                     <option key={service.id} value={service.id}>
-                      {service.name} ({service.category_name})
+                      {service.name}
                     </option>
                   ))}
                 </select>
+                {services.length === 0 ? (
+                  <p className="mt-2 text-xs text-gray-500">
+                    No services found. Ask an Admin or Super Admin to add one first.
+                  </p>
+                ) : null}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
@@ -410,7 +416,9 @@ const ServiceRequestList: React.FC = () => {
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">Create Request</button>
+                <button type="submit" className="btn-primary" disabled={!formData.booking || !formData.service}>
+                  Create Request
+                </button>
               </div>
             </form>
           </div>

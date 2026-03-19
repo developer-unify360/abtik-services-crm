@@ -17,8 +17,8 @@ export interface ServiceCategoryCreateData {
 export interface Service {
   id: string;
   tenant: string;
-  category: string;
-  category_name: string;
+  category: string | null;
+  category_name: string | null;
   name: string;
   description?: string;
   created_at: string;
@@ -26,12 +26,11 @@ export interface Service {
 }
 
 export interface ServiceCreateData {
-  category: string;
+  category?: string | null;
   name: string;
   description?: string;
 }
 
-// Service Request Types
 export interface ServiceRequest {
   id: string;
   tenant: string;
@@ -45,7 +44,7 @@ export interface ServiceRequest {
   };
   service: string;
   service_name: string;
-  category_name: string;
+  category_name: string | null;
   assigned_to: string | null;
   assigned_user?: {
     id: string;
@@ -104,8 +103,11 @@ export const ServiceCategoryApi = {
 export const ServiceApi = {
   list: async (categoryId?: string) => {
     const params = categoryId ? { category_id: categoryId } : {};
+    console.log('ServiceApi.list params:', params);
     const response = await apiClient.get('/services/', { params });
+    console.log('ServiceApi.list response:', response);
     const payload = response.data;
+    console.log('ServiceApi.list response payload:', payload);
     return payload.data || payload.results || payload || [];
   },
 

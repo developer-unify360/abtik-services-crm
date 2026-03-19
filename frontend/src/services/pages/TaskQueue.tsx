@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTaskStore } from '../store/useTaskStore';
-import { useServiceStore } from '../store/useServiceStore';
 import { UserPlus, Clock, CheckCircle2, AlertCircle, Search, MoreVertical } from 'lucide-react';
 
 const TaskQueue: React.FC = () => {
   const { tasks, isLoading, fetchTasks, updateTaskStatus } = useTaskStore();
-  const { fetchCategories } = useServiceStore();
   
   const [filters, setFilters] = useState({
     status: '',
@@ -17,8 +15,7 @@ const TaskQueue: React.FC = () => {
 
   useEffect(() => {
     fetchTasks(filters);
-    fetchCategories();
-  }, [fetchTasks, fetchCategories, filters]);
+  }, [fetchTasks, filters]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -122,7 +119,9 @@ const TaskQueue: React.FC = () => {
                           {task.priority.toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm text-slate-400 font-medium">{task.category_name}</span>
+                      {task.category_name ? (
+                        <span className="text-sm text-slate-400 font-medium">{task.category_name}</span>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-6 py-5">

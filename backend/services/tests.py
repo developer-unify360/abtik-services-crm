@@ -1,9 +1,10 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 from tenants.models import Tenant
 from users.models import User
-from roles.models import Role, Permission
+from roles.models import Role
 from clients.models import Client
 from bookings.models import Booking
 from services.models import ServiceCategory, Service, ServiceRequest
@@ -31,20 +32,12 @@ class ServicesModelTest(TestCase):
             status='pending',
         )
 
-    def test_create_service_category_and_service(self):
-        category = ServiceCategory.objects.create(
-            tenant=self.tenant,
-            name='Digital Services',
-            description='Web and marketing'
-        )
-        self.assertEqual(category.name, 'Digital Services')
-
+    def test_create_service_without_category(self):
         service = Service.objects.create(
             tenant=self.tenant,
-            category=category,
             name='Website Development'
         )
-        self.assertEqual(service.category, category)
+        self.assertIsNone(service.category)
         self.assertEqual(service.name, 'Website Development')
 
     def test_create_service_request(self):
@@ -66,8 +59,14 @@ class ServicesAPITest(TestCase):
     def setUp(self):
         self.api_client = APIClient()
         self.tenant = Tenant.objects.create(name='Test Org', industry='Tech')
+
+        self.admin_role = Role.objects.create(name='Admin')
+        self.admin_user = User.objects.create_user(
+            username='admin@test.com', email='admin@test.com', password='testpass',
+            name='Test Admin', tenant=self.tenant, role=self.admin_role,
+        )
         
-        # IT Manager role (Can manage, assign, update)
+        # IT Manager role (Can assign and update requests)
         self.manager_role = Role.objects.create(name='IT Manager')
         self.manager_user = User.objects.create_user(
             username='manager@test.com', email='manager@test.com', password='testpass',
@@ -91,21 +90,56 @@ class ServicesAPITest(TestCase):
             payment_type='new_payment', booking_date=date.today(),
         )
 
-    def test_manager_can_create_category(self):
+    def test_admin_can_create_service_without_category(self):
+        self.api_client.force_authenticate(user=self.admin_user)
+        self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
+        
+        response = self.api_client.post('/api/v1/services/', {'name': 'SEO'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['data']['name'], 'SEO')
+        self.assertIsNone(response.data['data']['category'])
+
+    def test_superuser_admin_without_tenant_can_create_service_with_selected_tenant_header(self):
+        global_admin = User.objects.create_user(
+            username='global-admin@test.com',
+            email='global-admin@test.com',
+            password='testpass',
+            name='Global Admin',
+            tenant=None,
+            role=self.admin_role,
+            is_superuser=True,
+            is_staff=True,
+        )
+        access_token = str(RefreshToken.for_user(global_admin).access_token)
+
+        self.api_client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {access_token}',
+            HTTP_TENANT_ID=str(self.tenant.id),
+        )
+
+        response = self.api_client.post('/api/v1/services/', {'name': 'Global SEO'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['data']['name'], 'Global SEO')
+        self.assertEqual(response.data['data']['tenant'], str(self.tenant.id))
+
+    def test_manager_cannot_create_service(self):
         self.api_client.force_authenticate(user=self.manager_user)
         self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
         
-        data = {'name': 'New Category', 'description': 'Test'}
-        response = self.api_client.post('/api/v1/service-categories/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-    def test_staff_cannot_create_category(self):
-        self.api_client.force_authenticate(user=self.staff_user)
-        self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
-        
-        data = {'name': 'New Category'}
-        response = self.api_client.post('/api/v1/service-categories/', data, format='json')
+        response = self.api_client.post('/api/v1/services/', {'name': 'SEO'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_delete_service_in_use(self):
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
+        ServiceRequest.objects.create(
+            tenant=self.tenant, booking=self.booking, service=service, status='pending'
+        )
+
+        self.api_client.force_authenticate(user=self.admin_user)
+        self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
+
+        response = self.api_client.delete(f'/api/v1/services/{service.id}/')
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     def test_assign_and_update_task(self):
         category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')

@@ -12,7 +12,7 @@ import {
   FilePlus2,
 } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
-import { isBDEUser } from '../auth/roleUtils';
+import { canManageServicesCatalog, isBDEUser } from '../auth/roleUtils';
 
 const DRAWER_WIDTH = 240;
 
@@ -23,13 +23,12 @@ interface NavItem {
   isActive?: (pathname: string) => boolean;
 }
 
-const defaultNavItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { label: 'Clients', path: '/clients', icon: <Users size={20} /> },
   { label: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
   { label: 'Kanban Board', path: '/kanban', icon: <Kanban size={20} /> },
   { label: 'Service Requests', path: '/service-requests', icon: <ClipboardList size={20} /> },
-  { label: 'Service Catalog', path: '/services', icon: <ListTodo size={20} /> },
   { label: 'Users', path: '/users', icon: <UserCircle size={20} /> },
   { label: 'Tenants', path: '/tenants', icon: <Building2 size={20} /> },
 ];
@@ -53,7 +52,17 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
-  const navItems = isBDEUser(user) ? bdeNavItems : defaultNavItems;
+  const navItems: NavItem[] = isBDEUser(user)
+    ? bdeNavItems
+    : (
+        canManageServicesCatalog(user)
+          ? [
+              ...baseNavItems.slice(0, 5),
+              { label: 'Services', path: '/services', icon: <ListTodo size={20} /> },
+              ...baseNavItems.slice(5),
+            ]
+          : baseNavItems
+      );
 
   return (
     <aside 
