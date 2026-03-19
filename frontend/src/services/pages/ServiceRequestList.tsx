@@ -56,7 +56,7 @@ const ServiceRequestList: React.FC = () => {
   });
 
   const authUser = useAuthStore((state) => state.user);
-  const roleName = authUser?.role_name || authUser?.role?.name || '';
+  const roleName = authUser?.role || '';
   const isBDE = roleName === 'BDE';
   const isITManager = roleName === 'IT Manager';
   const isITStaff = roleName === 'IT Staff';
@@ -83,7 +83,7 @@ const ServiceRequestList: React.FC = () => {
       const response = await UserService.list();
       const userList = Array.isArray(response) ? response : response?.results || [];
       const teamMembers = userList.filter((user: User) =>
-        user.role_name === 'IT Staff' || user.role_name === 'IT Manager' || user.role_name === 'Admin'
+        user.role_name === 'IT Staff'
       );
       setUsers(teamMembers);
     } catch (error) {
@@ -190,23 +190,6 @@ const ServiceRequestList: React.FC = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Service Requests</h1>
-          <p className="text-gray-500 mt-1">Manage client service requests and track progress</p>
-          <p className="text-sm text-gray-600 mt-1">Role: <strong>{roleName || 'Unknown'}</strong></p>
-        </div>
-        {!isITStaff && (
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} />
-            New Service Request
-          </button>
-        )}
-      </div>
 
       {/* Filters */}
       <div className="card mb-6">

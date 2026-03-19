@@ -12,7 +12,7 @@ import {
   FilePlus2,
 } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
-import { canManageServicesCatalog, isBDEUser } from '../auth/roleUtils';
+import { canManageServicesCatalog, isBDEUser, isITManagerUser } from '../auth/roleUtils';
 
 const DRAWER_WIDTH = 240;
 
@@ -48,21 +48,28 @@ const bdeNavItems: NavItem[] = [
   },
 ];
 
+const itManagerNavItems: NavItem[] = [
+  { label: 'Service Requests', path: '/service-requests', icon: <ClipboardList size={20} /> },
+  { label: 'Kanban Board', path: '/kanban', icon: <Kanban size={20} /> },
+];
+
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const navItems: NavItem[] = isBDEUser(user)
     ? bdeNavItems
-    : (
-        canManageServicesCatalog(user)
-          ? [
-              ...baseNavItems.slice(0, 5),
-              { label: 'Services', path: '/services', icon: <ListTodo size={20} /> },
-              ...baseNavItems.slice(5),
-            ]
-          : baseNavItems
-      );
+    : isITManagerUser(user)
+      ? itManagerNavItems
+      : (
+          canManageServicesCatalog(user)
+            ? [
+                ...baseNavItems.slice(0, 5),
+                { label: 'Services', path: '/services', icon: <ListTodo size={20} /> },
+                ...baseNavItems.slice(5),
+              ]
+            : baseNavItems
+        );
 
   return (
     <aside 

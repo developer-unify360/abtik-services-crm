@@ -18,6 +18,7 @@ export interface TaskColumn {
   color: string;
   position: number;
   WIP_LIMIT?: number;
+  board_id?: string;
   tasks_count?: number;
   tasks?: Task[];
 }
@@ -191,10 +192,15 @@ const taskApi = {
   },
 
   createColumn: async (data: Partial<TaskColumn>): Promise<TaskColumn> => {
-    const response = await apiClient.post('/tasks/columns/', data);
-    return response.data.data;
+    try {
+      console.log("🚀 CREATE COLUMN PAYLOAD:", data);
+      const response = await apiClient.post('/tasks/columns/', data);
+      return response.data.data;
+    } catch (err: any) {
+      console.error("❌ COLUMN CREATE ERROR:", err?.response?.data);
+      throw err;
+    }
   },
-
   // Labels
   getLabels: async (): Promise<TaskLabel[]> => {
     const response = await apiClient.get('/tasks/labels/');

@@ -21,6 +21,7 @@ export const getRoleName = (user: any | null | undefined): string => {
 export const isBDEUser = (user: any | null | undefined): boolean => getRoleName(user) === 'BDE';
 export const isAdminUser = (user: any | null | undefined): boolean => getRoleName(user) === 'Admin';
 export const isSuperAdminUser = (user: any | null | undefined): boolean => getRoleName(user) === 'Super Admin';
+export const isITManagerUser = (user: any | null | undefined): boolean => getRoleName(user) === 'IT Manager';
 export const canManageServicesCatalog = (user: any | null | undefined): boolean => (
   isAdminUser(user) || isSuperAdminUser(user)
 );

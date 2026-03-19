@@ -28,6 +28,11 @@ PHASE2_PERMISSIONS = [
     ('users', 'create', 'Create user'),
     ('users', 'update', 'Update user'),
     ('users', 'delete', 'Delete user'),
+    # Service management
+    ('service', 'view', 'View service requests'),
+    ('service', 'create', 'Create service request'),
+    ('service', 'assign', 'Assign service request'),
+    ('service', 'update', 'Update service request'),
 ]
 
 # Role → permission mapping per Role & Permission Matrix document
@@ -39,12 +44,14 @@ ROLE_PERMISSIONS = {
         'client.create', 'client.view', 'client.update', 'client.delete',
         'booking.create', 'booking.view', 'booking.update', 'booking.delete',
         'users.view', 'users.create', 'users.update', 'users.delete',
+        'service.view', 'service.create', 'service.assign', 'service.update',
     ],
     'Admin': [
         'tenants.view',
         'client.create', 'client.view', 'client.update', 'client.delete',
         'booking.create', 'booking.view', 'booking.update', 'booking.delete',
         'users.view', 'users.create', 'users.update', 'users.delete',
+        'service.view', 'service.create', 'service.assign', 'service.update',
     ],
     'BDE': [
         'client.create', 'client.view', 'client.update',
@@ -53,10 +60,17 @@ ROLE_PERMISSIONS = {
     'IT Manager': [
         'client.view',
         'booking.view',
+        'users.view',
+        'service.view',
+        'service.assign',
+        'service.update',
     ],
     'IT Staff': [
         'client.view',
         'booking.view',
+        'users.view',
+        'service.view',
+        'service.update',
     ],
     'Viewer': [
         'client.view',

@@ -133,7 +133,10 @@ useEffect(() => {
       ];
 
       for (const col of defaultColumns) {
-        await taskApi.createColumn({ ...col, board: board.id } as any);
+        await taskApi.createColumn({
+          ...col,
+          board: board.id,
+        } as any);
       }
 
       await fetchBoards();
