@@ -2,6 +2,8 @@ from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from clients.models import Client
 from audit.models import AuditLog
+from bookings.services import BookingService
+from services.services import ServiceRequestService
 
 
 class ClientService:
@@ -44,6 +46,37 @@ class ClientService:
         return client
 
     @staticmethod
+    @transaction.atomic
+    def create_client_with_booking_and_request(tenant_id, client_data, booking_data, request_data, user):
+        """Create client, booking and service request in one call for BDE workflow."""
+        client = ClientService.create_client(tenant_id, client_data, user)
+
+        # booking_data expects keys: payment_type, booking_date, payment_date, bank_account, remarks, status
+        booking_payload = dict(booking_data)
+        booking_payload['client_id'] = client.id
+        booking = BookingService.create_booking(
+            tenant_id=tenant_id,
+            data=booking_payload,
+            user=user,
+        )
+
+        service_request = None
+        if request_data:
+            request_payload = dict(request_data)
+            request_payload['booking'] = booking
+            service_request = ServiceRequestService.create_request(
+                tenant_id=tenant_id,
+                data=request_payload,
+                user=user,
+            )
+
+        return {
+            'client': client,
+            'booking': booking,
+            'service_request': service_request,
+        }
+
+    @staticmethod
     def update_client(client, data, user):
         """Update an existing client record."""
         updatable_fields = ['client_name', 'company_name', 'gst_pan', 'email', 'mobile', 'industry']
@@ -70,12 +103,16 @@ class ClientService:
         return client
 
     @staticmethod
-    def list_clients(tenant_id, filters=None):
+    def list_clients(tenant_id, user=None, filters=None):
         """
         List clients for a tenant with optional filtering.
+        For BDE users return only clients they created (and those mapped to their bookings).
         Supports: company, industry, date_from, date_to, search
         """
         queryset = Client.tenant_objects.for_tenant(tenant_id).select_related('created_by')
+
+        if user and getattr(user, 'role', None) and user.role.name == 'BDE':
+            queryset = queryset.filter(models.Q(created_by=user) | models.Q(bookings__bde_user=user)).distinct()
 
         if filters:
             if filters.get('company'):

@@ -24,6 +24,7 @@ interface ServiceState {
   createServiceRequest: (data: ServiceRequestCreateData) => Promise<void>;
   assignServiceRequest: (id: string, data: ServiceRequestAssignData) => Promise<void>;
   updateServiceRequestStatus: (id: string, data: ServiceRequestStatusUpdateData) => Promise<void>;
+  createTaskFromRequest: (id: string) => Promise<void>;
   deleteServiceRequest: (id: string) => Promise<void>;
 }
 
@@ -151,6 +152,16 @@ export const useServiceStore = create<ServiceState>((set, get) => ({
       await get().fetchServiceRequests();
     } catch (err: any) {
       set({ error: err.message || 'Failed to update service request status', isLoading: false });
+    }
+  },
+
+  createTaskFromRequest: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await ServiceRequestApi.createTask(id);
+      await get().fetchServiceRequests();
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to create task from request', isLoading: false });
     }
   },
 

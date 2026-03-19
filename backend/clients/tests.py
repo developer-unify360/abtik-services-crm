@@ -1,6 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
+from datetime import date
 from tenants.models import Tenant
 from users.models import User
 from roles.models import Role, Permission
@@ -93,6 +94,46 @@ class ClientAPITest(TestCase):
         response = self.api_client.post('/api/v1/clients/', data, format='json')
         self.assertIn(response.status_code, [status.HTTP_201_CREATED, status.HTTP_200_OK])
 
+    def test_bde_create_client_booking_service_request(self):
+        self.api_client.force_authenticate(user=self.bde_user)
+        self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
+
+        payload = {
+            'client': {
+                'client_name': 'Integrated Client',
+                'company_name': 'Integrated Co',
+                'email': 'integrated@example.com',
+                'mobile': '9999999999',
+                'industry': 'Consulting'
+            },
+            'booking': {
+                'payment_type': 'new_payment',
+                'bank_account': 'ICICI-123',
+                'booking_date': str(date.today()),
+                'payment_date': str(date.today()),
+                'remarks': 'BDE integrated entry',
+                'status': 'pending'
+            },
+            'service_request': {
+                'service': None,
+                'priority': 'medium'
+            }
+        }
+
+        # create a test service to use in service request
+        from services.models import ServiceCategory, Service
+        cat = ServiceCategory.objects.create(tenant=self.tenant, name='Test Category')
+        svc = Service.objects.create(tenant=self.tenant, category=cat, name='Test Service')
+
+        payload['service_request']['service'] = str(svc.id)
+
+        response = self.api_client.post('/api/v1/clients/bde-create-full/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
+        self.assertIsNotNone(response.data['data']['client']['id'])
+        self.assertIsNotNone(response.data['data']['booking']['id'])
+        self.assertIsNotNone(response.data['data']['service_request']['id'])
+
     def test_list_clients(self):
         # Create clients including one with no created_by (legacy or import data)
         Client.objects.create(
@@ -112,7 +153,6 @@ class ClientAPITest(TestCase):
         response = self.api_client.get('/api/v1/clients/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue('results' in response.data)
-        self.assertEqual(len(response.data['results']), 2)
-        orphan = next((c for c in response.data['results'] if c['email'] == 'orphan@test.com'), None)
-        self.assertIsNotNone(orphan)
-        self.assertIsNone(orphan['created_by_name'])
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['email'], 'test@test.com')
+        self.assertEqual(response.data['results'][0]['created_by_name'], 'Test BDE')

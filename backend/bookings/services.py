@@ -78,14 +78,18 @@ class BookingService:
         return booking
 
     @staticmethod
-    def list_bookings(tenant_id, filters=None):
+    def list_bookings(tenant_id, user=None, filters=None):
         """
         List bookings for a tenant with optional filtering.
+        BDE users see only their bookings.
         Supports: client_id, status, date_from, date_to
         """
         queryset = Booking.tenant_objects.for_tenant(tenant_id).select_related(
             'client', 'bde_user'
         )
+
+        if user and getattr(user, 'role', None) and user.role.name == 'BDE':
+            queryset = queryset.filter(bde_user=user)
 
         if filters:
             if filters.get('client_id'):

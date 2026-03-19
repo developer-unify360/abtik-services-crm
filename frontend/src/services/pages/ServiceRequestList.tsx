@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useServiceStore } from '../store/useServiceStore';
 import { BookingService } from '../../bookings/BookingService';
 import { UserService } from '../../users/UserService';
-import { 
-  Search, Plus, Edit, Trash2, User, ArrowRight, Filter, 
-  CheckCircle, Clock, AlertCircle, XCircle, X 
-} from 'lucide-react';
+import { useAuthStore } from '../../auth/authStore';
+import { Plus, User, ArrowRight, Filter, X } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Pending', color: '#f59e0b', bg: '#fffbeb' },
@@ -40,9 +38,10 @@ interface User {
 
 const ServiceRequestList: React.FC = () => {
   const {
-    serviceRequests, services, categories, isLoading,
+    serviceRequests, services, isLoading,
     fetchServiceRequests, fetchServices, fetchCategories,
-    createServiceRequest, assignServiceRequest, updateServiceRequestStatus
+    createServiceRequest, assignServiceRequest, updateServiceRequestStatus,
+    createTaskFromRequest
   } = useServiceStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -56,6 +55,12 @@ const ServiceRequestList: React.FC = () => {
     open: false, message: '', type: 'success',
   });
 
+  const authUser = useAuthStore((state) => state.user);
+  const roleName = authUser?.role_name || authUser?.role?.name || '';
+  const isBDE = roleName === 'BDE';
+  const isITManager = roleName === 'IT Manager';
+  const isITStaff = roleName === 'IT Staff';
+
   const [formData, setFormData] = useState({
     booking: '',
     service: '',
@@ -63,14 +68,6 @@ const ServiceRequestList: React.FC = () => {
     assigned_to: '',
     status: 'pending',
   });
-
-  useEffect(() => {
-    fetchServiceRequests();
-    fetchServices();
-    fetchCategories();
-    fetchBookings();
-    fetchUsers();
-  }, []);
 
   const fetchBookings = async () => {
     try {
@@ -93,6 +90,14 @@ const ServiceRequestList: React.FC = () => {
       console.error('Failed to fetch users:', error);
     }
   };
+
+  useEffect(() => {
+    fetchServiceRequests();
+    fetchServices();
+    fetchCategories();
+    fetchBookings();
+    fetchUsers();
+  }, []);
 
   const handleFilterChange = (key: string, value: string) => {
     const newFilters = { ...filters, [key]: value };
@@ -150,6 +155,16 @@ const ServiceRequestList: React.FC = () => {
     setShowAssignModal(true);
   };
 
+  const handleCreateTask = async (request: any) => {
+    try {
+      await createTaskFromRequest(request.id);
+      setSnackbar({ open: true, message: 'Task created from service request', type: 'success' });
+      fetchServiceRequests(filters);
+    } catch (err: any) {
+      setSnackbar({ open: true, message: 'Failed to create task from service request', type: 'error' });
+    }
+  };
+
   const openStatusModal = (request: any) => {
     setSelectedRequest(request);
     setFormData({ ...formData, status: request.status });
@@ -181,14 +196,17 @@ const ServiceRequestList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Service Requests</h1>
           <p className="text-gray-500 mt-1">Manage client service requests and track progress</p>
+          <p className="text-sm text-gray-600 mt-1">Role: <strong>{roleName || 'Unknown'}</strong></p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          New Service Request
-        </button>
+        {!isITStaff && (
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            New Service Request
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -289,20 +307,35 @@ const ServiceRequestList: React.FC = () => {
                     {new Date(request.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => openAssignModal(request)}
-                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
-                      title="Assign"
-                    >
-                      <User size={18} />
-                    </button>
-                    <button 
-                      onClick={() => openStatusModal(request)}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
-                      title="Update Status"
-                    >
-                      <ArrowRight size={18} />
-                    </button>
+                    {(isITManager || roleName === 'Admin' || roleName === 'Super Admin') && (
+                      <button 
+                        onClick={() => openAssignModal(request)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                        title="Assign"
+                      >
+                        <User size={18} />
+                      </button>
+                    )}
+
+                    {(isITManager || isITStaff || roleName === 'Admin' || roleName === 'Super Admin') && (
+                      <button 
+                        onClick={() => openStatusModal(request)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
+                        title="Update Status"
+                      >
+                        <ArrowRight size={18} />
+                      </button>
+                    )}
+
+                    {(isBDE || isITManager || roleName === 'Admin' || roleName === 'Super Admin' || (isITStaff && request.assigned_user?.id === authUser?.id)) && (
+                      <button
+                        onClick={() => handleCreateTask(request)}
+                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-block ml-1"
+                        title="Create Task"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

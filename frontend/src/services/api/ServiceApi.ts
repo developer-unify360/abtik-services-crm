@@ -105,8 +105,8 @@ export const ServiceApi = {
   list: async (categoryId?: string) => {
     const params = categoryId ? { category_id: categoryId } : {};
     const response = await apiClient.get('/services/', { params });
-    // Handle Django REST Framework paginated response
-    return response.data.results || response.data;
+    const payload = response.data;
+    return payload.data || payload.results || payload || [];
   },
 
   get: async (id: string) => {
@@ -134,8 +134,9 @@ export const ServiceApi = {
 export const ServiceRequestApi = {
   list: async (filters?: { status?: string; assigned_to?: string; priority?: string; booking_id?: string }) => {
     const response = await apiClient.get('/service-requests/', { params: filters });
-    // Handle Django REST Framework paginated response
-    return response.data.results || response.data;
+    const payload = response.data;
+    // Handle new envelope from view: { success, data, message }
+    return payload.data || payload.results || payload || [];
   },
 
   get: async (id: string) => {
@@ -166,5 +167,11 @@ export const ServiceRequestApi = {
   updateStatus: async (id: string, data: ServiceRequestStatusUpdateData) => {
     const response = await apiClient.patch(`/service-requests/${id}/status/`, data);
     return response.data;
+  },
+
+  createTask: async (id: string) => {
+    const response = await apiClient.post(`/service-requests/${id}/create_task/`);
+    // normalize output
+    return response.data.data?.task || response.data;
   },
 };

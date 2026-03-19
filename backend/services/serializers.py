@@ -26,12 +26,14 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='service.category.name', read_only=True)
     assigned_user = UserSerializer(source='assigned_to', read_only=True)
     booking_details = BookingListSerializer(source='booking', read_only=True)
+    created_by_user = UserSerializer(source='created_by', read_only=True)
     
     class Meta:
         model = ServiceRequest
         fields = [
             'id', 'tenant', 'booking', 'booking_details', 'service', 'service_name', 
-            'category_name', 'assigned_to', 'assigned_user', 'status', 'priority', 
+            'category_name', 'assigned_to', 'assigned_user', 'created_by', 'created_by_user',
+            'status', 'priority', 
             'completed_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'tenant', 'completed_at', 'created_at', 'updated_at']

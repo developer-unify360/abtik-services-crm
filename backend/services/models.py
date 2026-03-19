@@ -64,6 +64,13 @@ class ServiceRequest(TenantAwareModel):
         blank=True,
         related_name='assigned_tasks'
     )
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_service_requests'
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     completed_at = models.DateTimeField(null=True, blank=True)

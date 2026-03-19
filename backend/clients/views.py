@@ -1,8 +1,12 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from clients.models import Client
 from clients.serializers import ClientSerializer, ClientListSerializer, ClientCreateUpdateSerializer
+from bookings.serializers import BookingSerializer, BookingCreateUpdateSerializer
+from services.serializers import ServiceRequestSerializer, ServiceRequestCreateUpdateSerializer
+from services.services import ServiceRequestService
 from clients.services import ClientService
 from clients.permissions import CanCreateClient, CanUpdateClient, CanDeleteClient
 from roles.permissions import IsTenantUser
@@ -23,7 +27,7 @@ class ClientViewSet(viewsets.ModelViewSet):
         }
         # Remove None values
         filters = {k: v for k, v in filters.items() if v}
-        return ClientService.list_clients(self.request.tenant_id, filters or None)
+        return ClientService.list_clients(self.request.tenant_id, user=self.request.user, filters=filters or None)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -48,6 +52,62 @@ class ClientViewSet(viewsets.ModelViewSet):
             )
             return Response(
                 {"success": True, "data": ClientSerializer(client).data, "message": "Client created successfully"},
+                status=status.HTTP_201_CREATED,
+            )
+        except ValidationError as e:
+            return Response(
+                {"success": False, "error": {"code": "INVALID_INPUT", "message": str(e)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @action(detail=False, methods=['post'], url_path='bde-create-full')
+    def create_client_booking_request(self, request):
+        """BDE-only helper: create client, booking, and service request in one request."""
+        if not request.user.role or request.user.role.name != 'BDE':
+            return Response(
+                {"success": False, "error": {"code": "FORBIDDEN", "message": "Only BDE users can access this endpoint."}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        client_data = request.data.get('client', {})
+        booking_data = request.data.get('booking', {})
+        service_data = request.data.get('service_request', {})
+
+        client_serializer = ClientCreateUpdateSerializer(data=client_data)
+        client_serializer.is_valid(raise_exception=True)
+
+        booking_serializer = BookingCreateUpdateSerializer(data=booking_data)
+        booking_serializer.is_valid(raise_exception=True)
+
+        request_payload = {}
+        if service_data:
+            request_payload = {
+                'service': service_data.get('service'),
+                'priority': service_data.get('priority', 'medium'),
+            }
+            service_serializer = ServiceRequestCreateUpdateSerializer(data=request_payload)
+            service_serializer.is_valid(raise_exception=True)
+            request_payload = service_serializer.validated_data
+
+        try:
+            result = ClientService.create_client_with_booking_and_request(
+                tenant_id=request.tenant_id,
+                client_data=client_serializer.validated_data,
+                booking_data=booking_serializer.validated_data,
+                request_data=request_payload,
+                user=request.user,
+            )
+
+            return Response(
+                {
+                    "success": True,
+                    "data": {
+                        "client": ClientSerializer(result['client']).data,
+                        "booking": BookingSerializer(result['booking']).data,
+                        "service_request": ServiceRequestSerializer(result['service_request']).data if result['service_request'] else None,
+                    },
+                    "message": "Client, booking and service request created successfully",
+                },
                 status=status.HTTP_201_CREATED,
             )
         except ValidationError as e:

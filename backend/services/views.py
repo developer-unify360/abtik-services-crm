@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
+from django.db import models
 from .models import ServiceCategory, Service, ServiceRequest
 from .serializers import (
     ServiceCategorySerializer, ServiceSerializer, ServiceRequestSerializer,
@@ -89,7 +90,29 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             'booking_id': self.request.query_params.get('booking_id')
         }
         filters = {k: v for k, v in filters.items() if v}
-        return ServiceRequestService.list_requests(self.request.tenant_id, filters or None)
+
+        queryset = ServiceRequestService.list_requests(self.request.tenant_id, filters or None)
+
+        role_name = self.request.user.role.name if getattr(self.request.user, 'role', None) else None
+
+        if role_name == 'IT Staff':
+            queryset = queryset.filter(assigned_to=self.request.user)
+        elif role_name == 'BDE':
+            queryset = queryset.filter(
+                models.Q(booking__bde_user=self.request.user) | models.Q(created_by=self.request.user)
+            )
+        # IT Manager / Admin / Super Admin can see all tenant requests
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "success": True,
+            "data": serializer.data,
+            "message": "Service requests retrieved successfully"
+        })
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -126,6 +149,30 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             {"success": True, "data": ServiceRequestSerializer(updated_request).data, "message": "Task assigned successfully"}
         )
 
+    @action(detail=True, methods=['post'])
+    def create_task(self, request, pk=None):
+        service_request = self.get_object()
+
+        if not CanAssignTasks().has_permission(request, self):
+            return Response(
+                {"success": False, "error": {"code": "FORBIDDEN", "message": "You do not have permission to create tasks from requests"}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        task = ServiceRequestService.create_task_from_request(service_request=service_request, user=request.user)
+
+        return Response(
+            {"success": True, "data": {
+                'task': {
+                    'id': str(task.id),
+                    'task_number': task.task_number,
+                    'title': task.title,
+                    'status': task.status,
+                    'assignee': task.assignee.name if task.assignee else None,
+                }
+            }, "message": "Task created from service request"}
+        )
+
     @action(detail=True, methods=['patch'])
     def status(self, request, pk=None):
         service_request = self.get_object()
@@ -140,11 +187,18 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         new_status = serializer.validated_data.get('status')
-        updated_request = ServiceRequestService.update_status(
-            service_request=service_request,
-            new_status=new_status,
-            user=request.user
-        )
+        try:
+            updated_request = ServiceRequestService.update_status(
+                service_request=service_request,
+                new_status=new_status,
+                user=request.user
+            )
+        except ValidationError as e:
+            return Response(
+                {"success": False, "error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return Response(
             {"success": True, "data": ServiceRequestSerializer(updated_request).data, "message": "Status updated successfully"}
         )

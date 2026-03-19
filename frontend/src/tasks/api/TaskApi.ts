@@ -183,7 +183,11 @@ const taskApi = {
   // Columns
   getColumns: async (boardId: string): Promise<TaskColumn[]> => {
     const response = await apiClient.get('/tasks/columns/', { params: { board_id: boardId } });
-    return response.data.data || response.data;
+    // DRF wrapper uses data: { success, data } in task endpoints
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    return response.data;
   },
 
   createColumn: async (data: Partial<TaskColumn>): Promise<TaskColumn> => {

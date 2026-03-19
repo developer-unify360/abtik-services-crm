@@ -8,8 +8,10 @@ RUN apk add --no-cache curl
 COPY package*.json ./
 RUN npm install
 
+RUN npm install -D tailwindcss postcss autoprefixer
+
 COPY . .
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "until curl -fsS http://backend:8000/api/v1/roles/; do echo 'Waiting for backend...'; sleep 2; done; npm run dev -- --host"]
+CMD ["sh", "-c", "until curl -fsS http://backend:8000/health/; do echo 'Waiting for backend...'; sleep 2; done; npm run dev -- --host"]
