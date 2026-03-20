@@ -6,6 +6,7 @@ import AdminDashboard from './dashboard/AdminDashboard';
 import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
 import BookingFormPage from './bookings/BookingFormPage';
+import BanksPage from './bookings/BanksPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/bookings" element={<BookingListPage />} />
             <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
+            <Route path="/banks" element={<BanksPage />} />
             {/* Catch-all: redirect unknown routes to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
