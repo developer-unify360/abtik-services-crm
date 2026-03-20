@@ -16,6 +16,8 @@ const paymentTypes = [
   { value: 'transfer', label: 'Transfer' },
 ];
 
+const industries = ['Technology', 'Manufacturing', 'Finance', 'Healthcare', 'Education', 'Retail', 'Other'];
+
 interface BookingFormState {
   client_name: string;
   company_name: string;
@@ -472,8 +474,8 @@ const BookingFormPage: React.FC = () => {
                     <input
                       className="input-field"
                       value={formState.gst_pan}
-                      onChange={(event) => handleFieldChange('gst_pan', event.target.value.toUpperCase())}
-                      placeholder="Enter GST or PAN number"
+                      onChange={(event) => handleFieldChange('gst_pan', event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      placeholder="Enter 10-char PAN or 15-char GST"
                     />
                   </Field>
                   <Field label="Client Email" required>
@@ -494,12 +496,18 @@ const BookingFormPage: React.FC = () => {
                     />
                   </Field>
                   <Field label="Industry / Sector">
-                    <input
+                    <select
                       className="input-field"
                       value={formState.industry}
                       onChange={(event) => handleFieldChange('industry', event.target.value)}
-                      placeholder="Enter industry or sector"
-                    />
+                    >
+                      <option value="">Select industry</option>
+                      {industries.map((ind) => (
+                        <option key={ind} value={ind}>
+                          {ind}
+                        </option>
+                      ))}
+                    </select>
                   </Field>
                 </div>
               </SectionCard>

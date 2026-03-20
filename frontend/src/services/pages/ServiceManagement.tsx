@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '../../auth/authStore';
-import { canManageServicesCatalog, getRoleName } from '../../auth/roleUtils';
 import type { Service } from '../api/ServiceApi';
 import { useServiceStore } from '../store/useServiceStore';
 
@@ -26,8 +25,6 @@ const getErrorMessage = (error: any, fallback: string) => (
 const ServiceManagement: React.FC = () => {
   const { services, isLoading, error, fetchServices, createService, updateService, deleteService } = useServiceStore();
   const user = useAuthStore((state) => state.user);
-  const roleName = getRoleName(user);
-  const canManage = canManageServicesCatalog(user);
 
   const [draftName, setDraftName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,11 +127,7 @@ const ServiceManagement: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Manage Access</p>
-                <p className="mt-2 text-sm font-semibold text-white">Admin and Super Admin only</p>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-1">
               <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Active Services</p>
                 <p className="mt-2 text-2xl font-bold text-white">{serviceList.length}</p>
@@ -147,35 +140,31 @@ const ServiceManagement: React.FC = () => {
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-700">
-                {canManage ? <ShieldCheck size={22} /> : <Lock size={22} />}
+                <ShieldCheck size={22} />
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-slate-900">
-                  {canManage ? 'Quick Add Service' : 'Read-Only Access'}
+                  Quick Add Service
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {canManage
-                    ? 'Only the service name is required. Press Enter to save fast.'
-                    : `Your role is ${roleName || 'Unknown'}. You can view services here, but only Admin or Super Admin can change the list.`}
+                  Only the service name is required. Press Enter to save fast.
                 </p>
               </div>
             </div>
 
-            {canManage ? (
-              <form onSubmit={handleCreateService} className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <input
-                  type="text"
-                  className="input-field"
-                  value={draftName}
-                  onChange={(event) => setDraftName(event.target.value)}
-                  placeholder="Add a service name"
-                />
-                <button type="submit" className="btn-primary flex items-center justify-center gap-2 sm:min-w-[160px]">
-                  <Plus size={18} />
-                  Add Service
-                </button>
-              </form>
-            ) : null}
+            <form onSubmit={handleCreateService} className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <input
+                type="text"
+                className="input-field"
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                placeholder="Add a service name"
+              />
+              <button type="submit" className="btn-primary flex items-center justify-center gap-2 sm:min-w-[160px]">
+                <Plus size={18} />
+                Add Service
+              </button>
+            </form>
           </div>
 
           <div className="rounded-[24px] border border-slate-200 bg-white p-5">
@@ -263,7 +252,6 @@ const ServiceManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {canManage ? (
                   <div className="flex items-center gap-2 self-end md:self-auto">
                     {editingId === service.id ? (
                       <>
@@ -305,7 +293,6 @@ const ServiceManagement: React.FC = () => {
                       </>
                     )}
                   </div>
-                ) : null}
               </div>
             ))}
           </div>
@@ -314,9 +301,8 @@ const ServiceManagement: React.FC = () => {
 
       {snackbar.open ? (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-lg ${
-            snackbar.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
-          }`}
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-lg ${snackbar.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+            }`}
         >
           <span>{snackbar.message}</span>
           <button type="button" onClick={closeSnackbar}>

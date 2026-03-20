@@ -30,7 +30,7 @@ class BankViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # Anyone can list banks (needed for public booking form dropdowns)
         if self.action in ['list', 'retrieve']:
-            return []
+            return [AllowAny()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
