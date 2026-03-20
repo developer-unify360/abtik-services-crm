@@ -160,15 +160,29 @@ class TaskColumnViewSet(viewsets.ModelViewSet):
         return queryset.order_by('position')
     
     def create(self, request, *args, **kwargs):
+        print("\n====== CREATE COLUMN REQUEST ======")
+        print("USER:", request.user)
+        print("TENANT_ID:", getattr(request, "tenant_id", None))
+        print("DATA:", request.data)
+        print("==================================\n")
+        
         if not CanManageBoards().has_permission(request, self):
+            print("❌ PERMISSION DENIED")
             return Response(
                 {"success": False, "error": {"code": "FORBIDDEN", "message": "You don't have permission to create columns"}},
                 status=status.HTTP_403_FORBIDDEN
             )
         
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(tenant=request.tenant_id)
+        
+        if not serializer.is_valid():
+            print("❌ SERIALIZER ERRORS:", serializer.errors)
+            return Response(
+                {"success": False, "error": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer.save(tenant_id=request.tenant_id)
         return Response(
             {"success": True, "data": serializer.data, "message": "Column created successfully"},
             status=status.HTTP_201_CREATED

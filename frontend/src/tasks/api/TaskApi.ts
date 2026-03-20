@@ -181,6 +181,10 @@ const taskApi = {
     return response.data.data;
   },
 
+  deleteBoard: async (boardId: string): Promise<void> => {
+    await apiClient.delete(`/tasks/boards/${boardId}/`);
+  },
+
   // Columns
   getColumns: async (boardId: string): Promise<TaskColumn[]> => {
     const response = await apiClient.get('/tasks/columns/', { params: { board_id: boardId } });
@@ -197,7 +201,11 @@ const taskApi = {
       const response = await apiClient.post('/tasks/columns/', data);
       return response.data.data;
     } catch (err: any) {
-      console.error("❌ COLUMN CREATE ERROR:", err?.response?.data);
+      console.error("❌ FULL ERROR:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        headers: err?.response?.headers,
+      });
       throw err;
     }
   },

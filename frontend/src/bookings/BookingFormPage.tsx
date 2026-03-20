@@ -103,7 +103,7 @@ const SectionCard = ({
         <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       </div>
     </div>
-    <div className="p-6">{children}</div>
+    <div>{children}</div>
   </section>
 );
 

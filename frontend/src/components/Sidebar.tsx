@@ -27,7 +27,7 @@ const baseNavItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { label: 'Clients', path: '/clients', icon: <Users size={20} /> },
   { label: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
-  { label: 'Kanban Board', path: '/kanban', icon: <Kanban size={20} /> },
+  { label: 'Task Board', path: '/kanban', icon: <Kanban size={20} /> },
   { label: 'Service Requests', path: '/service-requests', icon: <ClipboardList size={20} /> },
   { label: 'Users', path: '/users', icon: <UserCircle size={20} /> },
   { label: 'Tenants', path: '/tenants', icon: <Building2 size={20} /> },
@@ -50,7 +50,7 @@ const bdeNavItems: NavItem[] = [
 
 const itManagerNavItems: NavItem[] = [
   { label: 'Service Requests', path: '/service-requests', icon: <ClipboardList size={20} /> },
-  { label: 'Kanban Board', path: '/kanban', icon: <Kanban size={20} /> },
+  { label: 'Task Board', path: '/kanban', icon: <Kanban size={20} /> },
 ];
 
 const Sidebar: React.FC = () => {

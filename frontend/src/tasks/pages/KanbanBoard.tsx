@@ -1,13 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTaskStore } from '../store/useTaskStore';
 import taskApi from '../api/TaskApi';
+import { ServiceRequestApi } from '../../services/api/ServiceApi';
 import type { Task, KanbanColumn } from '../api/TaskApi';
 import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import CreateTaskModal from '../components/CreateTaskModal';
 
+interface KanbanBoardProps {
+  source?: 'tasks' | 'service-requests';
+}
 
-const KanbanBoard: React.FC = () => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ source = 'service-requests' }) => {
   const {
     kanbanBoard,
     boards,
@@ -28,37 +32,141 @@ const KanbanBoard: React.FC = () => {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createInColumn, setCreateInColumn] = useState<string | null>(null);
+  const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+  const [localKanbanBoard, setLocalKanbanBoard] = useState<any>(null);
   const waitForBackendSafe = async () => {
-  const maxAttempts = 10;
+    const maxAttempts = 10;
 
-  for (let i = 1; i <= maxAttempts; i++) {
-    try {
-      await taskApi.getBoards();
-      return;
-    } catch (err: any) {
-      if (err?.response?.status === 401) return; // backend is UP
-      await new Promise((r) => setTimeout(r, 1000));
+    for (let i = 1; i <= maxAttempts; i++) {
+      try {
+        await taskApi.getBoards();
+        console.log('Backend check attempt', i, 'successful');
+        return;
+      } catch (err: any) {
+        console.log('Backend check attempt', i, 'failed:', err?.response?.status);
+        // If we get a response (even error), backend is up
+        if (err?.response?.status) {
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
-  }
 
-  throw new Error("Backend not ready");
-};
+    console.warn('Backend not ready after max attempts, continuing anyway...');
+  };
 
 const initialized = useRef(false);
 
-useEffect(() => {
+  // Create default board with columns (always has 5 columns: Pending, In Progress, Waiting Client, Completed, Closed)
+  const createDefaultBoard = async (): Promise<string | null> => {
+    setIsCreatingBoard(true);
+    try {
+      console.log('Starting createDefaultBoard...');
+      await waitForBackendSafe();
+      console.log('Backend is ready');
+      
+      const existingBoards = await taskApi.getBoards() as any[];
+      console.log('Existing boards:', existingBoards);
+      
+      // Delete any existing board to recreate with fresh columns
+      if (existingBoards.length > 0) {
+        console.log('Deleting existing board to recreate with new columns...');
+        try {
+          await taskApi.deleteBoard(existingBoards[0].id);
+          console.log('Board deleted successfully');
+        } catch (deleteError) {
+          console.log('Could not delete board:', deleteError);
+        }
+      }
+
+      // Create default board with 5 columns
+      console.log('Creating new board...');
+      const created = await taskApi.createBoard({ name: 'Main Board', is_default: true });
+      console.log('Board created:', created);
+      
+      if (!created || !created.id) {
+        console.error('Created board has no ID:', created);
+        throw new Error('Unable to determine board id after create');
+      }
+
+      const defaultColumns = [
+        { name: 'Pending', status_key: 'pending', color: '#6B7280', position: 0 },
+        { name: 'In Progress', status_key: 'in_progress', color: '#3B82F6', position: 1 },
+        { name: 'Waiting Client', status_key: 'waiting_client', color: '#F59E0B', position: 2 },
+        { name: 'Completed', status_key: 'completed', color: '#10B981', position: 3 },
+        { name: 'Closed', status_key: 'closed', color: '#EF4444', position: 4 },
+      ];
+
+      console.log('Creating columns...');
+      for (const col of defaultColumns) {
+        const createdCol = await taskApi.createColumn({
+          ...col,
+          board: created.id,
+        } as any);
+        console.log('Column created:', createdCol);
+      }
+
+      console.log('Refetching boards...');
+      await fetchBoards();
+      console.log('Board creation complete, returning ID:', created.id);
+      setIsCreatingBoard(false);
+      return created.id;
+    } catch (error: any) {
+      console.error('Failed to create default board:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      if (setError) setError('Failed to create default board: ' + (error.message || 'Unknown error'));
+      setIsCreatingBoard(false);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    console.log('KanbanBoard useEffect triggered, initialized:', initialized.current, 'isLoading:', isLoading);
     if (initialized.current) return;
     initialized.current = true;
 
     const init = async () => {
+      console.log('Running init...', 'source:', source);
       try {
+        // For service requests, fetch from service request kanban API
+        if (source === 'service-requests') {
+          console.log('Fetching service requests kanban...');
+          const serviceKanban = await ServiceRequestApi.getKanban();
+          console.log('Service requests kanban data:', serviceKanban);
+          // Set the kanban board from service requests
+          setLocalKanbanBoard(serviceKanban);
+          return;
+        }
+
+        // For tasks, use the original logic
         await waitForBackendSafe();
+        console.log('Backend ready, fetching boards...');
 
-        const boards = await fetchBoards();
+        let boards: any[] = [];
+        try {
+          boards = await fetchBoards();
+        } catch (e) {
+          console.log('Error fetching boards, will try to create default:', e);
+          boards = [];
+        }
+        console.log('Boards fetched:', boards, 'length:', boards?.length);
 
-        if (boards?.length > 0) {
-          const boardId = selectedBoardId || boards[0].id;
+        // Use createDefaultBoard which handles both new and existing boards
+        const boardId = await createDefaultBoard();
+        if (boardId) {
           await fetchKanbanBoard(boardId);
+        } else {
+          // No boards exist - automatically create default board with 4 columns
+          console.log('No boards exist, creating default board...');
+          const boardId = await createDefaultBoard();
+          console.log('Default board created, ID:', boardId);
+          if (boardId) {
+            console.log('Fetching kanban board with ID:', boardId);
+            await fetchKanbanBoard(boardId);
+            console.log('Kanban board fetched, kanbanBoard:', kanbanBoard);
+          } else {
+            console.error('Failed to create default board, boardId is null');
+          }
         }
       } catch (err) {
         console.error("Init failed:", err);
@@ -107,46 +215,6 @@ useEffect(() => {
     setShowCreateModal(true);
   }, []);
 
-  // Create default board with columns
-  const createDefaultBoard = async () => {
-
-    try {
-      await waitForBackendSafe();
-      const existingBoards = await taskApi.getBoards() as any[];
-      let board = existingBoards.find((b) => b.name === 'Main Board');
-
-      if (!board) {
-        const created = await taskApi.createBoard({ name: 'Main Board', is_default: true });
-        board = created;
-      }
-
-      if (!board) {
-        throw new Error('Unable to determine board id after create');
-      }
-
-      const defaultColumns = [
-        { name: 'To Do', status_key: 'pending', color: '#6B7280', position: 0 },
-        { name: 'In Progress', status_key: 'in_progress', color: '#3B82F6', position: 1 },
-        { name: 'Waiting for Client', status_key: 'waiting_client', color: '#F59E0B', position: 2 },
-        { name: 'Completed', status_key: 'completed', color: '#10B981', position: 3 },
-        { name: 'Closed', status_key: 'closed', color: '#6B7280', position: 4 },
-      ];
-
-      for (const col of defaultColumns) {
-        await taskApi.createColumn({
-          ...col,
-          board: board.id,
-        } as any);
-      }
-
-      await fetchBoards();
-      await fetchKanbanBoard(board.id);
-    } catch (error: any) {
-      console.error('Failed to create default board:', error);
-      if (setError) setError('Failed to create default board. Please try again.');
-    }
-  };
-
   // Priority color mapping
   const getPriorityColor = (priority: string): string => {
     switch (priority) {
@@ -170,7 +238,14 @@ useEffect(() => {
     }
   };
 
-  if (isLoading && !kanbanBoard) {
+  // Determine which kanban board to display based on source
+  const displayBoard = source === 'service-requests' ? localKanbanBoard : kanbanBoard;
+  
+  // Show loading spinner only if we're actively loading and there's no board data
+  const showLoading = isLoading && (!displayBoard || !displayBoard.columns || displayBoard.columns.length === 0);
+  console.log('Render check - isLoading:', isLoading, 'displayBoard:', displayBoard, 'showLoading:', showLoading, 'source:', source);
+  
+  if (showLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -179,28 +254,17 @@ useEffect(() => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-800">Task Board</h1>
-            <select
-              value={selectedBoardId || ''}
-              onChange={(e) => setSelectedBoard(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={boardsList.length === 0}
-            >
-              {boardsList.length > 0 ? (
-                boardsList.map((board) => (
-                  <option key={board.id} value={board.id}>
-                    {board.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">No boards available</option>
-              )}
-            </select>
+            <h1 className="text-2xl font-bold text-gray-800">{source === 'service-requests' ? 'Service Requests' : 'Task'} Board</h1>
+            {displayBoard && (
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-sm">
+                {displayBoard.name}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -215,9 +279,9 @@ useEffect(() => {
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto p-6">
-        {kanbanBoard && kanbanBoard.columns.length > 0 ? (
+        {displayBoard && displayBoard.columns && displayBoard.columns.length > 0 ? (
           <div className="flex gap-4 h-full min-w-max">
-            {kanbanBoard.columns.map((column) => (
+            {displayBoard.columns.map((column: any) => (
               <div
                 key={column.id}
                 className="flex flex-col w-80 bg-gray-200 rounded-lg"
@@ -256,7 +320,7 @@ useEffect(() => {
 
                 {/* Tasks */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                  {column.tasks?.map((task) => (
+                  {column.tasks?.map((task: any) => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -287,16 +351,10 @@ useEffect(() => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">No Board Found</h2>
-              <p className="text-gray-500 mb-4">Click below to create your first board with default columns</p>
-              <button
-                onClick={createDefaultBoard}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Create Default Board
-              </button>
-            </div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-gray-500 mt-4">
+              {isCreatingBoard ? 'Creating your task board...' : 'Setting up your task board...'}
+            </p>
           </div>
         )}
       </div>
@@ -319,3 +377,4 @@ useEffect(() => {
 };
 
 export default KanbanBoard;
+

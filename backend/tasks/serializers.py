@@ -21,13 +21,12 @@ class TaskBoardSerializer(serializers.ModelSerializer):
 
 class TaskColumnSerializer(serializers.ModelSerializer):
     tasks_count = serializers.SerializerMethodField()
+    tenant = serializers.PrimaryKeyRelatedField(read_only=True)
     
     class Meta:
         model = TaskColumn
         fields = '__all__'
-        extra_kwargs = {
-            'tenant': {'required': False},
-        }
+        read_only_fields = ('tenant',)
     
     def get_tasks_count(self, obj):
         return obj.tasks.count()

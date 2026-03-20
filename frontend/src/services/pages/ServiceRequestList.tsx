@@ -7,7 +7,6 @@ import { Plus, User, ArrowRight, Filter, X } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Pending', color: '#f59e0b', bg: '#fffbeb' },
-  assigned: { label: 'Assigned', color: '#2563eb', bg: '#eff6ff' },
   in_progress: { label: 'In Progress', color: '#7c3aed', bg: '#f5f3ff' },
   waiting_client: { label: 'Waiting Client', color: '#ea580c', bg: '#fff7ed' },
   completed: { label: 'Completed', color: '#16a34a', bg: '#f0fdf4' },
@@ -189,7 +188,7 @@ const ServiceRequestList: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div>
 
       {/* Filters */}
       <div className="card mb-6">
@@ -220,19 +219,6 @@ const ServiceRequestList: React.FC = () => {
             <option value="urgent">Urgent</option>
           </select>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {Object.entries(statusConfig).map(([key, config]) => {
-          const count = serviceRequests.filter(r => r.status === key).length;
-          return (
-            <div key={key} className="card !p-4" style={{ backgroundColor: config.bg }}>
-              <p className="text-sm font-semibold" style={{ color: config.color }}>{config.label}</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: config.color }}>{count}</p>
-            </div>
-          );
-        })}
       </div>
 
       {/* Table */}

@@ -60,7 +60,7 @@ const ServiceDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-4">Role-driven Operations Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {cards.map((card) => (

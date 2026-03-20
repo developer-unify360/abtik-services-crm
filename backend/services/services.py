@@ -99,11 +99,24 @@ class ServiceRequestService:
     def assign_task(service_request, assigned_to_user, user):
         """
         Assigns a service request to a specific user (IT Staff).
+        Sets status to 'in_progress' instead of 'assigned'.
         """
         service_request.assigned_to = assigned_to_user
         if service_request.status == 'pending':
-            service_request.status = 'assigned'
+            service_request.status = 'in_progress'
         service_request.save()
+
+        # If there's an associated task, move it to In Progress column
+        if hasattr(service_request, 'task') and service_request.task:
+            from tasks.models import TaskColumn
+            in_progress_column = TaskColumn.objects.filter(
+                board=service_request.task.board,
+                status_key='in_progress'
+            ).first()
+            if in_progress_column:
+                service_request.task.column = in_progress_column
+                service_request.task.status = 'in_progress'
+                service_request.task.save()
 
         AuditLogService.log_action(
             tenant_id=service_request.tenant_id,
@@ -118,8 +131,7 @@ class ServiceRequestService:
         return service_request
 
     STATUS_TRANSITIONS = {
-        'pending': ['assigned', 'closed'],
-        'assigned': ['in_progress', 'waiting_client', 'closed'],
+        'pending': ['in_progress', 'closed'],
         'in_progress': ['waiting_client', 'completed', 'closed'],
         'waiting_client': ['in_progress', 'completed', 'closed'],
         'completed': ['closed'],
@@ -183,23 +195,26 @@ class ServiceRequestService:
         if not column:
             column = TaskColumn.objects.filter(board=board).order_by('position').first()
 
+        # Get the In Progress column
+        in_progress_column = TaskColumn.objects.filter(board=board, status_key='in_progress').first()
+        
         task = Task.objects.create(
             tenant_id=service_request.tenant_id,
             board=board,
-            column=column,
+            column=in_progress_column or column,
             title=f"{service_request.service.name} for {service_request.booking.client.client_name}",
             description=f"Auto-created task from Service Request {service_request.id}",
             task_type='task',
-            status='pending',
+            status='in_progress',
             priority=service_request.priority,
             reporter=user,
             assignee=service_request.assigned_to,
             service_request=service_request
         )
 
-        # Sync service request status
+        # Sync service request status - set to in_progress instead of assigned
         if service_request.status == 'pending':
-            service_request.status = 'assigned'
+            service_request.status = 'in_progress'
             service_request.save()
 
         TaskActivity.objects.create(

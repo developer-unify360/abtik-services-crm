@@ -176,4 +176,9 @@ export const ServiceRequestApi = {
     // normalize output
     return response.data.data?.task || response.data;
   },
+
+  getKanban: async () => {
+    const response = await apiClient.get('/service-requests/kanban/');
+    return response.data.data;
+  },
 };

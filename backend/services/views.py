@@ -164,6 +164,95 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @action(detail=False, methods=['get'])
+    def kanban(self, request):
+        """
+        Get service requests in kanban format - grouped by status
+        """
+        queryset = self.get_queryset()
+        
+        # Group by status
+        from django.db.models import Case, When, Value, IntegerField
+        
+        status_order = Case(
+            When(status='pending', then=Value(0)),
+            When(status='in_progress', then=Value(1)),
+            When(status='waiting_client', then=Value(2)),
+            When(status='completed', then=Value(3)),
+            When(status='closed', then=Value(4)),
+            output_field=IntegerField(),
+        )
+        
+        queryset = queryset.annotate(status_order=status_order).order_by('status_order', '-priority', '-created_at')
+        
+        # Serialize with more details for kanban
+        serializer = ServiceRequestSerializer(queryset, many=True)
+        
+        # Group into columns
+        columns = {
+            'pending': [],
+            'in_progress': [],
+            'waiting_client': [],
+            'completed': [],
+            'closed': [],
+        }
+        
+        for item in serializer.data:
+            status = item.get('status', 'pending')
+            if status in columns:
+                columns[status].append(item)
+        
+        return Response({
+            "success": True,
+            "data": {
+                "id": "service-requests",
+                "name": "Service Requests",
+                "columns": [
+                    {
+                        "id": "pending",
+                        "name": "Pending",
+                        "status_key": "pending",
+                        "color": "#f59e0b",
+                        "position": 0,
+                        "tasks": columns['pending']
+                    },
+                    {
+                        "id": "in_progress",
+                        "name": "In Progress",
+                        "status_key": "in_progress",
+                        "color": "#7c3aed",
+                        "position": 1,
+                        "tasks": columns['in_progress']
+                    },
+                    {
+                        "id": "waiting_client",
+                        "name": "Waiting Client",
+                        "status_key": "waiting_client",
+                        "color": "#ea580c",
+                        "position": 2,
+                        "tasks": columns['waiting_client']
+                    },
+                    {
+                        "id": "completed",
+                        "name": "Completed",
+                        "status_key": "completed",
+                        "color": "#16a34a",
+                        "position": 3,
+                        "tasks": columns['completed']
+                    },
+                    {
+                        "id": "closed",
+                        "name": "Closed",
+                        "status_key": "closed",
+                        "color": "#64748b",
+                        "position": 4,
+                        "tasks": columns['closed']
+                    }
+                ]
+            },
+            "message": "Service requests kanban data retrieved successfully"
+        })
+
     @action(detail=True, methods=['put'])
     def assign(self, request, pk=None):
         if not CanAssignTasks().has_permission(request, self):
