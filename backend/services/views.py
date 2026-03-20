@@ -135,9 +135,13 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
         if role_name == 'IT Staff':
             queryset = queryset.filter(assigned_to=self.request.user)
         elif role_name == 'BDE':
-            queryset = queryset.filter(
-                models.Q(booking__bde_user=self.request.user) | models.Q(created_by=self.request.user)
-            )
+            bde_name = getattr(self.request.user, 'name', None)
+            if bde_name:
+                queryset = queryset.filter(
+                    models.Q(booking__bde_name=bde_name) | models.Q(created_by=self.request.user)
+                )
+            else:
+                queryset = queryset.filter(created_by=self.request.user)
         # IT Manager / Admin / Super Admin can see all tenant requests
 
         return queryset

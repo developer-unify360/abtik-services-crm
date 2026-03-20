@@ -106,6 +106,15 @@ export const BookingService = {
     return response.data.data || response.data;
   },
 
+  createPublicFull: async (data: BookingFullFormData) => {
+    const response = await apiClient.post('/bookings/public-form/', toMultipartPayload(data), {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data || response.data;
+  },
+
   updateFull: async (id: string, data: BookingFullFormData) => {
     const response = await apiClient.put(`/bookings/${id}/bde-form/`, toMultipartPayload(data), {
       headers: {

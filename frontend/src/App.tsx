@@ -4,7 +4,6 @@ import LoginPage from './auth/LoginPage';
 import PrivateRoute from './auth/PrivateRoute';
 import { useAuthStore } from './auth/authStore';
 import { getDefaultRouteForUser } from './auth/roleUtils';
-import { getStoredAuthData, userNeedsTenantSelection } from './auth/tenantSelection';
 import Layout from './components/Layout';
 import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
@@ -19,11 +18,8 @@ import ServiceDashboard from './services/pages/ServiceDashboard';
 
 function HomeRedirect() {
   const user = useAuthStore((state) => state.user);
-  const stored = getStoredAuthData();
-  const currentUser = user || stored?.user || stored || null;
-  const nextRoute = userNeedsTenantSelection(currentUser, stored)
-    ? '/tenants'
-    : getDefaultRouteForUser(currentUser);
+  const currentUser = user || null;
+  const nextRoute = getDefaultRouteForUser(currentUser);
 
   return <Navigate to={nextRoute} replace />;
 }
@@ -34,13 +30,14 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
+        <Route path="/bookings/new" element={<BookingFormPage />} />
+
         <Route element={<PrivateRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/dashboard" element={<ServiceDashboard />} />
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/bookings" element={<BookingListPage />} />
-            <Route path="/bookings/new" element={<BookingFormPage />} />
             <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
             <Route path="/users" element={<UserListPage />} />
             <Route path="/tenants" element={<TenantListPage />} />

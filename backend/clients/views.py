@@ -91,7 +91,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         try:
             result = ClientService.create_client_with_booking_and_request(
-                tenant_id=request.tenant_id,
+                tenant_id=1,
                 client_data=client_serializer.validated_data,
                 booking_data=booking_serializer.validated_data,
                 request_data=request_payload,

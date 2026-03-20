@@ -24,6 +24,7 @@ interface BookingFormState {
   email: string;
   mobile: string;
   industry: string;
+  bde_name: string;
   payment_type: string;
   bank: string;
   booking_date: string;
@@ -50,6 +51,7 @@ const emptyFormState = (): BookingFormState => ({
   email: '',
   mobile: '',
   industry: '',
+  bde_name: '',
   payment_type: 'new_payment',
   bank: '',
   booking_date: new Date().toISOString().split('T')[0],
@@ -128,6 +130,7 @@ const BookingFormPage: React.FC = () => {
   const navigate = useNavigate();
   const { bookingId } = useParams<{ bookingId: string }>();
   const authUser = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const isEditMode = Boolean(bookingId);
   const [formState, setFormState] = useState<BookingFormState>(emptyFormState);
@@ -153,7 +156,9 @@ const BookingFormPage: React.FC = () => {
         setBanks(bankData);
 
         if (!isEditMode || !bookingId) {
-          setDisplayBdeName(authUser?.name || '');
+          const initialBdeName = authUser?.name || '';
+          setDisplayBdeName(initialBdeName);
+          setFormState((prev) => ({ ...prev, bde_name: initialBdeName }));
           setLoading(false);
           return;
         }
@@ -179,6 +184,7 @@ const BookingFormPage: React.FC = () => {
           email: client.email || '',
           mobile: client.mobile || '',
           industry: client.industry || '',
+          bde_name: booking.bde_name || authUser?.name || '',
           payment_type: booking.payment_type || 'new_payment',
           bank: booking.bank || '',
           booking_date: booking.booking_date || '',
@@ -244,6 +250,7 @@ const BookingFormPage: React.FC = () => {
           industry: formState.industry,
         },
         booking: {
+          bde_name: formState.bde_name,
           payment_type: formState.payment_type,
           bank: formState.bank || null,
           booking_date: formState.booking_date,
@@ -271,7 +278,11 @@ const BookingFormPage: React.FC = () => {
       if (isEditMode && bookingId) {
         await BookingService.updateFull(bookingId, payload);
       } else {
-        await BookingService.createFull(payload);
+        if (isAuthenticated) {
+          await BookingService.createFull(payload);
+        } else {
+          await BookingService.createPublicFull(payload);
+        }
       }
 
       navigate('/bookings', {
@@ -339,18 +350,6 @@ const BookingFormPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Booking Workspace</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            {isEditMode ? 'Edit Booking Form' : 'New Booking Form'}
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Capture booking, client, service, payment, and attachment details in one place.
-          </p>
-        </div>
-        <BookingNavigation />
-      </div>
 
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-cyan-600 px-6 py-8 text-white">
@@ -372,12 +371,15 @@ const BookingFormPage: React.FC = () => {
           ) : (
             <form className="space-y-6" onSubmit={handleSubmit}>
               <SectionCard title="Booking Details" icon={<CalendarDays size={20} />}>
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2 p-3">
                   <Field label="BDE Name">
                     <input
-                      className="input-field bg-slate-100"
-                      value={displayBdeName}
-                      readOnly
+                      className="input-field"
+                      value={formState.bde_name}
+                      onChange={(event) => {
+                        handleFieldChange('bde_name', event.target.value);
+                        setDisplayBdeName(event.target.value);
+                      }}
                     />
                   </Field>
                   <Field label="Bank Account">
@@ -427,7 +429,7 @@ const BookingFormPage: React.FC = () => {
               </SectionCard>
 
               <SectionCard title="Client Information" icon={<UserRound size={20} />}>
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-5 md:grid-cols-2 p-3 xl:grid-cols-3">
                   <Field label="B2B Client Name" required>
                     <input
                       className="input-field"
@@ -481,7 +483,7 @@ const BookingFormPage: React.FC = () => {
               </SectionCard>
 
               <SectionCard title="Service Details" icon={<Wrench size={20} />}>
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2 p-3">
                   <Field label="Service">
                     <select
                       className="input-field"
@@ -505,7 +507,7 @@ const BookingFormPage: React.FC = () => {
               </SectionCard>
 
               <SectionCard title="Payment Information" icon={<IndianRupee size={20} />}>
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2 p-3">
                   <Field label="Total Payment Amount">
                     <input
                       type="number"
@@ -587,7 +589,7 @@ const BookingFormPage: React.FC = () => {
               </SectionCard>
 
               <SectionCard title="Additional Information" icon={<FileText size={20} />}>
-                <div className="space-y-5">
+                <div className="space-y-5 p-3">
                   <Field label="Upload File(s) or Folder">
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
                       <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-700">

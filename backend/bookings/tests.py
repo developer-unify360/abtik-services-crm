@@ -27,7 +27,7 @@ class BookingModelTest(TestCase):
         booking = Booking.objects.create(
             tenant=self.tenant,
             client=self.client_record,
-            bde_user=self.user,
+            bde_name=self.user.name,
             payment_type='new_payment',
             booking_date=date.today(),
             status='pending',
@@ -40,7 +40,7 @@ class BookingModelTest(TestCase):
         booking = Booking.objects.create(
             tenant=self.tenant,
             client=self.client_record,
-            bde_user=self.user,
+            bde_name=self.user.name,
             payment_type='new_payment',
             booking_date=date.today(),
             status='pending',
@@ -60,7 +60,7 @@ class BookingModelTest(TestCase):
         )
         Booking.objects.create(
             tenant=self.tenant, client=self.client_record,
-            bde_user=self.user, payment_type='new_payment',
+            bde_name=self.user.name, payment_type='new_payment',
             booking_date=date.today(),
         )
         Booking.objects.create(
@@ -108,7 +108,7 @@ class BookingAPITest(TestCase):
     def test_list_bookings(self):
         Booking.objects.create(
             tenant=self.tenant, client=self.client_record,
-            bde_user=self.bde_user, payment_type='new_payment',
+            bde_name=self.bde_user.name, payment_type='new_payment',
             booking_date=date.today(),
         )
         self.api_client.force_authenticate(user=self.bde_user)
@@ -116,3 +116,33 @@ class BookingAPITest(TestCase):
         
         response = self.api_client.get('/api/v1/bookings/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_public_form_create_uses_first_tenant_if_1_missing(self):
+        # run as anonymous request (AllowAny endpoint) with no Tenant header
+        payload = {
+            'client': {
+                'client_name': 'Public Client',
+                'company_name': 'Public Corp',
+                'email': 'public@test.com',
+                'mobile': '9999999999',
+                'industry': 'Public',
+            },
+            'booking': {
+                'payment_type': 'new_payment',
+                'booking_date': str(date.today()),
+                'status': 'pending',
+            },
+        }
+
+        response = self.api_client.post('/api/v1/bookings/public-form/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data.get('success'))
+
+        client_id = response.data['data']['client']['id']
+        booking_id = response.data['data']['booking']['id']
+
+        client_obj = Client.objects.get(id=client_id)
+        booking_obj = Booking.objects.get(id=booking_id)
+
+        self.assertEqual(client_obj.tenant, self.tenant)
+        self.assertEqual(booking_obj.tenant, self.tenant)

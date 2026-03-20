@@ -5,7 +5,7 @@ from core.models import TenantAwareModel
 
 
 def booking_attachment_upload_to(instance, filename):
-    return f"bookings/attachments/{instance.tenant_id}/{filename}"
+    return f"bookings/attachments/{filename}"
 
 
 class Bank(TenantAwareModel):
@@ -53,12 +53,7 @@ class Booking(TenantAwareModel):
         on_delete=models.CASCADE,
         related_name='bookings',
     )
-    bde_user = models.ForeignKey(
-        'users.User',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='bde_bookings',
-    )
+    bde_name = models.CharField(max_length=255, null=True, blank=True)
     payment_type = models.CharField(max_length=30, choices=PAYMENT_TYPE_CHOICES)
     bank = models.ForeignKey(
         'Bank',

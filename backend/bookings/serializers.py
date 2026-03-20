@@ -19,16 +19,22 @@ class BookingSerializer(serializers.ModelSerializer):
     """Full booking serializer for detail views."""
     client_name = serializers.CharField(source='client.client_name', read_only=True)
     company_name = serializers.CharField(source='client.company_name', read_only=True)
-    bde_name = serializers.CharField(source='bde_user.name', read_only=True)
+    bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     bank_name = serializers.CharField(source='bank.bank_name', read_only=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if (not data.get('bde_name') or data.get('bde_name') == '') and getattr(instance, 'bde_name', None):
+            data['bde_name'] = instance.bde_name
+        return data
 
     class Meta:
         model = Booking
         fields = [
             'id', 'client', 'client_name', 'company_name',
-            'bde_user', 'bde_name',
+            'bde_name',
             'payment_type', 'payment_type_display',
             'bank', 'bank_name',
             'booking_date', 'payment_date',
@@ -40,7 +46,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'remarks', 'status', 'status_display',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'bde_user', 'bde_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class BookingListSerializer(serializers.ModelSerializer):
@@ -84,6 +90,7 @@ class BookingCreateUpdateSerializer(serializers.Serializer):
     attachment = serializers.FileField(required=False, allow_null=True)
     remove_attachment = serializers.BooleanField(required=False, default=False)
     remarks = serializers.CharField(required=False, allow_blank=True)
+    bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     status = serializers.ChoiceField(choices=Booking.STATUS_CHOICES, required=False, default='pending')
 
     def validate_booking_date(self, value):

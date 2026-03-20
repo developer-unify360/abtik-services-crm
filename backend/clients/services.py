@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from clients.models import Client
+from tenants.models import Tenant
 from audit.models import AuditLog
 from bookings.services import BookingService
 from services.services import ServiceRequestService
@@ -49,13 +50,25 @@ class ClientService:
     @transaction.atomic
     def create_client_with_booking_and_request(tenant_id, client_data, booking_data, request_data, user):
         """Create client, booking and service request in one call for BDE workflow."""
-        client = ClientService.create_client(tenant_id, client_data, user)
+        resolved_tenant_id = tenant_id or 1
+
+        if not Tenant.objects.filter(id=resolved_tenant_id).exists():
+            first_tenant = Tenant.objects.first()
+            if not first_tenant:
+                raise ValidationError("No tenant exists to associate client and booking with.")
+            resolved_tenant_id = first_tenant.id
+
+        client = ClientService.create_client(
+            tenant_id=resolved_tenant_id,
+            data=client_data,
+            user=user,
+        )
 
         # booking_data expects keys: payment_type, booking_date, payment_date, bank_account, remarks, status
         booking_payload = dict(booking_data)
         booking_payload['client_id'] = client.id
         booking = BookingService.create_booking(
-            tenant_id=tenant_id,
+            tenant_id=resolved_tenant_id,
             data=booking_payload,
             user=user,
         )
@@ -65,7 +78,7 @@ class ClientService:
             request_payload = dict(request_data)
             request_payload['booking'] = booking
             service_request = ServiceRequestService.create_request(
-                tenant_id=tenant_id,
+                tenant_id=resolved_tenant_id,
                 data=request_payload,
                 user=user,
             )
@@ -112,7 +125,13 @@ class ClientService:
         queryset = Client.tenant_objects.for_tenant(tenant_id).select_related('created_by')
 
         if user and getattr(user, 'role', None) and user.role.name == 'BDE':
-            queryset = queryset.filter(models.Q(created_by=user) | models.Q(bookings__bde_user=user)).distinct()
+            if getattr(user, 'name', None):
+                queryset = queryset.filter(
+                    models.Q(created_by=user) |
+                    models.Q(bookings__bde_name=user.name)
+                ).distinct()
+            else:
+                queryset = queryset.filter(created_by=user).distinct()
 
         if filters:
             if filters.get('company'):

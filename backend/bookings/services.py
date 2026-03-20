@@ -2,6 +2,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from bookings.models import Booking, Bank
 from clients.models import Client
+from tenants.models import Tenant
 from audit.models import AuditLog
 
 
@@ -43,19 +44,29 @@ class BookingService:
         Create a new booking record.
         Validates that the client belongs to the same tenant.
         """
+        resolved_tenant_id = tenant_id or 1
+        if not Tenant.objects.filter(id=resolved_tenant_id).exists():
+            first_tenant = Tenant.objects.first()
+            if not first_tenant:
+                raise ValidationError("No tenant exists to create a booking")
+            resolved_tenant_id = first_tenant.id
+
         # Verify client exists and belongs to the same tenant
         try:
-            client = Client.tenant_objects.for_tenant(tenant_id).get(id=data['client_id'])
+            client = Client.tenant_objects.for_tenant(resolved_tenant_id).get(id=data['client_id'])
         except Client.DoesNotExist:
             raise ValidationError("Client not found or does not belong to your organization.")
 
         # Resolve bank if provided
         bank = BookingService._resolve_bank(data)
 
+        # If user is present and has name, keep as bde_name to preserve legacy workflow.
+        bde_name = data.get('bde_name') or (getattr(user, 'name', None) if user else None)
+
         booking = Booking.objects.create(
             tenant_id=tenant_id,
             client=client,
-            bde_user=user,
+            bde_name=bde_name,
             payment_type=data['payment_type'],
             bank=bank,
             booking_date=data['booking_date'],
@@ -153,11 +164,15 @@ class BookingService:
         Supports: client_id, status, date_from, date_to
         """
         queryset = Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bde_user', 'bank'
+            'client', 'bank'
         )
 
         if user and getattr(user, 'role', None) and user.role.name == 'BDE':
-            queryset = queryset.filter(bde_user=user)
+            # For public form users, user may be None. For authenticated BDE users, use their name if available.
+            if user and getattr(user, 'name', None):
+                queryset = queryset.filter(bde_name=user.name)
+            else:
+                queryset = queryset.none()
 
         if filters:
             if filters.get('client_id'):
@@ -175,7 +190,7 @@ class BookingService:
     def get_booking(booking_id, tenant_id):
         """Get a single booking within a tenant."""
         return Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bde_user', 'bank'
+            'client', 'bank'
         ).get(id=booking_id)
 
     @staticmethod
