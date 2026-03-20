@@ -2,14 +2,12 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from bookings.models import Booking, Bank
 from clients.models import Client
-from tenants.models import Tenant
 from audit.models import AuditLog
 
 
 class BookingService:
     @staticmethod
     def _resolve_bank(data):
-        """Resolve bank from data - either UUID or None."""
         bank_id = data.get('bank')
         if bank_id:
             try:
@@ -23,48 +21,27 @@ class BookingService:
         if 'remaining_amount' in data:
             return data.get('remaining_amount')
 
-        total_payment_amount = data.get(
-            'total_payment_amount',
-            getattr(booking, 'total_payment_amount', None) if booking else None,
-        )
-        received_amount = data.get(
-            'received_amount',
-            getattr(booking, 'received_amount', None) if booking else None,
-        )
+        total = data.get('total_payment_amount', getattr(booking, 'total_payment_amount', None) if booking else None)
+        received = data.get('received_amount', getattr(booking, 'received_amount', None) if booking else None)
 
-        if total_payment_amount is not None and received_amount is not None:
-            return total_payment_amount - received_amount
+        if total is not None and received is not None:
+            return total - received
 
         return getattr(booking, 'remaining_amount', None) if booking else None
 
     @staticmethod
     @transaction.atomic
-    def create_booking(tenant_id, data, user):
-        """
-        Create a new booking record.
-        Validates that the client belongs to the same tenant.
-        """
-        resolved_tenant_id = tenant_id or 1
-        if not Tenant.objects.filter(id=resolved_tenant_id).exists():
-            first_tenant = Tenant.objects.first()
-            if not first_tenant:
-                raise ValidationError("No tenant exists to create a booking")
-            resolved_tenant_id = first_tenant.id
-
-        # Verify client exists and belongs to the same tenant
+    def create_booking(data, user):
+        """Create a new booking record."""
         try:
-            client = Client.tenant_objects.for_tenant(resolved_tenant_id).get(id=data['client_id'])
+            client = Client.objects.get(id=data['client_id'])
         except Client.DoesNotExist:
-            raise ValidationError("Client not found or does not belong to your organization.")
+            raise ValidationError("Client not found.")
 
-        # Resolve bank if provided
         bank = BookingService._resolve_bank(data)
-
-        # If user is present and has name, keep as bde_name to preserve legacy workflow.
         bde_name = data.get('bde_name') or (getattr(user, 'name', None) if user else None)
 
         booking = Booking.objects.create(
-            tenant_id=tenant_id,
             client=client,
             bde_name=bde_name,
             payment_type=data['payment_type'],
@@ -84,9 +61,7 @@ class BookingService:
             status=data.get('status', 'pending'),
         )
 
-        # Audit log
         AuditLog.objects.create(
-            tenant_id=tenant_id,
             user=user,
             action='booking.created',
             module='bookings',
@@ -94,7 +69,6 @@ class BookingService:
                 'booking_id': str(booking.id),
                 'client_id': str(client.id),
                 'client_name': client.client_name,
-                'payment_type': data['payment_type'],
             },
         )
 
@@ -104,8 +78,7 @@ class BookingService:
     def update_booking(booking, data, user):
         """Update an existing booking record."""
         updatable_fields = [
-            'payment_type', 'bank', 'booking_date',
-            'payment_date',
+            'payment_type', 'booking_date', 'payment_date',
             'total_payment_amount', 'total_payment_remarks',
             'received_amount', 'received_amount_remarks',
             'remaining_amount', 'remaining_amount_remarks',
@@ -116,12 +89,12 @@ class BookingService:
 
         for field in updatable_fields:
             if field in data:
-                if field == 'bank':
-                    booking.bank = BookingService._resolve_bank(data)
-                    updated_fields.append(field)
-                else:
-                    setattr(booking, field, data[field])
-                    updated_fields.append(field)
+                setattr(booking, field, data[field])
+                updated_fields.append(field)
+
+        if 'bank' in data:
+            booking.bank = BookingService._resolve_bank(data)
+            updated_fields.append('bank')
 
         if 'total_payment_amount' in data or 'received_amount' in data or 'remaining_amount' in data:
             booking.remaining_amount = BookingService._resolve_remaining_amount(data, booking)
@@ -134,45 +107,28 @@ class BookingService:
             booking.attachment = None
             updated_fields.append('attachment')
 
-        if 'attachment' in data:
-            if booking.attachment and data['attachment'] and booking.attachment.name != data['attachment'].name:
+        if 'attachment' in data and data['attachment']:
+            if booking.attachment:
                 booking.attachment.delete(save=False)
             booking.attachment = data['attachment']
             updated_fields.append('attachment')
 
-        booking.full_clean()  # Run model-level validation
+        booking.full_clean()
         booking.save()
 
         AuditLog.objects.create(
-            tenant=booking.tenant,
             user=user,
             action='booking.updated',
             module='bookings',
-            details={
-                'booking_id': str(booking.id),
-                'updated_fields': updated_fields,
-            },
+            details={'booking_id': str(booking.id), 'updated_fields': updated_fields},
         )
 
         return booking
 
     @staticmethod
-    def list_bookings(tenant_id, user=None, filters=None):
-        """
-        List bookings for a tenant with optional filtering.
-        BDE users see only their bookings.
-        Supports: client_id, status, date_from, date_to
-        """
-        queryset = Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bank'
-        )
-
-        if user and getattr(user, 'role', None) and user.role.name == 'BDE':
-            # For public form users, user may be None. For authenticated BDE users, use their name if available.
-            if user and getattr(user, 'name', None):
-                queryset = queryset.filter(bde_name=user.name)
-            else:
-                queryset = queryset.none()
+    def list_bookings(filters=None):
+        """List all bookings with optional filtering."""
+        queryset = Booking.objects.select_related('client', 'bank')
 
         if filters:
             if filters.get('client_id'):
@@ -187,23 +143,12 @@ class BookingService:
         return queryset
 
     @staticmethod
-    def get_booking(booking_id, tenant_id):
-        """Get a single booking within a tenant."""
-        return Booking.tenant_objects.for_tenant(tenant_id).select_related(
-            'client', 'bank'
-        ).get(id=booking_id)
-
-    @staticmethod
     def delete_booking(booking, user):
-        """Delete a booking. Only Super Admin/Admin can do this."""
+        """Delete a booking."""
         AuditLog.objects.create(
-            tenant=booking.tenant,
             user=user,
             action='booking.deleted',
             module='bookings',
-            details={
-                'booking_id': str(booking.id),
-                'client_name': booking.client.client_name,
-            },
+            details={'booking_id': str(booking.id)},
         )
         booking.delete()

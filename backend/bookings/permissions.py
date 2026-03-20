@@ -1,29 +1,13 @@
-from rest_framework import permissions
+from rest_framework.permissions import IsAuthenticated
 
 
-class CanCreateBooking(permissions.BasePermission):
-    """Super Admin, Admin, BDE can create bookings."""
-    def has_permission(self, request, view):
-        if not request.user or not request.user.role:
-            return False
-        if request.user.role.name == 'Super Admin':
-            return True
-        return request.user.role.permissions.filter(module='booking', action='create').exists()
+class CanCreateBooking(IsAuthenticated):
+    pass
 
 
-class CanUpdateBooking(permissions.BasePermission):
-    """Super Admin, Admin, BDE can update bookings."""
-    def has_permission(self, request, view):
-        if not request.user or not request.user.role:
-            return False
-        if request.user.role.name == 'Super Admin':
-            return True
-        return request.user.role.permissions.filter(module='booking', action='update').exists()
+class CanUpdateBooking(IsAuthenticated):
+    pass
 
 
-class CanDeleteBooking(permissions.BasePermission):
-    """Only Super Admin and Admin can delete bookings."""
-    def has_permission(self, request, view):
-        if not request.user or not request.user.role:
-            return False
-        return request.user.role.name in ['Super Admin', 'Admin']
+class CanDeleteBooking(IsAuthenticated):
+    pass

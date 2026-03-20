@@ -40,21 +40,19 @@ const HeaderBar: React.FC = () => {
           />
         </div>
 
-        {/* Role Badge */}
-        {user?.role && (
-          <span className="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-sm font-medium rounded-lg">
-            {user.role}
-          </span>
-        )}
-
         {/* Notifications */}
         <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
           <Bell size={20} />
         </button>
 
         {/* User Avatar */}
-        <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-          {user?.name?.[0] || 'U'}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+            {user?.name?.[0] || 'A'}
+          </div>
+          <span className="text-sm font-medium text-slate-700 hidden md:block">
+            {user?.name || 'Admin'}
+          </span>
         </div>
 
         {/* Logout */}

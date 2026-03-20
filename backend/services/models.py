@@ -1,8 +1,7 @@
 from django.db import models
-from core.models import TenantAwareModel
+from core.models import BaseModel
 
-
-class ServiceCategory(TenantAwareModel):
+class ServiceCategory(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
 
@@ -13,8 +12,7 @@ class ServiceCategory(TenantAwareModel):
     def __str__(self):
         return f"{self.name}"
 
-
-class Service(TenantAwareModel):
+class Service(BaseModel):
     category = models.ForeignKey(
         ServiceCategory,
         on_delete=models.SET_NULL,
@@ -31,8 +29,7 @@ class Service(TenantAwareModel):
     def __str__(self):
         return f"{self.name} ({self.category.name})" if self.category else self.name
 
-
-class ServiceRequest(TenantAwareModel):
+class ServiceRequest(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('assigned', 'Assigned'),
@@ -82,7 +79,6 @@ class ServiceRequest(TenantAwareModel):
         indexes = [
             models.Index(fields=['status'], name='idx_service_req_status'),
             models.Index(fields=['assigned_to'], name='idx_service_req_assigned'),
-            models.Index(fields=['tenant', 'status'], name='idx_service_req_tenant_status'),
         ]
 
     def __str__(self):

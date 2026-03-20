@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Filter, PencilLine } from 'lucide-react';
+import { ExternalLink, Filter, PencilLine } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import BookingNavigation from './BookingNavigation';
 import { BookingService, type Booking } from './BookingService';
 
 const statusColors: Record<string, { bg: string; color: string; label: string }> = {
@@ -81,15 +80,22 @@ const BookingListPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Booking Workspace</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Booking List</h1>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Bookings</h1>
           <p className="mt-2 text-sm text-slate-600">
-            BDE users can view, create, and edit bookings from here. Delete is intentionally not available.
+            All bookings submitted through the BDE form. You can view and edit any booking.
           </p>
         </div>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <BookingNavigation />
+          <a
+            href="/bookings/new"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 transition-colors"
+          >
+            <ExternalLink size={16} />
+            Open Booking Form
+          </a>
         </div>
       </div>
 
@@ -114,7 +120,7 @@ const BookingListPage: React.FC = () => {
             </select>
           </div>
           <p className="text-sm text-slate-500">
-            Showing tenant-scoped bookings with BDE-specific access control.
+            All bookings from the public BDE form.
           </p>
         </div>
       </div>

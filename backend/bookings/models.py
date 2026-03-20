@@ -1,19 +1,19 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from core.models import TenantAwareModel
+from core.models import BaseModel
 
 
 def booking_attachment_upload_to(instance, filename):
     return f"bookings/attachments/{filename}"
 
 
-class Bank(TenantAwareModel):
+class Bank(BaseModel):
     """
-    Represents a bank with account details for booking transactions.
+    Represents a bank account used for booking transactions.
     """
     bank_name = models.CharField(max_length=200)
-    account_number = models.CharField(max_length=50)
+    account_number = models.CharField(max_length=50, unique=True)
     branch_name = models.CharField(max_length=200, blank=True)
     ifsc_code = models.CharField(max_length=20, blank=True)
     account_holder_name = models.CharField(max_length=200, blank=True)
@@ -21,15 +21,14 @@ class Bank(TenantAwareModel):
 
     class Meta:
         ordering = ['bank_name', 'account_number']
-        unique_together = [['tenant', 'bank_name', 'account_number']]
 
     def __str__(self):
         return f"{self.bank_name} - {self.account_number}"
 
 
-class Booking(TenantAwareModel):
+class Booking(BaseModel):
     """
-    Represents a service engagement/booking initiated by BDE for a client.
+    Represents a service engagement/booking created from the BDE form.
     """
 
     PAYMENT_TYPE_CHOICES = [
@@ -85,7 +84,6 @@ class Booking(TenantAwareModel):
         indexes = [
             models.Index(fields=['client'], name='idx_booking_client'),
             models.Index(fields=['status'], name='idx_booking_status'),
-            models.Index(fields=['tenant', 'booking_date'], name='idx_booking_tenant_date'),
         ]
 
     def clean(self):
@@ -95,10 +93,8 @@ class Booking(TenantAwareModel):
             raise ValidationError({'payment_date': 'Payment date cannot be in the future.'})
 
         amount_fields = [
-            'total_payment_amount',
-            'received_amount',
-            'remaining_amount',
-            'after_fund_disbursement_percentage',
+            'total_payment_amount', 'received_amount',
+            'remaining_amount', 'after_fund_disbursement_percentage',
         ]
         for field_name in amount_fields:
             value = getattr(self, field_name)

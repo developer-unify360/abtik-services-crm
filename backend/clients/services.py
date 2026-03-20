@@ -1,7 +1,6 @@
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from clients.models import Client
-from tenants.models import Tenant
 from audit.models import AuditLog
 from bookings.services import BookingService
 from services.services import ServiceRequestService
@@ -10,18 +9,13 @@ from services.services import ServiceRequestService
 class ClientService:
     @staticmethod
     @transaction.atomic
-    def create_client(tenant_id, data, user):
-        """
-        Create a new client record.
-        Per Workflow Document: client creation triggers booking + service request generation.
-        Booking creation is handled separately in the booking module.
-        """
-        # Check for duplicate email within the tenant
-        if Client.tenant_objects.for_tenant(tenant_id).filter(email=data['email']).exists():
-            raise ValidationError("A client with this email already exists in your organization.")
+    def create_client(data, user):
+        """Create a new client record."""
+        # Check for duplicate email
+        if Client.objects.filter(email=data['email']).exists():
+            raise ValidationError("A client with this email already exists.")
 
         client = Client.objects.create(
-            tenant_id=tenant_id,
             client_name=data['client_name'],
             company_name=data['company_name'],
             gst_pan=data.get('gst_pan', ''),
@@ -31,16 +25,13 @@ class ClientService:
             created_by=user,
         )
 
-        # Audit log
         AuditLog.objects.create(
-            tenant_id=tenant_id,
             user=user,
             action='client.created',
             module='clients',
             details={
                 'client_id': str(client.id),
                 'client_name': client.client_name,
-                'company_name': client.company_name,
             },
         )
 
@@ -48,37 +39,30 @@ class ClientService:
 
     @staticmethod
     @transaction.atomic
-    def create_client_with_booking_and_request(tenant_id, client_data, booking_data, request_data, user):
-        """Create client, booking and service request in one call for BDE workflow."""
-        resolved_tenant_id = tenant_id or 1
+    def create_client_with_booking_and_request(client_data, booking_data, request_data, user):
+        """Create or update client, then create booking and optional service request."""
+        email = client_data.get('email')
+        mobile = client_data.get('mobile')
+        
+        # Try to find existing client by email or mobile
+        client = Client.objects.filter(models.Q(email=email) | models.Q(mobile=mobile)).first()
+        
+        if client:
+            # Update existing client with latest info
+            client = ClientService.update_client(client, client_data, user=user)
+        else:
+            # Create new client
+            client = ClientService.create_client(data=client_data, user=user)
 
-        if not Tenant.objects.filter(id=resolved_tenant_id).exists():
-            first_tenant = Tenant.objects.first()
-            if not first_tenant:
-                raise ValidationError("No tenant exists to associate client and booking with.")
-            resolved_tenant_id = first_tenant.id
-
-        client = ClientService.create_client(
-            tenant_id=resolved_tenant_id,
-            data=client_data,
-            user=user,
-        )
-
-        # booking_data expects keys: payment_type, booking_date, payment_date, bank_account, remarks, status
         booking_payload = dict(booking_data)
         booking_payload['client_id'] = client.id
-        booking = BookingService.create_booking(
-            tenant_id=resolved_tenant_id,
-            data=booking_payload,
-            user=user,
-        )
+        booking = BookingService.create_booking(data=booking_payload, user=user)
 
         service_request = None
         if request_data:
             request_payload = dict(request_data)
             request_payload['booking'] = booking
             service_request = ServiceRequestService.create_request(
-                tenant_id=resolved_tenant_id,
                 data=request_payload,
                 user=user,
             )
@@ -103,35 +87,18 @@ class ClientService:
         client.save()
 
         AuditLog.objects.create(
-            tenant=client.tenant,
             user=user,
             action='client.updated',
             module='clients',
-            details={
-                'client_id': str(client.id),
-                'updated_fields': updated_fields,
-            },
+            details={'client_id': str(client.id), 'updated_fields': updated_fields},
         )
 
         return client
 
     @staticmethod
-    def list_clients(tenant_id, user=None, filters=None):
-        """
-        List clients for a tenant with optional filtering.
-        For BDE users return only clients they created (and those mapped to their bookings).
-        Supports: company, industry, date_from, date_to, search
-        """
-        queryset = Client.tenant_objects.for_tenant(tenant_id).select_related('created_by')
-
-        if user and getattr(user, 'role', None) and user.role.name == 'BDE':
-            if getattr(user, 'name', None):
-                queryset = queryset.filter(
-                    models.Q(created_by=user) |
-                    models.Q(bookings__bde_name=user.name)
-                ).distinct()
-            else:
-                queryset = queryset.filter(created_by=user).distinct()
+    def list_clients(filters=None):
+        """List all clients with optional filtering."""
+        queryset = Client.objects.select_related('created_by')
 
         if filters:
             if filters.get('company'):
@@ -153,21 +120,12 @@ class ClientService:
         return queryset
 
     @staticmethod
-    def get_client(client_id, tenant_id):
-        """Get a single client within a tenant."""
-        return Client.tenant_objects.for_tenant(tenant_id).select_related('created_by').get(id=client_id)
-
-    @staticmethod
     def delete_client(client, user):
-        """Hard delete a client. Only Super Admin/Admin can do this."""
+        """Delete a client record."""
         AuditLog.objects.create(
-            tenant=client.tenant,
             user=user,
             action='client.deleted',
             module='clients',
-            details={
-                'client_id': str(client.id),
-                'client_name': client.client_name,
-            },
+            details={'client_id': str(client.id), 'client_name': client.client_name},
         )
         client.delete()

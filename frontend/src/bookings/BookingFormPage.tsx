@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, FileText, IndianRupee, Save, Upload, UserRound, Wrench } from 'lucide-react';
+import { CalendarDays, CheckCircle, FileText, IndianRupee, Save, Upload, UserRound, Wrench } from 'lucide-react';
 
 import { useAuthStore } from '../auth/authStore';
-import BookingNavigation from './BookingNavigation';
 import { BookingService } from './BookingService';
 import { ClientService } from '../clients/ClientService';
 import { ServiceApi, ServiceRequestApi, type Service, type ServiceRequest } from '../services/api/ServiceApi';
@@ -141,6 +140,7 @@ const BookingFormPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
     const loadPage = async () => {
@@ -277,21 +277,22 @@ const BookingFormPage: React.FC = () => {
 
       if (isEditMode && bookingId) {
         await BookingService.updateFull(bookingId, payload);
+        navigate('/bookings', {
+          replace: true,
+          state: { toast: 'Booking updated successfully.', toastType: 'success' },
+        });
       } else {
         if (isAuthenticated) {
           await BookingService.createFull(payload);
+          navigate('/bookings', {
+            replace: true,
+            state: { toast: 'Booking created successfully.', toastType: 'success' },
+          });
         } else {
           await BookingService.createPublicFull(payload);
+          setSubmitSuccess(true);
         }
       }
-
-      navigate('/bookings', {
-        replace: true,
-        state: {
-          toast: isEditMode ? 'Booking updated successfully.' : 'Booking created successfully.',
-          toastType: 'success',
-        },
-      });
     } catch (error: any) {
       console.error('Booking form submission failed:', error);
       
@@ -348,13 +349,34 @@ const BookingFormPage: React.FC = () => {
   const attachmentName = formState.attachment?.name
     || (formState.existingAttachmentUrl ? decodeURIComponent(formState.existingAttachmentUrl.split('/').pop() || 'Current attachment') : '');
 
+  // Public submission success screen
+  if (submitSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 max-w-md w-full text-center space-y-5">
+          <CheckCircle size={56} className="mx-auto text-green-500" />
+          <h2 className="text-2xl font-bold text-slate-800">Booking Submitted!</h2>
+          <p className="text-slate-500 text-sm">
+            Your booking has been received successfully. Our team will get in touch with you shortly.
+          </p>
+          <button
+            onClick={() => { setSubmitSuccess(false); setFormState(emptyFormState()); }}
+            className="w-full rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800 transition-colors"
+          >
+            Submit Another Booking
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
 
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-cyan-600 px-6 py-8 text-white">
           <h2 className="text-2xl font-semibold">Abtik Booking Form</h2>
-          <p className="mt-2 text-sm text-blue-100">Effortlessly manage your bookings with the fields requested for the BDE workflow.</p>
+          <p className="mt-2 text-sm text-blue-100">Fill in the details below and our team will follow up with you shortly.</p>
         </div>
 
         <div className="p-6 lg:p-8">

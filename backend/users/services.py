@@ -1,10 +1,9 @@
 from django.core.exceptions import ValidationError
 from users.models import User
-from roles.models import Role
 
 class UserService:
     @staticmethod
-    def create_user(tenant_id, data):
+    def create_user(data):
         email = data.get('email')
         if User.objects.filter(email=email).exists():
             raise ValidationError("User with this email already exists.")
@@ -14,8 +13,7 @@ class UserService:
             email=email,
             name=data.get('name'),
             phone=data.get('phone'),
-            tenant_id=tenant_id,
-            role_id=data.get('role')
+            status=data.get('status', True)
         )
         if data.get('password'):
             user.set_password(data.get('password'))
@@ -29,8 +27,8 @@ class UserService:
             if field == 'password' and value:
                 user.set_password(value)
             elif field != 'password':
-                 if hasattr(user, field):
-                     setattr(user, field, value)
+                if hasattr(user, field):
+                    setattr(user, field, value)
         user.save()
         return user
 

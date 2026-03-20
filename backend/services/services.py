@@ -1,26 +1,25 @@
 from django.utils import timezone
 from .models import ServiceCategory, Service, ServiceRequest
 from django.core.exceptions import ValidationError
-from audit.services import AuditLogService
+from audit.models import AuditLog
 
 class ServiceManagementService:
     @staticmethod
-    def get_categories(tenant_id):
-        return ServiceCategory.tenant_objects.for_tenant(tenant_id)
+    def get_categories():
+        return ServiceCategory.objects.all()
 
     @staticmethod
-    def get_services(tenant_id, category_id=None):
-        queryset = Service.tenant_objects.for_tenant(tenant_id)
+    def get_services(category_id=None):
+        queryset = Service.objects.all()
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         return queryset
 
     @staticmethod
-    def create_category(tenant_id, data, user):
-        category = ServiceCategory.objects.create(tenant_id=tenant_id, **data)
-        AuditLogService.log_action(
-            tenant_id=tenant_id,
-            user_id=user.id,
+    def create_category(data, user):
+        category = ServiceCategory.objects.create(**data)
+        AuditLog.objects.create(
+            user=user,
             action='service_category.create',
             module='services',
             details={'category_id': str(category.id), 'name': category.name}
@@ -28,11 +27,10 @@ class ServiceManagementService:
         return category
 
     @staticmethod
-    def create_service(tenant_id, data, user):
-        service = Service.objects.create(tenant_id=tenant_id, **data)
-        AuditLogService.log_action(
-            tenant_id=tenant_id,
-            user_id=user.id,
+    def create_service(data, user):
+        service = Service.objects.create(**data)
+        AuditLog.objects.create(
+            user=user,
             action='service.create',
             module='services',
             details={'service_id': str(service.id), 'name': service.name}
@@ -42,8 +40,8 @@ class ServiceManagementService:
 
 class ServiceRequestService:
     @staticmethod
-    def list_requests(tenant_id, filters=None):
-        queryset = ServiceRequest.tenant_objects.for_tenant(tenant_id).select_related(
+    def list_requests(filters=None):
+        queryset = ServiceRequest.objects.all().select_related(
             'service', 'service__category', 'assigned_to', 'booking', 'booking__client'
         )
         
@@ -60,16 +58,14 @@ class ServiceRequestService:
         return queryset
 
     @staticmethod
-    def create_request(tenant_id, data, user):
+    def create_request(data, user):
         service_request = ServiceRequest.objects.create(
-            tenant_id=tenant_id, 
             status='pending',
             created_by=user,
             **data
         )
-        AuditLogService.log_action(
-            tenant_id=tenant_id,
-            user_id=user.id,
+        AuditLog.objects.create(
+            user=user,
             action='service_request.create',
             module='services',
             details={
@@ -86,9 +82,8 @@ class ServiceRequestService:
             setattr(service_request, key, value)
         service_request.save()
         
-        AuditLogService.log_action(
-            tenant_id=service_request.tenant_id,
-            user_id=user.id,
+        AuditLog.objects.create(
+            user=user,
             action='service_request.update',
             module='services',
             details={'request_id': str(service_request.id), 'updated_fields': list(data.keys())}
@@ -97,30 +92,13 @@ class ServiceRequestService:
 
     @staticmethod
     def assign_task(service_request, assigned_to_user, user):
-        """
-        Assigns a service request to a specific user (IT Staff).
-        Sets status to 'in_progress' instead of 'assigned'.
-        """
         service_request.assigned_to = assigned_to_user
         if service_request.status == 'pending':
             service_request.status = 'in_progress'
         service_request.save()
 
-        # If there's an associated task, move it to In Progress column
-        if hasattr(service_request, 'task') and service_request.task:
-            from tasks.models import TaskColumn
-            in_progress_column = TaskColumn.objects.filter(
-                board=service_request.task.board,
-                status_key='in_progress'
-            ).first()
-            if in_progress_column:
-                service_request.task.column = in_progress_column
-                service_request.task.status = 'in_progress'
-                service_request.task.save()
-
-        AuditLogService.log_action(
-            tenant_id=service_request.tenant_id,
-            user_id=user.id,
+        AuditLog.objects.create(
+            user=user,
             action='service_request.assign',
             module='services',
             details={
@@ -147,9 +125,6 @@ class ServiceRequestService:
 
     @staticmethod
     def update_status(service_request, new_status, user):
-        """
-        Updates the status of a service request. Handles completion timestamps and enforces workflow transitions.
-        """
         old_status = service_request.status
         ServiceRequestService._validate_transition(old_status, new_status)
 
@@ -162,67 +137,10 @@ class ServiceRequestService:
 
         service_request.save()
 
-        AuditLogService.log_action(
-            tenant_id=service_request.tenant_id,
-            user_id=user.id,
+        AuditLog.objects.create(
+            user=user,
             action='service_request.status_update',
             module='services',
-            details={
-                'request_id': str(service_request.id), 
-                'old_status': old_status,
-                'new_status': new_status
-            }
+            details={'request_id': str(service_request.id), 'old_status': old_status, 'new_status': new_status}
         )
         return service_request
-
-    @staticmethod
-    def create_task_from_request(service_request, user):
-        from tasks.models import Task, TaskBoard, TaskColumn, TaskActivity
-
-        # Check if task already exists for this request
-        if hasattr(service_request, 'task') and service_request.task is not None:
-            return service_request.task
-
-        # Determine board and column to place task
-        board = TaskBoard.tenant_objects.for_tenant(service_request.tenant_id).filter(is_default=True, is_active=True).first()
-        if not board:
-            board = TaskBoard.tenant_objects.for_tenant(service_request.tenant_id).filter(is_active=True).first()
-
-        if not board:
-            raise ValidationError('No active task board configured for this tenant.')
-
-        column = TaskColumn.objects.filter(board=board, is_default=True).first()
-        if not column:
-            column = TaskColumn.objects.filter(board=board).order_by('position').first()
-
-        # Get the In Progress column
-        in_progress_column = TaskColumn.objects.filter(board=board, status_key='in_progress').first()
-        
-        task = Task.objects.create(
-            tenant_id=service_request.tenant_id,
-            board=board,
-            column=in_progress_column or column,
-            title=f"{service_request.service.name} for {service_request.booking.client.client_name}",
-            description=f"Auto-created task from Service Request {service_request.id}",
-            task_type='task',
-            status='in_progress',
-            priority=service_request.priority,
-            reporter=user,
-            assignee=service_request.assigned_to,
-            service_request=service_request
-        )
-
-        # Sync service request status - set to in_progress instead of assigned
-        if service_request.status == 'pending':
-            service_request.status = 'in_progress'
-            service_request.save()
-
-        TaskActivity.objects.create(
-            tenant_id=service_request.tenant_id,
-            task=task,
-            user=user,
-            action='created',
-            description=f"Task auto-generated from request {service_request.id}"
-        )
-
-        return task

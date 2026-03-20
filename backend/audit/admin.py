@@ -6,16 +6,15 @@ from .models import AuditLog
 class AuditLogAdmin(admin.ModelAdmin):
     """
     Admin configuration for AuditLog model.
-    All fields are editable for Super Admin.
     """
-    list_display = ('id', 'user', 'action', 'module', 'tenant', 'created_at')
-    list_filter = ('module', 'action', 'tenant', 'created_at')
+    list_display = ('id', 'user', 'action', 'module', 'created_at')
+    list_filter = ('module', 'action', 'created_at')
     search_fields = ('action', 'module', 'user__email', 'details')
     ordering = ('-created_at',)
     
     fieldsets = (
         ('Audit Information', {
-            'fields': ('user', 'tenant', 'action', 'module')
+            'fields': ('user', 'action', 'module')
         }),
         ('Details', {
             'fields': ('details',)
@@ -29,8 +28,4 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_per_page = 100
     
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Super Admin can see all audit logs
-        if request.user.is_superuser:
-            return qs
-        return qs.filter(tenant=request.user.tenant)
+        return super().get_queryset(request)

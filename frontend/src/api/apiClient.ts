@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { getEffectiveTenantId, getStoredAuthData } from '../auth/tenantSelection';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
@@ -10,20 +9,13 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor: attach JWT token and tenant ID
+// Request interceptor: attach JWT token
 apiClient.interceptors.request.use((config) => {
-  const auth = getStoredAuthData();
-  console.log("AUTH:", auth);
-  if (auth) {
-    const accessToken = auth?.access || auth?.token || (auth?.user && auth.user.access);
-    console.log("ACCESS TOKEN:", accessToken);
-    const tenantId = getEffectiveTenantId(auth);
-
+  const stored = JSON.parse(localStorage.getItem('user') || 'null');
+  if (stored) {
+    const accessToken = stored?.access || stored?.token || stored?.user?.access;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    if (tenantId) {
-      config.headers['Tenant-ID'] = tenantId;
     }
   }
   return config;

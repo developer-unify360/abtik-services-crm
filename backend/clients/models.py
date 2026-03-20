@@ -1,13 +1,11 @@
-import re
 from django.db import models
 from django.core.validators import EmailValidator
-from core.models import TenantAwareModel
+from core.models import BaseModel
 
 
-class Client(TenantAwareModel):
+class Client(BaseModel):
     """
-    Represents a business client onboarded by BDE.
-    Each client belongs to a single tenant.
+    Represents a business client onboarded through the BDE booking form.
     """
     client_name = models.CharField(max_length=255)
     company_name = models.CharField(max_length=255)
@@ -19,6 +17,7 @@ class Client(TenantAwareModel):
         'users.User',
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='created_clients',
     )
 
@@ -27,7 +26,6 @@ class Client(TenantAwareModel):
         indexes = [
             models.Index(fields=['email'], name='idx_client_email'),
             models.Index(fields=['company_name'], name='idx_client_company'),
-            models.Index(fields=['tenant', 'created_at'], name='idx_client_tenant_date'),
         ]
 
     def __str__(self):
