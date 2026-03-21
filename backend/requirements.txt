@@ -6,3 +6,4 @@ django-cors-headers==4.3.1
 celery==5.3.6
 redis==5.0.3
 pytest-django==4.8.0
+django-filter==24.2

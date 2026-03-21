@@ -9,6 +9,12 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
+class UserPublicSerializer(serializers.ModelSerializer):
+    """Lighter user info for public lead generation form."""
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'email']
+
 class UserCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

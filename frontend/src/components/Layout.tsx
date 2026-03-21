@@ -14,7 +14,7 @@ const Layout: React.FC = () => {
         style={{ marginLeft: `${DRAWER_WIDTH}px` }}
       >
         <HeaderBar />
-        <main className="pt-16 px-6 pb-6">
+        <main className="pt-16 px-3 pb-3">
           <Outlet />
         </main>
       </div>

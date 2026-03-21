@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from bookings.models import Booking, Bank
+from attributes.models import LeadSource, PaymentType
 
 
 class BankSerializer(serializers.ModelSerializer):
@@ -20,9 +21,10 @@ class BookingSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.client_name', read_only=True)
     company_name = serializers.CharField(source='client.company_name', read_only=True)
     bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
+    payment_type_name = serializers.CharField(source='payment_type.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     bank_name = serializers.CharField(source='bank.bank_name', read_only=True)
+    lead_source_name = serializers.CharField(source='lead_source.name', read_only=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -34,8 +36,8 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'client', 'client_name', 'company_name',
-            'bde_name',
-            'payment_type', 'payment_type_display',
+            'bde_name', 'lead_source', 'lead_source_name',
+            'payment_type', 'payment_type_name',
             'bank', 'bank_name',
             'booking_date', 'payment_date',
             'total_payment_amount', 'total_payment_remarks',
@@ -53,24 +55,25 @@ class BookingListSerializer(serializers.ModelSerializer):
     """Compact serializer for list views."""
     client_name = serializers.CharField(source='client.client_name', read_only=True)
     company_name = serializers.CharField(source='client.company_name', read_only=True)
-    payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
+    payment_type_name = serializers.CharField(source='payment_type.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     bank_name = serializers.CharField(source='bank.bank_name', read_only=True)
+    lead_source_name = serializers.CharField(source='lead_source.name', read_only=True)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'client_name', 'company_name',
-            'payment_type', 'payment_type_display',
+            'payment_type', 'payment_type_name',
             'bank', 'bank_name', 'booking_date', 'status', 'status_display',
-            'created_at',
+            'lead_source', 'lead_source_name', 'created_at',
         ]
 
 
 class BookingCreateUpdateSerializer(serializers.Serializer):
     """Serializer for creating/updating booking records."""
     client_id = serializers.UUIDField(required=False)
-    payment_type = serializers.ChoiceField(choices=Booking.PAYMENT_TYPE_CHOICES)
+    payment_type = serializers.PrimaryKeyRelatedField(queryset=PaymentType.objects.all(), required=False, allow_null=True)
     bank = serializers.UUIDField(required=False, allow_null=True)
     booking_date = serializers.DateField()
     payment_date = serializers.DateField(required=False, allow_null=True)
@@ -91,6 +94,7 @@ class BookingCreateUpdateSerializer(serializers.Serializer):
     remove_attachment = serializers.BooleanField(required=False, default=False)
     remarks = serializers.CharField(required=False, allow_blank=True)
     bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    lead_source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
     status = serializers.ChoiceField(choices=Booking.STATUS_CHOICES, required=False, default='pending')
 
     def validate_booking_date(self, value):

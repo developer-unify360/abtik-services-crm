@@ -31,14 +31,6 @@ class Booking(BaseModel):
     Represents a service engagement/booking created from the BDE form.
     """
 
-    PAYMENT_TYPE_CHOICES = [
-        ('new_payment', 'New Payment'),
-        ('remaining_payment', 'Remaining Payment'),
-        ('complimentary', 'Complimentary'),
-        ('converted', 'Converted'),
-        ('transfer', 'Transfer'),
-    ]
-
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
@@ -53,7 +45,20 @@ class Booking(BaseModel):
         related_name='bookings',
     )
     bde_name = models.CharField(max_length=255, null=True, blank=True)
-    payment_type = models.CharField(max_length=30, choices=PAYMENT_TYPE_CHOICES)
+    lead_source = models.ForeignKey(
+        'attributes.LeadSource',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bookings'
+    )
+    payment_type = models.ForeignKey(
+        'attributes.PaymentType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bookings'
+    )
     bank = models.ForeignKey(
         'Bank',
         on_delete=models.SET_NULL,

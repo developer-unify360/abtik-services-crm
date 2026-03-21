@@ -4,6 +4,7 @@ from clients.models import Client
 from audit.models import AuditLog
 from bookings.services import BookingService
 from services.services import ServiceRequestService
+from leads.services import LeadService
 
 
 class ClientService:
@@ -58,6 +59,13 @@ class ClientService:
         booking_payload['client_id'] = client.id
         booking = BookingService.create_booking(data=booking_payload, user=user)
 
+        # Ensure a lead record exists (clients are the leads)
+        LeadService.ensure_lead_exists(
+            client=client, 
+            user=user, 
+            source=booking_payload.get('lead_source')
+        )
+
         service_request = None
         if request_data:
             request_payload = dict(request_data)
@@ -98,7 +106,12 @@ class ClientService:
     @staticmethod
     def list_clients(filters=None):
         """List all clients with optional filtering."""
-        queryset = Client.objects.select_related('created_by')
+        # Hide leads that haven't been converted to bookings yet
+        queryset = Client.objects.select_related('created_by').annotate(
+            num_bookings=models.Count('bookings')
+        ).filter(
+            models.Q(num_bookings__gt=0) | models.Q(lead_info__isnull=True)
+        )
 
         if filters:
             if filters.get('company'):
@@ -117,7 +130,7 @@ class ClientService:
                     models.Q(email__icontains=search)
                 )
 
-        return queryset
+        return queryset.order_by('-created_at')
 
     @staticmethod
     def delete_client(client, user):

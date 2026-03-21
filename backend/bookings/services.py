@@ -59,7 +59,12 @@ class BookingService:
             attachment=data.get('attachment'),
             remarks=data.get('remarks', ''),
             status=data.get('status', 'pending'),
+            lead_source=data.get('lead_source', 'other'),
         )
+        
+        # Sync with Lead record (clients are leads)
+        from leads.services import LeadService
+        LeadService.ensure_lead_exists(client, user, source=booking.lead_source)
 
         AuditLog.objects.create(
             user=user,
@@ -83,7 +88,7 @@ class BookingService:
             'received_amount', 'received_amount_remarks',
             'remaining_amount', 'remaining_amount_remarks',
             'after_fund_disbursement_percentage', 'after_fund_disbursement_remarks',
-            'remarks', 'status',
+            'remarks', 'status', 'lead_source', 'bde_name',
         ]
         updated_fields = []
 
@@ -115,6 +120,11 @@ class BookingService:
 
         booking.full_clean()
         booking.save()
+        
+        # Sync with Lead record if source or client changed
+        if 'lead_source' in updated_fields:
+            from leads.services import LeadService
+            LeadService.ensure_lead_exists(booking.client, user, source=booking.lead_source)
 
         AuditLog.objects.create(
             user=user,

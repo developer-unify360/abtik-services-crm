@@ -26,6 +26,11 @@ export const UserService = {
     return response.data;
   },
 
+  publicList: async () => {
+    const response = await apiClient.get('/users/public/');
+    return response.data;
+  },
+
   get: async (id: string) => {
     const response = await apiClient.get(`/users/${id}/`);
     return response.data;

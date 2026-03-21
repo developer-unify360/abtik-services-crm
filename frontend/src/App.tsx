@@ -6,8 +6,9 @@ import AdminDashboard from './dashboard/AdminDashboard';
 import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
 import BookingFormPage from './bookings/BookingFormPage';
-import BanksPage from './bookings/BanksPage';
-import ServiceManagement from './services/pages/ServiceManagement';
+import LeadListPage from './leads/LeadListPage';
+import PublicLeadFormPage from './leads/PublicLeadFormPage';
+import AttributesPage from './attributes/AttributesPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/bookings/new" element={<BookingFormPage />} />
+        <Route path="/leads/new" element={<PublicLeadFormPage />} />
 
         {/* Admin-only private routes */}
         <Route element={<PrivateRoute />}>
@@ -25,8 +27,8 @@ function App() {
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/bookings" element={<BookingListPage />} />
             <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
-            <Route path="/banks" element={<BanksPage />} />
-            <Route path="/services" element={<ServiceManagement />} />
+            <Route path="/attributes" element={<AttributesPage />} />
+            <Route path="/leads" element={<LeadListPage />} />
             {/* Catch-all: redirect unknown routes to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

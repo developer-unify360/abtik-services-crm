@@ -117,25 +117,6 @@ const ServiceManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-slate-950 via-slate-800 to-cyan-700 px-6 py-8 text-white">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Service Setup</p>
-              <h1 className="mt-3 text-3xl font-bold">Services</h1>
-              <p className="mt-3 text-sm text-slate-200">
-                Keep this list simple. Add each service by name once, then reuse it across bookings and service requests.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-1">
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Active Services</p>
-                <p className="mt-2 text-2xl font-bold text-white">{serviceList.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-start gap-3">

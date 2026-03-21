@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from users.models import User
-from users.serializers import UserSerializer, UserCreateUpdateSerializer
+from users.serializers import UserSerializer, UserPublicSerializer, UserCreateUpdateSerializer
 from users.services import UserService
 from django.core.exceptions import ValidationError
 
@@ -13,6 +14,13 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Admins can see all users
         return User.objects.all()
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def public(self, request):
+        """Public list of users for dropdowns."""
+        users = User.objects.filter(is_active=True)
+        serializer = UserPublicSerializer(users, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = UserCreateUpdateSerializer(data=request.data)

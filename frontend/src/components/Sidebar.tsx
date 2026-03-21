@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, CreditCard, Wrench } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Trophy, Layers } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
 
 const DRAWER_WIDTH = 240;
@@ -18,10 +18,10 @@ const Sidebar: React.FC = () => {
   const { logout } = useAuthStore();
   const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
+    { label: 'Leads', path: '/leads', icon: <Trophy size={20} /> },
     { label: 'Clients', path: '/clients', icon: <Users size={20} /> },
     { label: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
-    { label: 'Banks', path: '/banks', icon: <CreditCard size={20} /> },
-    { label: 'Services', path: '/services', icon: <Wrench size={20} /> },
+    { label: 'Attributes', path: '/attributes', icon: <Layers size={20} /> },
   ];
 
   const handleLogout = () => {

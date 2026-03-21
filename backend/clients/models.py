@@ -12,7 +12,13 @@ class Client(BaseModel):
     gst_pan = models.CharField(max_length=50, null=True, blank=True)
     email = models.EmailField(validators=[EmailValidator()])
     mobile = models.CharField(max_length=20)
-    industry = models.CharField(max_length=255, null=True, blank=True)
+    industry = models.ForeignKey(
+        'attributes.Industry',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='clients'
+    )
     created_by = models.ForeignKey(
         'users.User',
         on_delete=models.SET_NULL,
