@@ -13,7 +13,7 @@ Backend:  http://localhost:8000
 
 ## Default Credentials
 
-- **Admin**: `admin@example.com` / `password123`
+- **Admin**: `admin@example.com` / `admin123`
 
 ## Stop Services
 
