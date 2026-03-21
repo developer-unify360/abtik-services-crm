@@ -13,9 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-COPY entrypoint.sh /app/entrypoint.sh
-RUN sed -i 's/\r//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

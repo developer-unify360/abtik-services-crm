@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from leads.models import Lead, LeadActivity
+from attributes.models import LeadSource
 from leads.serializers import (
     LeadSerializer, 
     LeadListSerializer, 
@@ -131,8 +132,8 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         # Simple stats by source
         stats_by_source = {}
-        for source, name in Lead.LEAD_SOURCE_CHOICES:
-            stats_by_source[name] = Lead.objects.filter(source=source).count()
+        for lead_source in LeadSource.objects.all():
+            stats_by_source[lead_source.name] = Lead.objects.filter(source=lead_source).count()
             
         return Response({
             'total_leads': total_leads,

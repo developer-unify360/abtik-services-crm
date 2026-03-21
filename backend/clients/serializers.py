@@ -1,5 +1,6 @@
 import re
 from rest_framework import serializers
+from attributes.models import Industry
 from clients.models import Client
 
 
@@ -42,7 +43,11 @@ class ClientCreateUpdateSerializer(serializers.Serializer):
     gst_pan = serializers.CharField(max_length=50, required=False, allow_blank=True)
     email = serializers.EmailField()
     mobile = serializers.CharField(max_length=20)
-    industry = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    industry = serializers.PrimaryKeyRelatedField(
+        queryset=Industry.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     def validate_mobile(self, value):
         """Ensure mobile number is numeric."""
