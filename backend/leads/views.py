@@ -1,8 +1,9 @@
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from rest_framework import permissions
 from rest_framework.permissions import AllowAny
 from leads.models import Lead, LeadActivity
 from attributes.models import LeadSource
@@ -11,7 +12,8 @@ from leads.serializers import (
     LeadListSerializer, 
     LeadCreateSerializer,
     LeadActivitySerializer,
-    LeadUpdateStatusSerializer
+    LeadUpdateStatusSerializer,
+    ExternalLeadSerializer
 )
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -152,3 +154,26 @@ class ActivityViewSet(viewsets.ModelViewSet):
     filterset_fields = ['lead', 'activity_type']
     ordering_fields = ['created_at']
     ordering = ['-created_at']
+    permission_classes = [permissions.AllowAny]
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def external_lead_create(request):
+    serializer = ExternalLeadSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        lead = serializer.save()
+        LeadActivity.objects.create(
+            lead=lead,
+            activity_type='note',
+            description='Lead created via external website form.',
+        )
+        return Response(
+            {
+                'success': True,
+                'message': 'Lead created successfully'
+            },
+            status=status.HTTP_201_CREATED
+        )
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -106,3 +106,50 @@ class LeadUpdateStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = ['status', 'notes']
+
+
+class ExternalLeadSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255)
+    company_name = serializers.CharField(max_length=255)
+    email_address = serializers.EmailField()
+    contact_number = serializers.CharField(max_length=20)
+    service_type = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    message = serializers.CharField(required=False, allow_blank=True)
+
+    def create(self, validated_data):
+        client_data = {
+            'client_name': validated_data.pop('full_name'),
+            'company_name': validated_data.pop('company_name'),
+            'email': validated_data.pop('email_address'),
+            'mobile': validated_data.pop('contact_number'),
+            'industry': None,
+        }
+        
+        service_type = validated_data.pop('service_type', '')
+        message = validated_data.pop('message', '')
+        
+        notes = ''
+        if service_type:
+            notes = f"Service Type: {service_type}\n"
+        if message:
+            notes += f"Message: {message}"
+        
+        client, created = Client.objects.get_or_create(
+            email=client_data['email'],
+            defaults=client_data
+        )
+        
+        lead_source = None
+        try:
+            lead_source = LeadSource.objects.get(name='Website')
+        except LeadSource.DoesNotExist:
+            lead_source = LeadSource.objects.create(name='Website', is_active=True)
+        
+        lead = Lead.objects.create(
+            client=client,
+            bde_name=validated_data.get('bde_name', ''),
+            source=lead_source,
+            notes=notes if notes else None,
+            assigned_to=validated_data.get('assigned_to', None),
+        )
+        return lead

@@ -3,6 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 from django.http import JsonResponse
+from leads.views import external_lead_create
 
 
 def health(request):
@@ -19,6 +20,7 @@ urlpatterns = [
     path('api/v1/attributes/', include('attributes.urls')),
     path('api/v1/users/', include('users.urls')),
     path('api/v1/', include('services.urls')),
+    path('api/external/leads/', external_lead_create, name='external-lead-create'),
 ]
 
 if settings.DEBUG:
