@@ -1,5 +1,5 @@
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
@@ -158,6 +158,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def external_lead_create(request):
     serializer = ExternalLeadSerializer(data=request.data)
     
