@@ -34,7 +34,17 @@ class LeadSerializer(serializers.ModelSerializer):
     client_info = serializers.SerializerMethodField()
 
     def get_client_info(self, obj):
-        return ClientLeadInfoSerializer(instance=obj.client).data
+        if obj.client:
+            return ClientLeadInfoSerializer(instance=obj.client).data
+        return {
+            'id': None,
+            'client_name': getattr(obj, 'client_name', ''),
+            'company_name': getattr(obj, 'company_name', ''),
+            'email': getattr(obj, 'email', ''),
+            'mobile': getattr(obj, 'mobile', ''),
+            'industry': obj.industry.id if obj.industry else None,
+            'industry_name': obj.industry.name if obj.industry else None,
+        }
 
     class Meta:
         model = Lead
@@ -61,41 +71,37 @@ class LeadCreateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
-        client_data = {
-            'client_name': validated_data.pop('client_name'),
-            'company_name': validated_data.pop('company_name'),
-            'email': validated_data.pop('email'),
-            'mobile': validated_data.pop('mobile'),
-            'industry': validated_data.pop('industry', None),
-        }
-        
-        # Create or get client
-        client, created = Client.objects.get_or_create(
-            email=client_data['email'],
-            defaults=client_data
-        )
-        if not created and client_data['industry']:
-             client.industry = client_data['industry']
-             client.save()
-        
         # Create lead
+        # Assumes Lead model has client_name, company_name, email, mobile, industry fields
         lead = Lead.objects.create(
-            client=client,
+            client=None,
             **validated_data
         )
         return lead
 
 class LeadListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list view."""
-    client_name = serializers.CharField(source='client.client_name', read_only=True)
-    company_name = serializers.CharField(source='client.company_name', read_only=True)
-    mobile = serializers.CharField(source='client.mobile', read_only=True)
-    email = serializers.CharField(source='client.email', read_only=True)
+    client_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+    mobile = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source='assigned_to.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     source_name = serializers.CharField(source='source.name', read_only=True)
     service_name = serializers.CharField(source='service.name', read_only=True)
+
+    def get_client_name(self, obj):
+        return obj.client.client_name if obj.client else getattr(obj, 'client_name', '')
+
+    def get_company_name(self, obj):
+        return obj.client.company_name if obj.client else getattr(obj, 'company_name', '')
+
+    def get_mobile(self, obj):
+        return obj.client.mobile if obj.client else getattr(obj, 'mobile', '')
+
+    def get_email(self, obj):
+        return obj.client.email if obj.client else getattr(obj, 'email', '')
 
     class Meta:
         model = Lead
@@ -122,14 +128,6 @@ class ExternalLeadSerializer(serializers.Serializer):
     message = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
-        client_data = {
-            'client_name': validated_data.pop('full_name'),
-            'company_name': validated_data.pop('company_name'),
-            'email': validated_data.pop('email_address'),
-            'mobile': validated_data.pop('contact_number'),
-            'industry': None,
-        }
-        
         service = validated_data.pop('service', None)
         service_type = validated_data.pop('service_type', '')
         message = validated_data.pop('message', '')
@@ -140,11 +138,6 @@ class ExternalLeadSerializer(serializers.Serializer):
         if message:
             notes += f"Message: {message}"
         
-        client, created = Client.objects.get_or_create(
-            email=client_data['email'],
-            defaults=client_data
-        )
-        
         lead_source = None
         try:
             lead_source = LeadSource.objects.get(name='Website')
@@ -152,7 +145,11 @@ class ExternalLeadSerializer(serializers.Serializer):
             lead_source = LeadSource.objects.create(name='Website', is_active=True)
         
         lead = Lead.objects.create(
-            client=client,
+            client=None,
+            client_name=validated_data.pop('full_name'),
+            company_name=validated_data.pop('company_name'),
+            email=validated_data.pop('email_address'),
+            mobile=validated_data.pop('contact_number'),
             bde_name=validated_data.get('bde_name', ''),
             source=lead_source,
             service=service,

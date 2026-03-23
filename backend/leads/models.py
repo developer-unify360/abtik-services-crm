@@ -24,11 +24,26 @@ class Lead(BaseModel):
         ('urgent', 'Urgent'),
     ]
 
-    client = models.OneToOneField(
+    client = models.ForeignKey(
         'clients.Client', 
-        on_delete=models.CASCADE, 
-        related_name='lead_info',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='leads',
         help_text="Link to the master client record"
+    )
+    
+    # Standalone lead fields (before conversion)
+    client_name = models.CharField(max_length=255, null=True, blank=True)
+    company_name = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    mobile = models.CharField(max_length=20, null=True, blank=True)
+    industry = models.ForeignKey(
+        'attributes.Industry',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='leads'
     )
     
     bde_name = models.CharField(max_length=255, null=True, blank=True)
@@ -68,7 +83,8 @@ class Lead(BaseModel):
         ordering = ['-priority', '-lead_score', '-created_at']
 
     def __str__(self):
-        return f"Lead for {self.client.client_name} ({self.status})"
+        name = self.client.client_name if self.client else self.client_name
+        return f"Lead for {name} ({self.status})"
 
 class LeadActivity(BaseModel):
     """
@@ -96,4 +112,5 @@ class LeadActivity(BaseModel):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.activity_type} for {self.lead.client.client_name} on {self.created_at}"
+        name = self.lead.client.client_name if self.lead.client else self.lead.client_name
+        return f"{self.activity_type} for {name} on {self.created_at}"

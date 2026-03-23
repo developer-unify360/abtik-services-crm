@@ -4,6 +4,7 @@ from clients.models import Client
 from audit.models import AuditLog
 from bookings.services import BookingService
 from services.services import ServiceRequestService
+from leads.models import Lead
 from leads.services import LeadService
 
 
@@ -48,12 +49,22 @@ class ClientService:
         # Try to find existing client by email or mobile
         client = Client.objects.filter(models.Q(email=email) | models.Q(mobile=mobile)).first()
         
+        # Check for existing standalone Lead (not yet converted)
+        existing_lead = Lead.objects.filter(
+            (models.Q(email=email) | models.Q(mobile=mobile)) & models.Q(client__isnull=True)
+        ).first()
+
         if client:
             # Update existing client with latest info
             client = ClientService.update_client(client, client_data, user=user)
         else:
             # Create new client
             client = ClientService.create_client(data=client_data, user=user)
+            
+        # If we found a standalone lead, link it to the client now (Conversion)
+        if existing_lead and not existing_lead.client:
+            existing_lead.client = client
+            existing_lead.save()
 
         booking_payload = dict(booking_data)
         booking_payload['client_id'] = client.id
@@ -110,7 +121,7 @@ class ClientService:
         queryset = Client.objects.select_related('created_by').annotate(
             num_bookings=models.Count('bookings')
         ).filter(
-            models.Q(num_bookings__gt=0) | models.Q(lead_info__isnull=True)
+            models.Q(num_bookings__gt=0) | models.Q(leads__isnull=True)
         )
 
         if filters:
