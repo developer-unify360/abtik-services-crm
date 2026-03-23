@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from leads.models import Lead, LeadActivity
 from clients.models import Client
 from attributes.models import LeadSource, Industry
+from services.models import Service
 
 User = get_user_model()
 
@@ -28,6 +29,7 @@ class LeadSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     source_name = serializers.CharField(source='source.name', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    service_name = serializers.CharField(source='service.name', read_only=True)
     activities = LeadActivitySerializer(many=True, read_only=True)
     client_info = serializers.SerializerMethodField()
 
@@ -39,7 +41,7 @@ class LeadSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'client', 'client_info', 'bde_name', 'source', 'source_name',
             'status', 'status_display', 'priority', 'priority_display', 
-            'lead_score', 'assigned_to', 'assigned_to_name', 'notes', 
+            'lead_score', 'assigned_to', 'assigned_to_name', 'service', 'service_name', 'notes', 
             'last_contacted_at', 'next_follow_up_date', 'activities',
             'created_at', 'updated_at'
         ]
@@ -55,6 +57,7 @@ class LeadCreateSerializer(serializers.Serializer):
     industry = serializers.PrimaryKeyRelatedField(queryset=Industry.objects.all(), required=False, allow_null=True)
     assigned_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
     source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
+    service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
@@ -92,6 +95,7 @@ class LeadListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     source_name = serializers.CharField(source='source.name', read_only=True)
+    service_name = serializers.CharField(source='service.name', read_only=True)
 
     class Meta:
         model = Lead
@@ -99,7 +103,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             'id', 'client_name', 'company_name', 'mobile', 'email', 'bde_name',
             'source', 'source_name', 'status', 'status_display', 
             'priority', 'priority_display', 'lead_score', 'assigned_to_name', 
-            'next_follow_up_date', 'created_at'
+            'service', 'service_name', 'next_follow_up_date', 'created_at'
         ]
 
 class LeadUpdateStatusSerializer(serializers.ModelSerializer):
@@ -113,6 +117,7 @@ class ExternalLeadSerializer(serializers.Serializer):
     company_name = serializers.CharField(max_length=255)
     email_address = serializers.EmailField()
     contact_number = serializers.CharField(max_length=20)
+    service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), required=False, allow_null=True)
     service_type = serializers.CharField(max_length=255, required=False, allow_blank=True)
     message = serializers.CharField(required=False, allow_blank=True)
 
@@ -125,6 +130,7 @@ class ExternalLeadSerializer(serializers.Serializer):
             'industry': None,
         }
         
+        service = validated_data.pop('service', None)
         service_type = validated_data.pop('service_type', '')
         message = validated_data.pop('message', '')
         
@@ -149,6 +155,7 @@ class ExternalLeadSerializer(serializers.Serializer):
             client=client,
             bde_name=validated_data.get('bde_name', ''),
             source=lead_source,
+            service=service,
             notes=notes if notes else None,
             assigned_to=validated_data.get('assigned_to', None),
         )

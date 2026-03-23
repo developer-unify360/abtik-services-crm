@@ -11,7 +11,9 @@ export interface Lead {
     industry: string;
   };
   source: string;
-  source_display: string;
+  source_name?: string;
+  service?: string;
+  service_name?: string;
   status: string;
   status_display: string;
   priority: string;

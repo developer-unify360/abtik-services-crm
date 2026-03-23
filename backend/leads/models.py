@@ -51,6 +51,15 @@ class Lead(BaseModel):
         related_name='assigned_leads'
     )
     
+    service = models.ForeignKey(
+        'services.Service',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='leads',
+        help_text="Service the lead is interested in"
+    )
+    
     notes = models.TextField(blank=True, null=True)
     last_contacted_at = models.DateTimeField(null=True, blank=True)
     next_follow_up_date = models.DateField(null=True, blank=True)

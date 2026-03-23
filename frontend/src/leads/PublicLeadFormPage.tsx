@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
+import { ServiceApi, type Service } from '../services/api/ServiceApi';
 import { } from 'react-router-dom';
 import { 
   UserPlus, 
@@ -11,7 +12,8 @@ import {
   Target, 
   Send,
   Search,
-  MessageSquare
+  MessageSquare,
+  Briefcase
 } from 'lucide-react';
 
 import apiClient from '../api/apiClient';
@@ -26,6 +28,7 @@ interface LeadFormState {
   industry: string;
   assigned_to: string;
   source: string;
+  service: string;
   notes: string;
 }
 
@@ -38,6 +41,7 @@ const emptyFormState = (): LeadFormState => ({
   industry: '',
   assigned_to: '',
   source: '',
+  service: '',
   notes: '',
 });
 
@@ -83,6 +87,7 @@ const PublicLeadFormPage: React.FC = () => {
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [industries, setIndustries] = useState<Attribute[]>([]);
   const [leadSources, setLeadSources] = useState<Attribute[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,15 +97,17 @@ const PublicLeadFormPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, industriesData, sourcesData] = await Promise.all([
+        const [usersData, industriesData, sourcesData, servicesData] = await Promise.all([
           UserService.publicList(),
           AttributeService.listIndustries(),
-          AttributeService.listLeadSources()
+          AttributeService.listLeadSources(),
+          ServiceApi.list()
         ]);
         // Filter only active attributes
         setUsers((usersData.results || usersData).filter((u: any) => u.is_active !== false));
         setIndustries(industriesData.filter((ind: Attribute) => ind.is_active));
         setLeadSources(sourcesData.filter((src: Attribute) => src.is_active));
+        setServices(servicesData);
       } catch (err) {
         console.error('Failed to load form data:', err);
       }
@@ -274,6 +281,21 @@ const PublicLeadFormPage: React.FC = () => {
                     value={formState.email}
                     onChange={(e) => handleFieldChange('email', e.target.value)}
                   />
+                </div>
+              </Field>
+              <Field label="Service Required">
+                <div className="relative">
+                  <Briefcase size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <select
+                    className="input-field pl-8 py-1.5 text-sm"
+                    value={formState.service}
+                    onChange={(e) => handleFieldChange('service', e.target.value)}
+                  >
+                    <option value="">Select Service</option>
+                    {services.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
               </Field>
             </div>

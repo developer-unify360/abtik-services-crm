@@ -201,6 +201,7 @@ const LeadListPage: React.FC = () => {
               <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                 <th className="px-3 py-2 text-left">Lead Contact</th>
                 <th className="px-3 py-2 text-left">BDE & Source</th>
+                <th className="px-3 py-2 text-left">Service</th>
                 <th className="px-3 py-2 text-left">Status & Priority</th>
                 <th className="px-3 py-2 text-left">Assigned To</th>
                 <th className="px-3 py-2 text-left">Score</th>
@@ -210,7 +211,7 @@ const LeadListPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
                       <span>Loading high-potential leads...</span>
@@ -219,7 +220,7 @@ const LeadListPage: React.FC = () => {
                 </tr>
               ) : filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     No leads found matching your criteria.
                   </td>
                 </tr>
@@ -248,8 +249,13 @@ const LeadListPage: React.FC = () => {
                     <td className="px-3 py-2">
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-slate-700">{lead.bde_name || 'System'}</span>
-                        <span className="text-[9px] uppercase tracking-tighter text-slate-400 font-bold">{lead.source_display}</span>
+                        <span className="text-[9px] uppercase tracking-tighter text-slate-400 font-bold">{lead.source_name}</span>
                       </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="text-xs font-medium text-slate-700">
+                        {lead.service_name || <span className="text-slate-400 italic">Not specified</span>}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
@@ -283,6 +289,7 @@ const LeadListPage: React.FC = () => {
                                   mobile: (lead as any).mobile,
                                   bde_name: lead.bde_name,
                                   lead_source: lead.source,
+                                  service: lead.service,
                                 } 
                               } 
                             });
