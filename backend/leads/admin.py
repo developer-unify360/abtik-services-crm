@@ -7,7 +7,7 @@ class LeadAdmin(admin.ModelAdmin):
     """
     Admin configuration for Lead model.
     """
-    list_display = ('id', 'client', 'client_name', 'company_name', 'status', 'priority', 'lead_score', 'assigned_to', 'source', 'created_at')
+    list_display = ('id', 'client', 'client_name', 'company_name', 'service', 'status', 'priority', 'lead_score', 'assigned_to', 'source', 'created_at')
     list_filter = ('status', 'priority', 'source', 'industry', 'created_at')
     search_fields = ('client__client_name', 'client__company_name', 'client_name', 'company_name', 'email', 'mobile', 'bde_name')
     ordering = ('-priority', '-lead_score', '-created_at')

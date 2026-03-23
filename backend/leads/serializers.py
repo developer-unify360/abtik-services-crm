@@ -132,6 +132,10 @@ class ExternalLeadSerializer(serializers.Serializer):
         service_type = validated_data.pop('service_type', '')
         message = validated_data.pop('message', '')
         
+        # Lookup service by name if ID is not provided
+        if not service and service_type:
+            service = Service.objects.filter(name__iexact=service_type.strip()).first()
+
         notes = ''
         if service_type:
             notes = f"Service Type: {service_type}\n"
