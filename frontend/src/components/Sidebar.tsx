@@ -36,9 +36,11 @@ const Sidebar: React.FC = () => {
     >
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-slate-800">
-        <h1 className="text-lg font-bold text-white tracking-wide">
-          Abtik BDE
-        </h1>
+        <img 
+          src="/src/assets/logo.png" 
+          alt="Abtik BDE Logo" 
+          className="h-100 w-auto object-contain"
+        />
       </div>
 
       {/* Navigation */}
