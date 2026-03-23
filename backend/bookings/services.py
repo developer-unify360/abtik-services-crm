@@ -65,6 +65,24 @@ class BookingService:
         # Sync with Lead record (clients are leads)
         from leads.services import LeadService
         LeadService.ensure_lead_exists(client, user, source=booking.lead_source)
+        
+        lead_id = data.get('lead_id')
+        if lead_id:
+            from leads.models import Lead, LeadActivity
+            try:
+                lead = Lead.objects.get(id=lead_id)
+                if lead.status != 'closed_won':
+                    old_status = lead.get_status_display()
+                    lead.status = 'closed_won'
+                    lead.save()
+                    LeadActivity.objects.create(
+                        lead=lead,
+                        activity_type='status_change',
+                        description=f'Status changed from "{old_status}" to "Closed Won" (booking created)',
+                        performed_by=user
+                    )
+            except Lead.DoesNotExist:
+                pass
 
         AuditLog.objects.create(
             user=user,

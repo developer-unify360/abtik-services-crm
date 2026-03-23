@@ -290,6 +290,7 @@ const LeadListPage: React.FC = () => {
                                   bde_name: lead.bde_name,
                                   lead_source: lead.source,
                                   service: lead.service,
+                                  lead_id: lead.id,
                                 } 
                               } 
                             });

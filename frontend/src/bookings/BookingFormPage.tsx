@@ -36,6 +36,7 @@ interface BookingFormState {
   attachment: File | null;
   existingAttachmentUrl: string;
   remove_attachment: boolean;
+  lead_id?: string;
 }
 
 const emptyFormState = (): BookingFormState => ({
@@ -278,6 +279,7 @@ const BookingFormPage: React.FC = () => {
           after_fund_disbursement_remarks: formState.after_fund_disbursement_remarks,
           remarks: formState.remarks,
           remove_attachment: formState.remove_attachment,
+          lead_id: formState.lead_id || null,
         },
         service_request: formState.service
           ? {

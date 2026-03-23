@@ -95,19 +95,17 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def convert(self, request, pk=None):
-        """Update lead status to 'closed_won' when conversion initiated."""
+        """Prepare lead for conversion to booking - status will be updated when booking is created."""
         lead = self.get_object()
-        lead.status = 'closed_won'
-        lead.save()
         
         LeadActivity.objects.create(
             lead=lead,
-            activity_type='status_change',
-            description="Lead converted to booking",
+            activity_type='note',
+            description="Lead conversion to booking initiated",
             performed_by=request.user if request.user.is_authenticated else None
         )
         
-        return Response({"status": "Lead status updated to closed_won"})
+        return Response({"status": "Lead ready for conversion", "lead_id": str(lead.id)})
 
     @action(detail=False, methods=['post'], url_path='public')
     def public(self, request):

@@ -73,6 +73,7 @@ class BookingListSerializer(serializers.ModelSerializer):
 class BookingCreateUpdateSerializer(serializers.Serializer):
     """Serializer for creating/updating booking records."""
     client_id = serializers.UUIDField(required=False)
+    lead_id = serializers.UUIDField(required=False, allow_null=True)
     payment_type = serializers.PrimaryKeyRelatedField(queryset=PaymentType.objects.all(), required=False, allow_null=True)
     bank = serializers.UUIDField(required=False, allow_null=True)
     booking_date = serializers.DateField()

@@ -64,10 +64,43 @@ class ClientService:
         # If we found a standalone lead, link it to the client now (Conversion)
         if existing_lead and not existing_lead.client:
             existing_lead.client = client
+            existing_lead.status = 'closed_won'
             existing_lead.save()
+            
+            # Log the status change
+            from leads.models import LeadActivity
+            LeadActivity.objects.create(
+                lead=existing_lead,
+                activity_type='status_change',
+                description='Lead converted to booking',
+                performed_by=user
+            )
 
         booking_payload = dict(booking_data)
         booking_payload['client_id'] = client.id
+        
+        # If lead_id is provided in booking_data, update that lead's status
+        lead_id = booking_data.get('lead_id')
+        if lead_id:
+            try:
+                lead = Lead.objects.get(id=lead_id)
+                if lead.status != 'closed_won':
+                    old_status = lead.get_status_display()
+                    lead.client = client
+                    lead.status = 'closed_won'
+                    lead.save()
+                    
+                    # Log the status change
+                    from leads.models import LeadActivity
+                    LeadActivity.objects.create(
+                        lead=lead,
+                        activity_type='status_change',
+                        description=f'Status changed from "{old_status}" to "Closed Won" (booking created)',
+                        performed_by=user
+                    )
+            except Lead.DoesNotExist:
+                pass
+        
         booking = BookingService.create_booking(data=booking_payload, user=user)
 
         # Ensure a lead record exists (clients are the leads)
