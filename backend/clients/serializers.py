@@ -7,12 +7,13 @@ from clients.models import Client
 class ClientSerializer(serializers.ModelSerializer):
     """Full client serializer for detail views."""
     created_by_name = serializers.SerializerMethodField(read_only=True)
+    industry_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Client
         fields = [
             'id', 'client_name', 'company_name', 'gst_pan', 'email',
-            'mobile', 'industry', 'created_by', 'created_by_name',
+            'mobile', 'industry', 'industry_name', 'created_by', 'created_by_name',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_by', 'created_by_name', 'created_at', 'updated_at']
@@ -20,20 +21,27 @@ class ClientSerializer(serializers.ModelSerializer):
     def get_created_by_name(self, obj):
         return obj.created_by.name if obj.created_by else None
 
+    def get_industry_name(self, obj):
+        return obj.industry.name if obj.industry else None
+
 
 class ClientListSerializer(serializers.ModelSerializer):
     """Compact serializer for list views."""
     created_by_name = serializers.SerializerMethodField(read_only=True)
+    industry_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Client
         fields = [
             'id', 'client_name', 'company_name', 'email',
-            'mobile', 'industry', 'created_by_name', 'created_at',
+            'mobile', 'industry', 'industry_name', 'created_by_name', 'created_at',
         ]
 
     def get_created_by_name(self, obj):
         return obj.created_by.name if obj.created_by else None
+
+    def get_industry_name(self, obj):
+        return obj.industry.name if obj.industry else None
 
 
 class ClientCreateUpdateSerializer(serializers.Serializer):

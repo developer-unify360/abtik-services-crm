@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Eye, X } from 'lucide-react';
 import { ClientService, type Client, type ClientCreateData } from './ClientService';
-
-const industries = ['Technology', 'Manufacturing', 'Finance', 'Healthcare', 'Education', 'Retail', 'Other'];
+import AttributeService, { type Attribute } from '../attributes/AttributeService';
 
 const ClientListPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -21,6 +20,8 @@ const ClientListPage: React.FC = () => {
     client_name: '', company_name: '', gst_pan: '', email: '', mobile: '', industry: '',
   });
 
+  const [industries, setIndustries] = useState<Attribute[]>([]);
+
   const fetchClients = async () => {
     try {
       const params: Record<string, string> = {};
@@ -34,6 +35,16 @@ const ClientListPage: React.FC = () => {
     }
   };
 
+  const fetchIndustries = async () => {
+    try {
+      const data = await AttributeService.listIndustries();
+      setIndustries(data);
+    } catch (err) {
+      console.error('Failed to fetch industries:', err);
+    }
+  };
+
+  useEffect(() => { fetchClients(); fetchIndustries(); }, []);
   useEffect(() => { fetchClients(); }, [page, search]);
 
   const handleOpenCreate = () => {
@@ -47,7 +58,7 @@ const ClientListPage: React.FC = () => {
     setFormData({
       client_name: client.client_name, company_name: client.company_name,
       gst_pan: client.gst_pan || '', email: client.email,
-      mobile: client.mobile, industry: client.industry || '',
+      mobile: client.mobile, industry: String(client.industry || ''),
     });
     setOpenForm(true);
   };
@@ -123,8 +134,8 @@ const ClientListPage: React.FC = () => {
                   <td className="px-6 py-4 text-gray-600">{client.email}</td>
                   <td className="px-6 py-4 text-gray-600">{client.mobile}</td>
                   <td className="px-6 py-4">
-                    {client.industry && (
-                      <span className="badge badge-info">{client.industry}</span>
+                    {client.industry_name && (
+                      <span className="badge badge-info">{client.industry_name}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-gray-600">{new Date(client.created_at).toLocaleDateString()}</td>
@@ -243,7 +254,7 @@ const ClientListPage: React.FC = () => {
                   >
                     <option value="">None</option>
                     {industries.map((ind) => (
-                      <option key={ind} value={ind}>{ind}</option>
+                      <option key={ind.id} value={ind.id}>{ind.name}</option>
                     ))}
                   </select>
                 </div>
@@ -280,7 +291,7 @@ const ClientListPage: React.FC = () => {
               <p><strong className="text-gray-700">Email:</strong> <span className="text-gray-600">{viewingClient.email}</span></p>
               <p><strong className="text-gray-700">Mobile:</strong> <span className="text-gray-600">{viewingClient.mobile}</span></p>
               <p><strong className="text-gray-700">GST/PAN:</strong> <span className="text-gray-600">{viewingClient.gst_pan || '—'}</span></p>
-              <p><strong className="text-gray-700">Industry:</strong> <span className="text-gray-600">{viewingClient.industry || '—'}</span></p>
+              <p><strong className="text-gray-700">Industry:</strong> <span className="text-gray-600">{viewingClient.industry_name || '—'}</span></p>
               <p><strong className="text-gray-700">Created By:</strong> <span className="text-gray-600">{viewingClient.created_by_name || '—'}</span></p>
               <p><strong className="text-gray-700">Created:</strong> <span className="text-gray-600">{new Date(viewingClient.created_at).toLocaleString()}</span></p>
             </div>

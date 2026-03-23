@@ -7,7 +7,9 @@ export interface Client {
   gst_pan?: string;
   email: string;
   mobile: string;
-  industry?: string;
+  industry?: number;
+  industry_name?: string;
+  industry_id?: string;
   created_by?: string;
   created_by_name?: string;
   created_at: string;
