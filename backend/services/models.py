@@ -1,25 +1,7 @@
 from django.db import models
 from core.models import BaseModel
 
-class ServiceCategory(BaseModel):
-    name = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['name']
-        verbose_name_plural = 'Service Categories'
-
-    def __str__(self):
-        return f"{self.name}"
-
 class Service(BaseModel):
-    category = models.ForeignKey(
-        ServiceCategory,
-        on_delete=models.SET_NULL,
-        related_name='services',
-        null=True,
-        blank=True,
-    )
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
 
@@ -27,7 +9,7 @@ class Service(BaseModel):
         ordering = ['name']
 
     def __str__(self):
-        return f"{self.name} ({self.category.name})" if self.category else self.name
+        return self.name
 
 class ServiceRequest(BaseModel):
     STATUS_CHOICES = [

@@ -1,30 +1,12 @@
 from django.utils import timezone
-from .models import ServiceCategory, Service, ServiceRequest
+from .models import Service, ServiceRequest
 from django.core.exceptions import ValidationError
 from audit.models import AuditLog
 
 class ServiceManagementService:
     @staticmethod
-    def get_categories():
-        return ServiceCategory.objects.all()
-
-    @staticmethod
-    def get_services(category_id=None):
-        queryset = Service.objects.all()
-        if category_id:
-            queryset = queryset.filter(category_id=category_id)
-        return queryset
-
-    @staticmethod
-    def create_category(data, user):
-        category = ServiceCategory.objects.create(**data)
-        AuditLog.objects.create(
-            user=user,
-            action='service_category.create',
-            module='services',
-            details={'category_id': str(category.id), 'name': category.name}
-        )
-        return category
+    def get_services():
+        return Service.objects.all()
 
     @staticmethod
     def create_service(data, user):
@@ -42,7 +24,7 @@ class ServiceRequestService:
     @staticmethod
     def list_requests(filters=None):
         queryset = ServiceRequest.objects.all().select_related(
-            'service', 'service__category', 'assigned_to', 'booking', 'booking__client'
+            'service', 'assigned_to', 'booking', 'booking__client'
         )
         
         if filters:

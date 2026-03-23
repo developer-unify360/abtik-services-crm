@@ -1,17 +1,10 @@
 from django.contrib import admin
-from .models import ServiceCategory, Service, ServiceRequest
-
-
-@admin.register(ServiceCategory)
-class ServiceCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description', 'created_at')
-    search_fields = ('name',)
+from .models import Service, ServiceRequest
 
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'created_at')
-    list_filter = ('category',)
+    list_display = ('name', 'created_at')
     search_fields = ('name',)
 
 

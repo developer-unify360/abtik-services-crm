@@ -1,31 +1,14 @@
 from rest_framework import serializers
-from .models import ServiceCategory, Service, ServiceRequest
+from .models import Service, ServiceRequest
 from users.serializers import UserSerializer
 from bookings.serializers import BookingListSerializer
 
 
-class ServiceCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ServiceCategory
-        fields = ['id', 'name', 'description', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
 class ServiceSerializer(serializers.ModelSerializer):
-    category = serializers.PrimaryKeyRelatedField(
-        queryset=ServiceCategory.objects.all(),
-        required=False,
-        allow_null=True,
-    )
-    category_name = serializers.SerializerMethodField()
-
     class Meta:
         model = Service
-        fields = ['id', 'category', 'category_name', 'name', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
-
-    def get_category_name(self, obj):
-        return obj.category.name if obj.category else None
 
     def validate_name(self, value):
         cleaned_value = value.strip()
@@ -36,7 +19,6 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 class ServiceRequestSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source='service.name', read_only=True)
-    category_name = serializers.SerializerMethodField()
     assigned_user = UserSerializer(source='assigned_to', read_only=True)
     booking_details = BookingListSerializer(source='booking', read_only=True)
     created_by_user = UserSerializer(source='created_by', read_only=True)
@@ -44,15 +26,12 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceRequest
         fields = [
-            'id', 'booking', 'booking_details', 'service', 'service_name', 
-            'category_name', 'assigned_to', 'assigned_user', 'created_by', 'created_by_user',
+            'id', 'booking', 'booking_details', 'service', 'service_name',
+            'assigned_to', 'assigned_user', 'created_by', 'created_by_user',
             'status', 'priority', 
             'completed_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'completed_at', 'created_at', 'updated_at']
-
-    def get_category_name(self, obj):
-        return obj.service.category.name if obj.service.category else None
 
 class ServiceRequestCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:

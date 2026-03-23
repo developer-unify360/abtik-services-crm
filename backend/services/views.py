@@ -4,49 +4,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from django.db import models
 from django.db.models import ProtectedError
-from .models import ServiceCategory, Service, ServiceRequest
+from .models import Service, ServiceRequest
 from .serializers import (
-    ServiceCategorySerializer, ServiceSerializer, ServiceRequestSerializer,
+    ServiceSerializer, ServiceRequestSerializer,
     ServiceRequestCreateUpdateSerializer, ServiceRequestAssignSerializer,
     ServiceRequestStatusUpdateSerializer
 )
 from .services import ServiceManagementService, ServiceRequestService
 from .permissions import CanManageServices, CanAssignTasks, CanUpdateTaskStatus
 from django.core.exceptions import ValidationError
-
-
-class ServiceCategoryViewSet(viewsets.ModelViewSet):
-    serializer_class = ServiceCategorySerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        return [CanManageServices()]
-
-    def get_queryset(self):
-        return ServiceManagementService.get_categories()
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "success": True,
-            "data": serializer.data,
-            "message": "Categories retrieved successfully"
-        })
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        category = ServiceManagementService.create_category(
-            data=serializer.validated_data,
-            user=request.user,
-        )
-        return Response(
-            {"success": True, "data": ServiceCategorySerializer(category).data, "message": "Category created successfully"},
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -59,8 +25,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return [CanManageServices()]
 
     def get_queryset(self):
-        category_id = self.request.query_params.get('category_id')
-        return ServiceManagementService.get_services(category_id)
+        return ServiceManagementService.get_services()
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

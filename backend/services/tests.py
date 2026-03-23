@@ -7,7 +7,7 @@ from users.models import User
 from roles.models import Role
 from clients.models import Client
 from bookings.models import Booking
-from services.models import ServiceCategory, Service, ServiceRequest
+from services.models import Service, ServiceRequest
 from datetime import date
 
 
@@ -32,17 +32,15 @@ class ServicesModelTest(TestCase):
             status='pending',
         )
 
-    def test_create_service_without_category(self):
+    def test_create_service(self):
         service = Service.objects.create(
             tenant=self.tenant,
             name='Website Development'
         )
-        self.assertIsNone(service.category)
         self.assertEqual(service.name, 'Website Development')
 
     def test_create_service_request(self):
-        category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')
-        service = Service.objects.create(tenant=self.tenant, category=category, name='SEO')
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
         
         request = ServiceRequest.objects.create(
             tenant=self.tenant,
@@ -90,14 +88,13 @@ class ServicesAPITest(TestCase):
             payment_type='new_payment', booking_date=date.today(),
         )
 
-    def test_admin_can_create_service_without_category(self):
+    def test_admin_can_create_service(self):
         self.api_client.force_authenticate(user=self.admin_user)
         self.api_client.credentials(HTTP_TENANT_ID=str(self.tenant.id))
         
         response = self.api_client.post('/api/v1/services/', {'name': 'SEO'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['data']['name'], 'SEO')
-        self.assertIsNone(response.data['data']['category'])
 
     def test_superuser_admin_without_tenant_can_create_service_with_selected_tenant_header(self):
         global_admin = User.objects.create_user(
@@ -142,8 +139,7 @@ class ServicesAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     def test_assign_and_update_task(self):
-        category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')
-        service = Service.objects.create(tenant=self.tenant, category=category, name='SEO')
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
         service_req = ServiceRequest.objects.create(
             tenant=self.tenant, booking=self.booking, service=service, status='pending'
         )
@@ -183,8 +179,7 @@ class ServicesAPITest(TestCase):
         self.assertIsNotNone(service_req.completed_at)
 
     def test_status_transition_invalid(self):
-        category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')
-        service = Service.objects.create(tenant=self.tenant, category=category, name='SEO')
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
         service_req = ServiceRequest.objects.create(
             tenant=self.tenant, booking=self.booking, service=service, status='pending'
         )
@@ -199,8 +194,7 @@ class ServicesAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_role_scoped_list(self):
-        category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')
-        service = Service.objects.create(tenant=self.tenant, category=category, name='SEO')
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
 
         # Request created by BDE (booking bde_user = manager)
         service_req1 = ServiceRequest.objects.create(
@@ -234,8 +228,7 @@ class ServicesAPITest(TestCase):
         self.assertEqual(results[0]['id'], str(service_req2.id))
 
     def test_create_task_from_request_endpoint(self):
-        category = ServiceCategory.objects.create(tenant=self.tenant, name='Digital')
-        service = Service.objects.create(tenant=self.tenant, category=category, name='SEO')
+        service = Service.objects.create(tenant=self.tenant, name='SEO')
         service_req = ServiceRequest.objects.create(
             tenant=self.tenant, booking=self.booking, service=service, status='pending'
         )
