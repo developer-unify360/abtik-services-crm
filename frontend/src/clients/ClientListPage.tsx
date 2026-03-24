@@ -81,106 +81,124 @@ const ClientListPage: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
-        <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2">
-          <Plus size={18} />
-          Add Client
-        </button>
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+      <div className="shrink-0 w-full">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-purple-700">Client Directory</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">Clients</h1>
+            <p className="mt-1 text-xs text-slate-600">
+              Manage your client relationships and contact information.
+            </p>
+          </div>
+          <button onClick={handleOpenCreate} className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700">
+            <Plus size={14} />
+            New Client
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}
-      <div className="card mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search clients..."
-            className="input-field pl-10"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          />
+      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="relative w-full md:w-56">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="input-field pl-8 py-1.5 text-sm"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            />
+          </div>
+          <span className="text-xs text-slate-500">
+            {totalCount === 0 ? '0 records' : `${totalCount} total`}
+          </span>
         </div>
       </div>
 
       {/* Table */}
-      <div className="table-container">
-        <table className="w-full">
-          <thead>
-            <tr className="table-header">
-              <th className="text-left px-6 py-3 font-semibold">Client Name</th>
-              <th className="text-left px-6 py-3 font-semibold">Company</th>
-              <th className="text-left px-6 py-3 font-semibold">Email</th>
-              <th className="text-left px-6 py-3 font-semibold">Mobile</th>
-              <th className="text-left px-6 py-3 font-semibold">Industry</th>
-              <th className="text-left px-6 py-3 font-semibold">Created</th>
-              <th className="text-right px-6 py-3 font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                  No clients found. Create a new client to get started.
-                </td>
+      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
+        <div className="h-full overflow-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="text-xs font-semibold text-slate-600">
+                <th className="px-3 py-2 text-left whitespace-nowrap">Client</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Company</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Email</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Mobile</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Industry</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
+                <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
               </tr>
-            ) : (
-              clients.map((client) => (
-                <tr key={client.id} className="table-row">
-                  <td className="px-6 py-4 font-medium text-slate-800">{client.client_name}</td>
-                  <td className="px-6 py-4 text-gray-600">{client.company_name}</td>
-                  <td className="px-6 py-4 text-gray-600">{client.email}</td>
-                  <td className="px-6 py-4 text-gray-600">{client.mobile}</td>
-                  <td className="px-6 py-4">
-                    {client.industry_name && (
-                      <span className="badge badge-info">{client.industry_name}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{new Date(client.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => setViewingClient(client)}
-                      className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button 
-                      onClick={() => handleOpenEdit(client)}
-                      className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block ml-1"
-                    >
-                      <Edit size={18} />
-                    </button>
+            </thead>
+            <tbody className="text-sm">
+              {clients.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    No clients found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                clients.map((client) => (
+                  <tr key={client.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{client.client_name}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[120px] truncate">{client.company_name}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{client.email}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{client.mobile}</td>
+                    <td className="px-3 py-2">
+                      {client.industry_name && (
+                        <span className="badge bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5">{client.industry_name}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(client.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button 
+                        onClick={() => setViewingClient(client)}
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        <Eye size={12} />
+                        View
+                      </button>
+                      <button 
+                        onClick={() => handleOpenEdit(client)}
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50 ml-1"
+                      >
+                        <Edit size={12} />
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
         
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-          <span className="text-sm text-gray-500">
-            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
-              disabled={(page + 1) * rowsPerPage >= totalCount}
-              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+        {totalCount > rowsPerPage && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+            <span className="text-xs text-slate-500">
+              {`${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
+                disabled={(page + 1) * rowsPerPage >= totalCount}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Create / Edit Modal */}

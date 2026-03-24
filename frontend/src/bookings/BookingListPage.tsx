@@ -77,41 +77,41 @@ const BookingListPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Bookings</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            All bookings submitted through the BDE form. You can view and edit any booking.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+      <div className="shrink-0 w-full">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">Bookings</h1>
+            <p className="mt-1 text-xs text-slate-600">
+              All bookings submitted through the BDE form. You can view and edit any booking.
+            </p>
+          </div>
           <a
             href="/bookings/new"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
           >
-            <ExternalLink size={16} />
-            Open Booking Form
+            <ExternalLink size={14} />
+            Open Form
           </a>
         </div>
       </div>
 
-      <div className="card">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <Filter size={18} className="text-slate-400" />
+      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-slate-400" />
             <select
-              className="input-field w-full md:w-56"
+              className="input-field py-1.5 text-sm w-32"
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value);
                 setPage(0);
               }}
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="in_progress">In Progress</option>
@@ -119,85 +119,87 @@ const BookingListPage: React.FC = () => {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
-          <p className="text-sm text-slate-500">
-            All bookings from the public BDE form.
-          </p>
+          <span className="text-xs text-slate-500">
+            {totalCount === 0 ? '0 records' : `${totalCount} total`}
+          </span>
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="w-full min-w-[840px]">
-          <thead>
-            <tr className="table-header">
-              <th className="px-6 py-3 text-left font-semibold">Client</th>
-              <th className="px-6 py-3 text-left font-semibold">Company</th>
-              <th className="px-6 py-3 text-left font-semibold">Payment Type</th>
-              <th className="px-6 py-3 text-left font-semibold">Booking Date</th>
-              <th className="px-6 py-3 text-left font-semibold">Status</th>
-              <th className="px-6 py-3 text-left font-semibold">Created</th>
-              <th className="px-6 py-3 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                  Loading bookings...
-                </td>
+      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
+        <div className="h-full overflow-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="text-xs font-semibold text-slate-600">
+                <th className="px-3 py-2 text-left whitespace-nowrap">Client</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Company</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Payment Type</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Booking Date</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Status</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
+                <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
               </tr>
-            ) : bookings.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                  No bookings found. Use the booking form to create the first one.
-                </td>
-              </tr>
-            ) : (
-              bookings.map((booking) => (
-                <tr key={booking.id} className="table-row">
-                  <td className="px-6 py-4 font-medium text-slate-800">{booking.client_name}</td>
-                  <td className="px-6 py-4 text-slate-600">{booking.company_name}</td>
-                  <td className="px-6 py-4 text-slate-600">{booking.payment_type_name}</td>
-                  <td className="px-6 py-4 text-slate-600">{new Date(booking.booking_date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">{getStatusChip(booking.status, booking.status_display)}</td>
-                  <td className="px-6 py-4 text-slate-600">{new Date(booking.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => navigate(`/bookings/${booking.id}/edit`)}
-                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50"
-                    >
-                      <PencilLine size={16} />
-                      Edit
-                    </button>
+            </thead>
+            <tbody className="text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    Loading...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
-          <span className="text-sm text-slate-500">
-            {totalCount === 0
-              ? 'Showing 0 of 0'
-              : `Showing ${page * rowsPerPage + 1} to ${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount}`}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
-              disabled={page === 0}
-              className="btn-secondary text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage((currentPage) => ((page + 1) * rowsPerPage < totalCount ? currentPage + 1 : currentPage))}
-              disabled={(page + 1) * rowsPerPage >= totalCount}
-              className="btn-secondary text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+              ) : bookings.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    No bookings found.
+                  </td>
+                </tr>
+              ) : (
+                bookings.map((booking) => (
+                  <tr key={booking.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{booking.client_name}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[120px] truncate">{booking.company_name}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{booking.payment_type_name}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(booking.booking_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
+                    <td className="px-3 py-2">{getStatusChip(booking.status, booking.status_display)}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(booking.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        onClick={() => navigate(`/bookings/${booking.id}/edit`)}
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                      >
+                        <PencilLine size={12} />
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+
+        {totalCount > rowsPerPage && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+            <span className="text-xs text-slate-500">
+              {`${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+                disabled={page === 0}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setPage((currentPage) => ((page + 1) * rowsPerPage < totalCount ? currentPage + 1 : currentPage))}
+                disabled={(page + 1) * rowsPerPage >= totalCount}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {snackbar.open ? (

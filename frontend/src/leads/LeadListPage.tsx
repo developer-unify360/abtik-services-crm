@@ -145,122 +145,112 @@ const LeadListPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Lead Management</h1>
-          <p className="text-slate-500 mt-1">Nurture and convert your high-potential opportunities.</p>
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+      <div className="shrink-0 w-full">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Sales Pipeline</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">Leads</h1>
+            <p className="mt-1 text-xs text-slate-600">
+              Nurture and convert your high-potential opportunities.
+            </p>
+          </div>
           <button 
             onClick={() => navigate('/leads/new')}
-            className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
           >
-            <Plus size={18} className="transition-transform group-hover:rotate-90" />
-            <span>New Lead</span>
+            <Plus size={14} />
+            New Lead
           </button>
         </div>
       </div>
 
       {/* Summary Stats cards */}
       {summary && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Total Leads</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">{summary.total_leads}</h3>
+                <p className="text-xs font-medium text-slate-500">Total</p>
+                <h3 className="text-lg font-bold text-slate-900">{summary.total_leads}</h3>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
-                <Target size={24} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Target size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 w-fit px-2 py-1 rounded-full">
-              <TrendingUp size={12} />
-              <span>+12.5% this month</span>
+            <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 w-fit px-1.5 py-0.5 rounded">
+              <TrendingUp size={10} />
+              <span>+12.5%</span>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Qualified</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">{summary.qualified_leads}</h3>
+                <p className="text-xs font-medium text-slate-500">Qualified</p>
+                <h3 className="text-lg font-bold text-slate-900">{summary.qualified_leads}</h3>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-600 group-hover:text-white">
-                <BarChart3 size={24} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                <BarChart3 size={16} />
               </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-xs font-medium text-slate-500">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-6 w-6 rounded-full border-2 border-white bg-slate-200" />
-                ))}
-              </div>
-              <span>Nurtured by team</span>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Converted</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">{summary.closed_won}</h3>
+                <p className="text-xs font-medium text-slate-500">Won</p>
+                <h3 className="text-lg font-bold text-slate-900">{summary.closed_won}</h3>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                <CheckCircle2 size={24} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <CheckCircle2 size={16} />
               </div>
             </div>
-            <div className="mt-4 text-xs font-medium text-slate-500">
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${summary.conversion_rate}%` }} />
-              </div>
-              <p className="mt-1">{summary.conversion_rate}% Conversion rate</p>
+            <div className="mt-2 text-[10px] font-medium text-slate-500">
+              {summary.conversion_rate}% rate
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">New Leads</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">{summary.new_leads}</h3>
+                <p className="text-xs font-medium text-slate-500">New</p>
+                <h3 className="text-lg font-bold text-slate-900">{summary.new_leads}</h3>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 transition-colors group-hover:bg-purple-600 group-hover:text-white">
-                <AlertCircle size={24} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                <AlertCircle size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 w-fit px-2 py-1 rounded-full">
-              <Clock size={12} />
-              <span>Requires Attention</span>
+            <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 w-fit px-1.5 py-0.5 rounded">
+              <Clock size={10} />
+              <span>Attention</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Main List Section */}
-      <div className="rounded-[28px] border border-slate-200 bg-white shadow-xl overflow-hidden">
+      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
         {/* Controls */}
-        <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/50 p-6 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search leads by name, company..." 
-              className="w-full rounded-xl border-slate-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
-              <Filter size={16} />
+        <div className="shrink-0 border-b border-slate-100 bg-slate-50/50 p-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input 
+                type="text" 
+                placeholder="Search leads..." 
+                className="input-field pl-8 py-1.5 text-sm w-full md:w-56"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
               <select 
-                className="bg-transparent outline-none cursor-pointer"
+                className="input-field py-1.5 text-sm w-32"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
-                <option value="">All Statuses</option>
+                <option value="">All Status</option>
                 {Object.entries(statusConfig).map(([key, cfg]) => (
                   <option key={key} value={key}>{cfg.label}</option>
                 ))}
@@ -270,33 +260,30 @@ const LeadListPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-3 py-2 text-left">Lead Contact</th>
-                <th className="px-3 py-2 text-left">BDE & Source</th>
-                <th className="px-3 py-2 text-left">Service</th>
-                <th className="px-3 py-2 text-left">Status & Priority</th>
-                <th className="px-3 py-2 text-left">Assigned To</th>
-                <th className="px-3 py-2 text-left">Score</th>
-                <th className="px-3 py-2 text-center">Actions</th>
+        <div className="h-full overflow-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="text-xs font-semibold text-slate-600">
+                <th className="px-3 py-2 text-left whitespace-nowrap">Lead Contact</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">BDE & Source</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Service</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Status & Priority</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Assigned To</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Score</th>
+                <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-                      <span>Loading high-potential leads...</span>
-                    </div>
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    Loading...
                   </td>
                 </tr>
               ) : filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    No leads found matching your criteria.
+                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    No leads found.
                   </td>
                 </tr>
               ) : filteredLeads.map((lead) => {
@@ -306,44 +293,42 @@ const LeadListPage: React.FC = () => {
                 return (
                   <tr 
                     key={lead.id} 
-                    className="group hover:bg-slate-50 border-b border-slate-100 transition-colors"
+                    className="border-b border-slate-100 hover:bg-slate-50"
                   >
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
                           {lead.client_name?.[0].toUpperCase() || 'L'}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900 text-sm">{lead.client_name}</p>
-                          <div className="flex gap-2">
-                             <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">{lead.company_name}</span>
-                          </div>
+                          <p className="font-medium text-slate-900 text-sm">{lead.client_name}</p>
+                          <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{lead.company_name}</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-slate-700">{lead.bde_name || 'System'}</span>
-                        <span className="text-[9px] uppercase tracking-tighter text-slate-400 font-bold">{lead.source_name}</span>
+                        <span className="text-xs text-slate-700">{lead.bde_name || 'System'}</span>
+                        <span className="text-[10px] text-slate-400">{lead.source_name}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-xs font-medium text-slate-700">
-                        {lead.service_name || <span className="text-slate-400 italic">Not specified</span>}
+                      <span className="text-xs text-slate-700">
+                        {lead.service_name || <span className="text-slate-400">—</span>}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${cfg.bg} ${cfg.color} ${cfg.border} whitespace-nowrap`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`badge ${cfg.bg} ${cfg.color} text-[10px] px-1.5 py-0.5`}>
                           {cfg.label}
                         </span>
-                        <span className={`text-[10px] font-bold uppercase ${pcfg.color.replace('bg-', 'text-')}`}>{lead.priority_display}</span>
+                        <span className={`text-[10px] ${pcfg.color.replace('bg-', 'text-')}`}>{lead.priority_display}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <div className="h-5 w-5 rounded-full bg-slate-200" />
-                        <span className="font-medium">{lead.assigned_to_name || 'Unassigned'}</span>
+                        <div className="h-4 w-4 rounded-full bg-slate-200" />
+                        <span>{lead.assigned_to_name || '—'}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2">
@@ -354,9 +339,10 @@ const LeadListPage: React.FC = () => {
                         <button 
                           title="Edit Lead"
                           onClick={() => openEditModal(lead)}
-                          className="flex h-7 w-7 items-center justify-center rounded bg-slate-100 text-slate-600 hover:bg-slate-600 hover:text-white transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={12} />
+                          Edit
                         </button>
                         <button 
                           title="Convert to Booking"
@@ -377,9 +363,10 @@ const LeadListPage: React.FC = () => {
                               } 
                             });
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
                         >
-                          <ArrowUpRight size={14} />
+                          <ArrowUpRight size={12} />
+                          Open
                         </button>
                       </div>
                     </td>
