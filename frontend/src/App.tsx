@@ -9,6 +9,8 @@ import BookingFormPage from './bookings/BookingFormPage';
 import LeadListPage from './leads/LeadListPage';
 import PublicLeadFormPage from './leads/PublicLeadFormPage';
 import AttributesPage from './attributes/AttributesPage';
+import PaymentListPage from './payments/PaymentListPage';
+import PaymentFormPage from './payments/PaymentFormPage';
 
 function App() {
   return (
@@ -27,6 +29,9 @@ function App() {
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/bookings" element={<BookingListPage />} />
             <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
+            <Route path="/payments" element={<PaymentListPage />} />
+            <Route path="/payments/new" element={<PaymentFormPage />} />
+            <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
             <Route path="/attributes" element={<AttributesPage />} />
             <Route path="/leads" element={<LeadListPage />} />
             {/* Catch-all: redirect unknown routes to dashboard */}

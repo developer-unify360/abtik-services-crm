@@ -13,12 +13,6 @@ import {
   ArrowUpRight,
   Edit2,
   X,
-  User as UserIcon,
-  Building2,
-  Phone,
-  Mail,
-  Briefcase,
-  MessageSquare,
   Save
 } from 'lucide-react';
 import { LeadService } from './LeadService';

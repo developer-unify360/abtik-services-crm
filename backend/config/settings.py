@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'auth_app',
     'clients',
     'bookings',
+    'payments',
     'services',
     'audit',
     'leads',

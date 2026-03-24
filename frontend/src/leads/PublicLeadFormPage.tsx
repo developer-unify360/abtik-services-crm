@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
 import { ServiceApi, type Service } from '../services/api/ServiceApi';
-import { } from 'react-router-dom';
 import { 
   UserPlus, 
   CheckCircle, 
@@ -9,10 +8,8 @@ import {
   Building2, 
   Phone, 
   Mail, 
-  Target, 
   Send,
   Search,
-  MessageSquare,
   Briefcase,
   BarChart3,
   Flag,
@@ -55,26 +52,6 @@ const emptyFormState = (): LeadFormState => ({
   lead_score: '0',
   next_follow_up_date: '',
 });
-
-const SectionCard = ({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <section className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-    <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
-      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-100 text-blue-700">
-        {icon}
-      </div>
-      <h2 className="text-xs font-bold text-slate-900">{title}</h2>
-    </div>
-    <div className="p-2">{children}</div>
-  </section>
-);
 
 const Field = ({
   label,

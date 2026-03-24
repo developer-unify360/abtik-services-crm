@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Trophy, Layers } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Trophy, Layers, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
 
 const DRAWER_WIDTH = 240;
@@ -21,6 +21,7 @@ const Sidebar: React.FC = () => {
     { label: 'Leads', path: '/leads', icon: <Trophy size={20} /> },
     { label: 'Clients', path: '/clients', icon: <Users size={20} /> },
     { label: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
+    { label: 'Payments', path: '/payments', icon: <CreditCard size={20} /> },
     { label: 'Attributes', path: '/attributes', icon: <Layers size={20} /> },
   ];
 
