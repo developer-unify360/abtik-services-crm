@@ -14,7 +14,7 @@ class LeadService:
         lead, created = Lead.objects.get_or_create(
             client=client,
             defaults={
-                'source': source if source else 'other',
+                'source': source if source else None,
                 'status': 'new',
                 'assigned_to': user if (user and not user.is_anonymous) else None
             }

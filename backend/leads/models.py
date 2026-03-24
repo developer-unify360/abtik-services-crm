@@ -24,6 +24,12 @@ class Lead(BaseModel):
         ('urgent', 'Urgent'),
     ]
 
+    ASSIGNMENT_METHOD_CHOICES = [
+        ('manual', 'Manual'),
+        ('auto', 'Auto'),
+        ('round_robin', 'Round Robin'),
+    ]
+
     client = models.ForeignKey(
         'clients.Client', 
         on_delete=models.SET_NULL,
@@ -78,6 +84,37 @@ class Lead(BaseModel):
     notes = models.TextField(blank=True, null=True)
     last_contacted_at = models.DateTimeField(null=True, blank=True)
     next_follow_up_date = models.DateField(null=True, blank=True)
+
+    # P0 enrichment fields
+    lead_status_reason = models.CharField(max_length=255, null=True, blank=True,
+        help_text="Reason for current status, e.g. why lost or why qualified")
+    lost_reason = models.CharField(max_length=255, null=True, blank=True,
+        help_text="Specific reason if lead was lost")
+    interested_at = models.DateTimeField(null=True, blank=True,
+        help_text="When the lead first showed interest")
+    converted_at = models.DateTimeField(null=True, blank=True,
+        help_text="When the lead was converted to a booking")
+    converted_booking = models.ForeignKey(
+        'bookings.Booking',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_lead',
+        help_text="Booking created from this lead"
+    )
+    assignment_method = models.CharField(
+        max_length=20,
+        choices=ASSIGNMENT_METHOD_CHOICES,
+        null=True,
+        blank=True,
+        help_text="How this lead was assigned"
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True,
+        help_text="When the lead was assigned to the current owner")
+    first_response_at = models.DateTimeField(null=True, blank=True,
+        help_text="When the lead was first contacted")
+    last_activity_at = models.DateTimeField(null=True, blank=True,
+        help_text="Timestamp of the most recent activity on this lead")
 
     class Meta:
         ordering = ['-priority', '-lead_score', '-created_at']

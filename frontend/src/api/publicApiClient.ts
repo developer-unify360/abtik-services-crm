@@ -2,15 +2,16 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-const apiClient = axios.create({
+// Public API client without auth redirect on 401
+const publicApiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor: attach JWT token
-apiClient.interceptors.request.use((config) => {
+// Request interceptor: attach JWT token if available
+publicApiClient.interceptors.request.use((config) => {
   const stored = JSON.parse(localStorage.getItem('user') || 'null');
   if (stored) {
     const accessToken = stored?.access || stored?.token || stored?.user?.access;
@@ -21,16 +22,13 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: handle 401 (token expired)
-apiClient.interceptors.response.use(
+// Response interceptor: don't redirect to login for public endpoints
+publicApiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    // For public endpoints, just reject the error without redirecting
     return Promise.reject(error);
   }
 );
 
-export default apiClient;
+export default publicApiClient;

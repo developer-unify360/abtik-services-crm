@@ -156,7 +156,7 @@ const BookingListPage: React.FC = () => {
                 <tr key={booking.id} className="table-row">
                   <td className="px-6 py-4 font-medium text-slate-800">{booking.client_name}</td>
                   <td className="px-6 py-4 text-slate-600">{booking.company_name}</td>
-                  <td className="px-6 py-4 text-slate-600">{booking.payment_type_display}</td>
+                  <td className="px-6 py-4 text-slate-600">{booking.payment_type_name}</td>
                   <td className="px-6 py-4 text-slate-600">{new Date(booking.booking_date).toLocaleDateString()}</td>
                   <td className="px-6 py-4">{getStatusChip(booking.status, booking.status_display)}</td>
                   <td className="px-6 py-4 text-slate-600">{new Date(booking.created_at).toLocaleDateString()}</td>

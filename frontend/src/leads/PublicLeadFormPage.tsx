@@ -13,7 +13,10 @@ import {
   Send,
   Search,
   MessageSquare,
-  Briefcase
+  Briefcase,
+  BarChart3,
+  Flag,
+  Calendar
 } from 'lucide-react';
 
 import apiClient from '../api/apiClient';
@@ -30,6 +33,10 @@ interface LeadFormState {
   source: string;
   service: string;
   notes: string;
+  status: string;
+  priority: string;
+  lead_score: string;
+  next_follow_up_date: string;
 }
 
 const emptyFormState = (): LeadFormState => ({
@@ -43,6 +50,10 @@ const emptyFormState = (): LeadFormState => ({
   source: '',
   service: '',
   notes: '',
+  status: 'new',
+  priority: 'medium',
+  lead_score: '0',
+  next_follow_up_date: '',
 });
 
 const SectionCard = ({
@@ -168,7 +179,7 @@ const PublicLeadFormPage: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-50 p-4 overflow-hidden">
-      <div className="mx-auto max-w-3xl h-full flex flex-col">
+      <div className="mx-auto max-w-4xl h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 pb-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-600 text-white shadow-lg shadow-blue-200">
@@ -188,197 +199,249 @@ const PublicLeadFormPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-3 pr-1">
-          <SectionCard title="Agent & Source" icon={<Target size={14} />}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="BDE Name" required>
-                <div className="relative">
-                  <User className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                  <input
-                    required
-                    className="input-field pl-8 py-1.5 text-sm"
-                    placeholder="Your name"
-                    value={formState.bde_name}
-                    onChange={(e) => handleFieldChange('bde_name', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <Field label="Lead Source" required>
-                <select
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1">
+          {/* Combined compact form layout */}
+          <div className="grid gap-3 md:grid-cols-3">
+            {/* Agent & Source */}
+            <Field label="BDE Name" required>
+              <div className="relative">
+                <User className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <input
                   required
-                  className="input-field py-1.5 text-sm"
-                  value={formState.source}
-                  onChange={(e) => handleFieldChange('source', e.target.value)}
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Your name"
+                  value={formState.bde_name}
+                  onChange={(e) => handleFieldChange('bde_name', e.target.value)}
+                />
+              </div>
+            </Field>
+            <Field label="Lead Source" required>
+              <select
+                required
+                className="input-field py-1.5 text-sm"
+                value={formState.source}
+                onChange={(e) => handleFieldChange('source', e.target.value)}
+              >
+                <option value="">Select</option>
+                {leadSources.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Assign To">
+              <div className="relative">
+                <div 
+                  className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm"
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
-                  <option value="">Select</option>
-                  {leadSources.map(s => (
+                  <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
+                    {selectedUser ? selectedUser.name : 'Select user'}
+                  </span>
+                  <Search size={14} className="text-slate-400" />
+                </div>
+
+                {showUserDropdown && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg animate-in fade-in zoom-in duration-200">
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        className="w-full rounded-lg bg-slate-50 border-none px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="Search..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <div className="max-h-[100px] overflow-y-auto p-1">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map(user => (
+                          <div
+                            key={user.id}
+                            className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${formState.assigned_to === user.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                            onClick={() => {
+                              handleFieldChange('assigned_to', user.id);
+                              setShowUserDropdown(false);
+                              setUserSearchTerm('');
+                            }}
+                          >
+                            <span className="font-bold text-xs">{user.name}</span>
+                            <span className="text-[10px] opacity-70">{user.email}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-4 text-center text-slate-400 text-xs">
+                          No users found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Field>
+
+            {/* Client Details */}
+            <Field label="Client Name" required>
+              <div className="relative">
+                <User size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  required
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Client name"
+                  value={formState.client_name}
+                  onChange={(e) => handleFieldChange('client_name', e.target.value)}
+                />
+              </div>
+            </Field>
+            <Field label="Company Name" required>
+              <div className="relative">
+                <Building2 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  required
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Company"
+                  value={formState.company_name}
+                  onChange={(e) => handleFieldChange('company_name', e.target.value)}
+                />
+              </div>
+            </Field>
+            <Field label="Industry" required>
+              <select
+                required
+                className="input-field py-1.5 text-sm"
+                value={formState.industry}
+                onChange={(e) => handleFieldChange('industry', e.target.value)}
+              >
+                <option value="">Select</option>
+                {industries.map(i => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Mobile" required>
+              <div className="relative">
+                <Phone size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  required
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Mobile"
+                  value={formState.mobile}
+                  onChange={(e) => handleFieldChange('mobile', e.target.value)}
+                />
+              </div>
+            </Field>
+            <Field label="Email" required>
+              <div className="relative">
+                <Mail size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  required
+                  type="email"
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Email"
+                  value={formState.email}
+                  onChange={(e) => handleFieldChange('email', e.target.value)}
+                />
+              </div>
+            </Field>
+            <Field label="Service Required">
+              <div className="relative">
+                <Briefcase size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select
+                  className="input-field pl-8 py-1.5 text-sm"
+                  value={formState.service}
+                  onChange={(e) => handleFieldChange('service', e.target.value)}
+                >
+                  <option value="">Select Service</option>
+                  {services.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
-              </Field>
-            </div>
-          </SectionCard>
+              </div>
+            </Field>
 
-          <SectionCard title="Client Details" icon={<Building2 size={14} />}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Client Name" required>
-                <div className="relative">
-                  <User size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    required
-                    className="input-field pl-8 py-1.5 text-sm"
-                    placeholder="Client name"
-                    value={formState.client_name}
-                    onChange={(e) => handleFieldChange('client_name', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <Field label="Company Name" required>
-                <div className="relative">
-                  <Building2 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    required
-                    className="input-field pl-8 py-1.5 text-sm"
-                    placeholder="Company"
-                    value={formState.company_name}
-                    onChange={(e) => handleFieldChange('company_name', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <Field label="Industry" required>
+            {/* Additional Fields - Status, Priority, Score, Follow-up */}
+            <Field label="Status">
+              <div className="relative">
+                <BarChart3 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
-                  required
-                  className="input-field py-1.5 text-sm"
-                  value={formState.industry}
-                  onChange={(e) => handleFieldChange('industry', e.target.value)}
+                  className="input-field pl-8 py-1.5 text-sm"
+                  value={formState.status}
+                  onChange={(e) => handleFieldChange('status', e.target.value)}
                 >
-                  <option value="">Select</option>
-                  {industries.map(i => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
-                  ))}
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="proposal_sent">Proposal Sent</option>
+                  <option value="negotiation">Negotiation</option>
+                  <option value="closed_won">Closed Won</option>
+                  <option value="closed_lost">Closed Lost</option>
                 </select>
-              </Field>
-              <Field label="Mobile" required>
-                <div className="relative">
-                  <Phone size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    required
-                    className="input-field pl-8 py-1.5 text-sm"
-                    placeholder="Mobile"
-                    value={formState.mobile}
-                    onChange={(e) => handleFieldChange('mobile', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <Field label="Email" required>
-                <div className="relative">
-                  <Mail size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    required
-                    type="email"
-                    className="input-field pl-8 py-1.5 text-sm"
-                    placeholder="Email"
-                    value={formState.email}
-                    onChange={(e) => handleFieldChange('email', e.target.value)}
-                  />
-                </div>
-              </Field>
-              <Field label="Service Required">
-                <div className="relative">
-                  <Briefcase size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <select
-                    className="input-field pl-8 py-1.5 text-sm"
-                    value={formState.service}
-                    onChange={(e) => handleFieldChange('service', e.target.value)}
-                  >
-                    <option value="">Select Service</option>
-                    {services.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </Field>
-            </div>
-          </SectionCard>
+              </div>
+            </Field>
+            <Field label="Priority">
+              <div className="relative">
+                <Flag size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select
+                  className="input-field pl-8 py-1.5 text-sm"
+                  value={formState.priority}
+                  onChange={(e) => handleFieldChange('priority', e.target.value)}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </Field>
+            <Field label="Lead Score">
+              <input
+                type="number"
+                className="input-field py-1.5 text-sm"
+                placeholder="0"
+                value={formState.lead_score}
+                onChange={(e) => handleFieldChange('lead_score', e.target.value)}
+              />
+            </Field>
+            <Field label="Follow-up Date">
+              <div className="relative">
+                <Calendar size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  className="input-field pl-8 py-1.5 text-sm"
+                  value={formState.next_follow_up_date}
+                  onChange={(e) => handleFieldChange('next_follow_up_date', e.target.value)}
+                />
+              </div>
+            </Field>
 
-          <SectionCard title="Assignment & Notes" icon={<MessageSquare size={14} />}>
-            <div className="space-y-2">
-              <Field label="Assign To" required>
-                <div className="relative">
-                  <div 
-                    className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm"
-                    onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  >
-                    <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
-                      {selectedUser ? selectedUser.name : 'Select user'}
-                    </span>
-                    <Search size={14} className="text-slate-400" />
-                  </div>
-
-                  {showUserDropdown && (
-                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg animate-in fade-in zoom-in duration-200">
-                      <div className="p-2 border-b border-slate-100">
-                        <input
-                          autoFocus
-                          className="w-full rounded-lg bg-slate-50 border-none px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500/20"
-                          placeholder="Search..."
-                          value={userSearchTerm}
-                          onChange={(e) => setUserSearchTerm(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                      <div className="max-h-[120px] overflow-y-auto p-1">
-                        {filteredUsers.length > 0 ? (
-                          filteredUsers.map(user => (
-                            <div
-                              key={user.id}
-                              className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${formState.assigned_to === user.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
-                              onClick={() => {
-                                handleFieldChange('assigned_to', user.id);
-                                setShowUserDropdown(false);
-                                setUserSearchTerm('');
-                              }}
-                            >
-                              <span className="font-bold text-xs">{user.name}</span>
-                              <span className="text-[10px] opacity-70">{user.email}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-3 py-4 text-center text-slate-400 text-xs">
-                            No users found
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Field>
-
+            {/* Notes - spans full width */}
+            <div className="md:col-span-4">
               <Field label="Notes">
                 <textarea
-                  className="input-field min-h-[60px] py-1.5 text-sm pt-2"
+                  className="input-field min-h-[50px] py-1.5 text-sm pt-2"
                   placeholder="Additional notes..."
                   value={formState.notes}
                   onChange={(e) => handleFieldChange('notes', e.target.value)}
                 />
               </Field>
             </div>
-          </SectionCard>
+          </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-[0.98]"
-          >
-            {submitting ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : (
-              <>
-                <Send size={16} />
-                <span>Submit Lead</span>
-              </>
-            )}
-          </button>
+          <div className="mt-4">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+            >
+              {submitting ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Submit Lead</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>

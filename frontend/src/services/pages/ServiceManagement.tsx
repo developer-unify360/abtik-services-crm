@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Check,
-  Lock,
   Pencil,
   Plus,
   Search,
@@ -11,7 +10,6 @@ import {
   X,
 } from 'lucide-react';
 
-import { useAuthStore } from '../../auth/authStore';
 import type { Service } from '../api/ServiceApi';
 import { useServiceStore } from '../store/useServiceStore';
 
@@ -24,7 +22,6 @@ const getErrorMessage = (error: any, fallback: string) => (
 
 const ServiceManagement: React.FC = () => {
   const { services, isLoading, error, fetchServices, createService, updateService, deleteService } = useServiceStore();
-  const user = useAuthStore((state) => state.user);
 
   const [draftName, setDraftName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');

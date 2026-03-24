@@ -5,8 +5,8 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: string;  // Now stores role name (e.g., 'BDE', 'Admin')
-  role_name: string;
+  role?: string;
+  role_display?: string;
   status: boolean;
   created_at: string;
 }
@@ -15,8 +15,7 @@ export interface UserCreateData {
   name: string;
   email: string;
   phone?: string;
-  role: string;  // Role name like 'BDE', 'Admin', etc.
-  role_name: string;
+  role?: string;
   password?: string;
 }
 
@@ -49,19 +48,5 @@ export const UserService = {
   delete: async (id: string) => {
     const response = await apiClient.delete(`/users/${id}/`);
     return response.data;
-  },
-};
-
-// Role service for fetching roles
-export interface Role {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-export const RoleService = {
-  list: async () => {
-    const response = await apiClient.get('/roles/');
-    return response.data as Role[];
   },
 };

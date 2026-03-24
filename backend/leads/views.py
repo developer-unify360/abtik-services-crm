@@ -24,7 +24,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'source', 'assigned_to']
-    search_fields = ['first_name', 'last_name', 'email', 'company_name', 'phone']
+    search_fields = ['client_name', 'email', 'company_name', 'mobile']
     ordering_fields = ['created_at', 'updated_at', 'lead_score', 'priority']
     ordering = ['-priority', '-lead_score', '-created_at']
 
@@ -39,6 +39,9 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'public':
+            return [AllowAny()]
+        # Allow unauthenticated access to list/search for public booking form
+        if self.action == 'list':
             return [AllowAny()]
         return super().get_permissions()
 
@@ -152,7 +155,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
     filterset_fields = ['lead', 'activity_type']
     ordering_fields = ['created_at']
     ordering = ['-created_at']
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

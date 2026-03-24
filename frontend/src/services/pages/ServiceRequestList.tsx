@@ -32,7 +32,8 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role_name: string;
+  role: string;
+  role_display: string;
 }
 
 const ServiceRequestList: React.FC = () => {
@@ -55,10 +56,10 @@ const ServiceRequestList: React.FC = () => {
   });
 
   const authUser = useAuthStore((state) => state.user);
-  const roleName = authUser?.role || '';
-  const isBDE = roleName === 'BDE';
-  const isITManager = roleName === 'IT Manager';
-  const isITStaff = roleName === 'IT Staff';
+  const userRole = authUser?.role || '';
+  const isSalesManager = userRole === 'sales_manager';
+  const isServiceOps = userRole === 'service_ops';
+  const isAdmin = userRole === 'admin';
 
   const [formData, setFormData] = useState({
     booking: '',
@@ -82,7 +83,7 @@ const ServiceRequestList: React.FC = () => {
       const response = await UserService.list();
       const userList = Array.isArray(response) ? response : response?.results || [];
       const teamMembers = userList.filter((user: User) =>
-        user.role_name === 'IT Staff'
+        user.role === 'service_ops'
       );
       setUsers(teamMembers);
     } catch (error) {
@@ -277,7 +278,7 @@ const ServiceRequestList: React.FC = () => {
                     {new Date(request.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {(isITManager || roleName === 'Admin' || roleName === 'Super Admin') && (
+                    {(isServiceOps || isAdmin) && (
                       <button 
                         onClick={() => openAssignModal(request)}
                         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
@@ -287,7 +288,7 @@ const ServiceRequestList: React.FC = () => {
                       </button>
                     )}
 
-                    {(isITManager || isITStaff || roleName === 'Admin' || roleName === 'Super Admin') && (
+                    {(isServiceOps || isAdmin) && (
                       <button 
                         onClick={() => openStatusModal(request)}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
@@ -297,7 +298,7 @@ const ServiceRequestList: React.FC = () => {
                       </button>
                     )}
 
-                    {(isBDE || isITManager || roleName === 'Admin' || roleName === 'Super Admin' || (isITStaff && request.assigned_user?.id === authUser?.id)) && (
+                    {(isSalesManager || isServiceOps || isAdmin) && (
                       <button
                         onClick={() => handleCreateTask(request)}
                         className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-block ml-1"
@@ -418,7 +419,7 @@ const ServiceRequestList: React.FC = () => {
                   <option value="">Select team member</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.name} ({user.role_name})
+                      {user.name} ({user.role_display})
                     </option>
                   ))}
                 </select>

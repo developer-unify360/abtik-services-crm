@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import models
 from django.contrib.auth import get_user_model
 from leads.models import Lead, LeadActivity
 from clients.models import Client
@@ -53,6 +54,7 @@ class LeadSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'priority', 'priority_display', 
             'lead_score', 'assigned_to', 'assigned_to_name', 'service', 'service_name', 'notes', 
             'last_contacted_at', 'next_follow_up_date', 'activities',
+            'client_name', 'company_name', 'email', 'mobile', 'industry',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'activities', 'client_info']
@@ -69,6 +71,27 @@ class LeadCreateSerializer(serializers.Serializer):
     source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
     service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+    status = serializers.ChoiceField(choices=Lead.LEAD_STATUS_CHOICES, required=False, default='new')
+    priority = serializers.ChoiceField(choices=Lead.PRIORITY_CHOICES, required=False, default='medium')
+    lead_score = serializers.IntegerField(required=False, default=0)
+    next_follow_up_date = serializers.DateField(required=False, allow_null=True)
+
+    def validate(self, data):
+        email = data.get('email')
+        mobile = data.get('mobile')
+        
+        # Check for existing leads with same email/mobile that aren't closed/converted
+        existing_leads = Lead.objects.filter(
+            models.Q(email=email) | models.Q(mobile=mobile),
+            status__in=['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation']
+        )
+        
+        if existing_leads.exists():
+            raise serializers.ValidationError(
+                "A lead with this email or mobile number already exists in the pipeline."
+            )
+            
+        return data
 
     def create(self, validated_data):
         # Create lead
@@ -85,6 +108,7 @@ class LeadListSerializer(serializers.ModelSerializer):
     company_name = serializers.SerializerMethodField()
     mobile = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
+    industry_name = serializers.CharField(source='industry.name', read_only=True)
     assigned_to_name = serializers.CharField(source='assigned_to.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
@@ -108,8 +132,9 @@ class LeadListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'client_name', 'company_name', 'mobile', 'email', 'bde_name',
             'source', 'source_name', 'status', 'status_display', 
-            'priority', 'priority_display', 'lead_score', 'assigned_to_name', 
-            'service', 'service_name', 'next_follow_up_date', 'created_at'
+            'priority', 'priority_display', 'lead_score', 'assigned_to', 'assigned_to_name', 
+            'service', 'service_name', 'next_follow_up_date', 'created_at',
+            'industry', 'industry_name', 'notes'
         ]
 
 class LeadUpdateStatusSerializer(serializers.ModelSerializer):

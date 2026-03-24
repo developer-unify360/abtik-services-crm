@@ -1,23 +1,25 @@
 from django.core.exceptions import ValidationError
 from users.models import User
 
+
 class UserService:
     @staticmethod
     def create_user(data):
         email = data.get('email')
         if User.objects.filter(email=email).exists():
             raise ValidationError("User with this email already exists.")
-            
+
         user = User(
             username=email,
             email=email,
             name=data.get('name'),
             phone=data.get('phone'),
-            status=data.get('status', True)
+            role=data.get('role'),
+            status=data.get('status', True),
         )
         if data.get('password'):
             user.set_password(data.get('password'))
-            
+
         user.save()
         return user
 
@@ -34,6 +36,6 @@ class UserService:
 
     @staticmethod
     def delete_user(user):
-        user.status = False # Soft delete
+        user.status = False  # Soft delete
         user.save()
         return user

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Edit, X, Trash2, Save, Check, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit, X, Trash2, Save, AlertCircle } from 'lucide-react';
 import AttributeService, { type Attribute } from './AttributeService';
 
 interface AttributeTableProps {

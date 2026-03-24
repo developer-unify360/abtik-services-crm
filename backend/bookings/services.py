@@ -7,6 +7,17 @@ from audit.models import AuditLog
 
 class BookingService:
     @staticmethod
+    def _resolve_payment_type(data):
+        payment_type_id = data.get('payment_type')
+        if payment_type_id:
+            from attributes.models import PaymentType
+            try:
+                return PaymentType.objects.get(id=payment_type_id)
+            except PaymentType.DoesNotExist:
+                return None
+        return None
+
+    @staticmethod
     def _resolve_bank(data):
         bank_id = data.get('bank')
         if bank_id:
@@ -38,13 +49,14 @@ class BookingService:
         except Client.DoesNotExist:
             raise ValidationError("Client not found.")
 
+        payment_type = BookingService._resolve_payment_type(data)
         bank = BookingService._resolve_bank(data)
         bde_name = data.get('bde_name') or (getattr(user, 'name', None) if user else None)
 
         booking = Booking.objects.create(
             client=client,
             bde_name=bde_name,
-            payment_type=data['payment_type'],
+            payment_type=payment_type,
             bank=bank,
             booking_date=data['booking_date'],
             payment_date=data.get('payment_date'),
@@ -59,7 +71,7 @@ class BookingService:
             attachment=data.get('attachment'),
             remarks=data.get('remarks', ''),
             status=data.get('status', 'pending'),
-            lead_source=data.get('lead_source', 'other'),
+            lead_source=data.get('lead_source', None),
         )
         
         # Sync with Lead record (clients are leads)
@@ -101,7 +113,7 @@ class BookingService:
     def update_booking(booking, data, user):
         """Update an existing booking record."""
         updatable_fields = [
-            'payment_type', 'booking_date', 'payment_date',
+            'booking_date', 'payment_date',
             'total_payment_amount', 'total_payment_remarks',
             'received_amount', 'received_amount_remarks',
             'remaining_amount', 'remaining_amount_remarks',
@@ -114,6 +126,10 @@ class BookingService:
             if field in data:
                 setattr(booking, field, data[field])
                 updated_fields.append(field)
+
+        if 'payment_type' in data:
+            booking.payment_type = BookingService._resolve_payment_type(data)
+            updated_fields.append('payment_type')
 
         if 'bank' in data:
             booking.bank = BookingService._resolve_bank(data)

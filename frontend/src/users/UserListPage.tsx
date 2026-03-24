@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
-import { UserService, RoleService, type User, type UserCreateData, type Role } from './UserService';
+import { UserService, type User, type UserCreateData } from './UserService';
 
 const UserListPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const ROLE_CHOICES = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'sales_manager', label: 'Sales Manager' },
+    { value: 'booking_ops', label: 'Booking Ops' },
+    { value: 'finance', label: 'Finance' },
+    { value: 'service_ops', label: 'Service Ops' },
+  ];
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
@@ -15,8 +21,8 @@ const UserListPage: React.FC = () => {
     open: false, message: '', type: 'success',
   });
 
-  const [formData, setFormData] = useState<{ name: string; email: string; phone: string; role: string; role_name: string; password: string }>({
-    name: '', email: '', phone: '', role: '', role_name: '', password: '',
+  const [formData, setFormData] = useState<{ name: string; email: string; phone: string; role: string; password: string }>({
+    name: '', email: '', phone: '', role: '', password: '',
   });
 
   const fetchUsers = async () => {
@@ -31,23 +37,14 @@ const UserListPage: React.FC = () => {
     }
   };
 
-  const fetchRoles = async () => {
-    try {
-      const data = await RoleService.list();
-      setRoles(data);
-    } catch (err) {
-      console.error('Failed to fetch roles:', err);
-    }
-  };
 
   useEffect(() => { 
     fetchUsers(); 
-    fetchRoles();
   }, [page, search]);
 
   const handleOpenCreate = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', phone: '', role: '', role_name: '', password: '' });
+    setFormData({ name: '', email: '', phone: '', role: '', password: '' });
     setOpenForm(true);
   };
 
@@ -58,7 +55,6 @@ const UserListPage: React.FC = () => {
       email: user.email,
       phone: user.phone || '',
       role: user.role || '',
-      role_name: user.role_name || '',
       password: '',
     });
     setOpenForm(true);
@@ -147,7 +143,7 @@ const UserListPage: React.FC = () => {
                 <td className="px-6 py-4 text-gray-600">{user.email}</td>
                 <td className="px-6 py-4 text-gray-600">{user.phone || '—'}</td>
                 <td className="px-6 py-4">
-                  <span className="badge badge-info">{user.role_name || 'No Role'}</span>
+                  <span className="badge badge-info">{user.role_display || 'No Role'}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`badge ${user.status ? 'badge-success' : 'badge-error'}`}>
@@ -258,9 +254,9 @@ const UserListPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
                     <option value="">Select a role</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
+                    {ROLE_CHOICES.map((rc) => (
+                      <option key={rc.value} value={rc.value}>
+                        {rc.label}
                       </option>
                     ))}
                   </select>

@@ -10,6 +10,7 @@ export interface Booking {
   bde_name?: string;
   payment_type: string;
   payment_type_name: string;
+  payment_type_display: string;
   lead_source?: string | null;
   bank?: string | null;
   bank_name?: string | null;

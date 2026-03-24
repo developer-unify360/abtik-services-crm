@@ -1,33 +1,44 @@
 import pytest
 from django.core.exceptions import ValidationError
 from users.models import User
-from tenants.models import Tenant
-from roles.models import Role
 from users.services import UserService
+
 
 @pytest.mark.django_db
 class TestUserService:
     def test_create_user(self):
-        tenant = Tenant.objects.create(name="Test Tenant")
-        role = Role.objects.create(name="Admin")
-        
         data = {
             'email': 'test@example.com',
             'name': 'Test User',
             'phone': '1234567890',
-            'role': role.id,
-            'password': 'securepassword123'
+            'password': 'securepassword123',
         }
-        
-        user = UserService.create_user(tenant.id, data)
+
+        user = UserService.create_user(data)
         assert user.email == 'test@example.com'
-        assert user.tenant == tenant
+        assert user.name == 'Test User'
         assert user.check_password('securepassword123')
 
     def test_duplicate_email(self):
-        tenant = Tenant.objects.create(name="Test Tenant")
         data = {'email': 'dup@example.com', 'name': 'Dup User'}
-        UserService.create_user(tenant.id, data)
-        
+        UserService.create_user(data)
+
         with pytest.raises(ValidationError):
-            UserService.create_user(tenant.id, data)
+            UserService.create_user(data)
+
+    def test_update_user(self):
+        user = UserService.create_user({
+            'email': 'update@example.com',
+            'name': 'Original',
+        })
+        updated = UserService.update_user(user, {'name': 'Updated'})
+        assert updated.name == 'Updated'
+
+    def test_delete_user_soft(self):
+        user = UserService.create_user({
+            'email': 'delete@example.com',
+            'name': 'To Delete',
+        })
+        UserService.delete_user(user)
+        user.refresh_from_db()
+        assert user.status is False

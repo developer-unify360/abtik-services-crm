@@ -5,6 +5,7 @@ import { CalendarDays, CheckCircle, FileText, IndianRupee, Save, Upload, UserRou
 import { useAuthStore } from '../auth/authStore';
 import { BookingService } from './BookingService';
 import { ClientService } from '../clients/ClientService';
+import { LeadService, type Lead } from '../leads/LeadService';
 import { ServiceApi, ServiceRequestApi, type Service, type ServiceRequest } from '../services/api/ServiceApi';
 import { BankApi, type Bank } from './api/BankApi';
 
@@ -135,12 +136,15 @@ const BookingFormPage: React.FC = () => {
   const [leadSources, setLeadSources] = useState<Attribute[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<Attribute[]>([]);
   const [existingServiceRequest, setExistingServiceRequest] = useState<ServiceRequest | null>(null);
-  const [displayBdeName, setDisplayBdeName] = useState(authUser?.name || '');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showPaymentRemarks, setShowPaymentRemarks] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadSearch, setLeadSearch] = useState('');
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [showLeadDropdown, setShowLeadDropdown] = useState(false);
 
   useEffect(() => {
     const loadPage = async () => {
@@ -165,7 +169,6 @@ const BookingFormPage: React.FC = () => {
         if (!isEditMode || !bookingId) {
           const prefill = location.state?.prefill;
           const initialBdeName = prefill?.bde_name || authUser?.name || '';
-          setDisplayBdeName(initialBdeName);
           setFormState((prev) => ({ 
             ...prev, 
             ...prefill,
@@ -176,7 +179,6 @@ const BookingFormPage: React.FC = () => {
         }
 
         const booking = await BookingService.get(bookingId);
-        setDisplayBdeName(booking.bde_name || authUser?.name || '');
         const [client, serviceRequests] = await Promise.all([
           ClientService.get(booking.client),
           ServiceRequestApi.list({ booking_id: bookingId }),
@@ -227,6 +229,67 @@ const BookingFormPage: React.FC = () => {
     loadPage();
   }, [authUser?.name, bookingId, isEditMode]);
 
+  // Load leads for dropdown
+  const loadLeads = async (search: string = '') => {
+    try {
+      setLoadingLeads(true);
+      const data = await LeadService.listForDropdown(search);
+      // Handle both paginated and non-paginated responses
+      const leadsArray = data.results || data;
+      setLeads(leadsArray);
+    } catch (error) {
+      console.error('Failed to load leads:', error);
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
+
+  // Handle lead selection
+  const handleLeadSelect = (lead: Lead) => {
+    // Get lead info from either client_info or direct fields
+    const clientInfo = lead.client_info;
+    const leadData = {
+      lead_id: lead.id,
+      client_name: clientInfo?.client_name || lead.client_name || '',
+      company_name: clientInfo?.company_name || lead.company_name || '',
+      email: clientInfo?.email || lead.email || '',
+      mobile: clientInfo?.mobile || lead.mobile || '',
+      industry: clientInfo?.industry || lead.industry || '',
+    };
+
+    setFormState((prev) => ({
+      ...prev,
+      ...leadData,
+    }));
+    setShowLeadDropdown(false);
+    setLeadSearch('');
+  };
+
+  // Handle lead search input change
+  const handleLeadSearchChange = (value: string) => {
+    setLeadSearch(value);
+    setShowLeadDropdown(true);
+    loadLeads(value);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.lead-dropdown-container')) {
+        setShowLeadDropdown(false);
+      }
+    };
+
+    if (showLeadDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showLeadDropdown]);
+
+  // Filter leads for dropdown display
+  const filteredLeads = leads;
+
   const handleFieldChange = (field: keyof BookingFormState, value: string | boolean | File | null) => {
     setFormState((previous) => {
       const nextState = { ...previous, [field]: value } as BookingFormState;
@@ -265,7 +328,7 @@ const BookingFormPage: React.FC = () => {
         booking: {
           bde_name: formState.bde_name,
           lead_source: formState.lead_source || null,
-          payment_type: formState.payment_type,
+          payment_type: formState.payment_type || null,
           bank: formState.bank || null,
           booking_date: formState.booking_date,
           payment_date: formState.payment_date || null,
@@ -419,7 +482,6 @@ const BookingFormPage: React.FC = () => {
                           value={formState.bde_name}
                           onChange={(event) => {
                             handleFieldChange('bde_name', event.target.value);
-                            setDisplayBdeName(event.target.value);
                           }}
                         />
                       </Field>
@@ -568,6 +630,48 @@ const BookingFormPage: React.FC = () => {
                 {/* Right column: Client Information + Payment Info */}
                 <div className="flex-1 flex flex-col gap-2">
                   <SectionCard title="Client Information" icon={<UserRound size={14} />}>
+                    {/* Lead Selection Dropdown */}
+                    <div className="mb-3 lead-dropdown-container">
+                      <Field label="Select Lead (Optional)">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            className="input-field py-1.5 text-sm w-full"
+                            placeholder="Search leads by name, email, mobile or company..."
+                            value={leadSearch}
+                            onChange={(e) => handleLeadSearchChange(e.target.value)}
+                            onFocus={() => { setShowLeadDropdown(true); if (leads.length === 0) loadLeads(); }}
+                          />
+                          {showLeadDropdown && (
+                            <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                              {loadingLeads ? (
+                                <div className="p-2 text-xs text-slate-500">Loading...</div>
+                              ) : filteredLeads.length > 0 ? (
+                                filteredLeads.map((lead) => (
+                                  <button
+                                    key={lead.id}
+                                    type="button"
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-slate-100 focus:bg-slate-100"
+                                    onClick={() => handleLeadSelect(lead)}
+                                  >
+                                    <div className="font-medium text-slate-800">
+                                      {lead.client_info?.client_name || lead.client_name || 'Unnamed Lead'}
+                                    </div>
+                                    <div className="text-slate-500">
+                                      {lead.client_info?.company_name || lead.company_name || 'No company'} 
+                                      {lead.client_info?.mobile || lead.mobile ? ` | ${lead.client_info?.mobile || lead.mobile}` : ''}
+                                      {lead.client_info?.email || lead.email ? ` | ${lead.client_info?.email || lead.email}` : ''}
+                                    </div>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="p-2 text-xs text-slate-500">No leads found</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </Field>
+                    </div>
                     <div className="grid gap-2 md:grid-cols-2">
                       <Field label="Client Name" required>
                         <input

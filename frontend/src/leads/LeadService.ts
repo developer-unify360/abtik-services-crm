@@ -1,30 +1,39 @@
 import apiClient from '../api/apiClient';
+import publicApiClient from '../api/publicApiClient';
 
 export interface Lead {
   id: string;
-  client: string;
-  client_info: {
+  client: string | null;
+  client_info?: {
+    id: string | null;
     client_name: string;
     company_name: string;
     email: string;
     mobile: string;
-    industry: string;
+    industry: string | null;
+    industry_name: string | null;
   };
-  source: string;
+  client_name?: string;
+  company_name?: string;
+  email?: string;
+  mobile?: string;
+  industry?: string | null;
+  industry_name?: string;
+  source: string | null;
   source_name?: string;
-  service?: string;
+  service?: string | null;
   service_name?: string;
   status: string;
   status_display: string;
   priority: string;
   priority_display: string;
   lead_score: number;
-  assigned_to?: string;
+  assigned_to?: string | null;
   assigned_to_name?: string;
   bde_name?: string;
   notes?: string;
-  last_contacted_at?: string;
-  next_follow_up_date?: string;
+  last_contacted_at?: string | null;
+  next_follow_up_date?: string | null;
   activities: LeadActivity[];
   created_at: string;
   updated_at: string;
@@ -52,6 +61,17 @@ export interface LeadSummary {
 export const LeadService = {
   list: async (params?: Record<string, string>) => {
     const response = await apiClient.get('/leads/', { params });
+    return response.data;
+  },
+
+  listForDropdown: async (search?: string) => {
+    const params: Record<string, string> = {};
+    if (search) {
+      params.search = search;
+    }
+    // Get all leads, limit to 100 for dropdown performance
+    params.limit = '100';
+    const response = await publicApiClient.get('/leads/', { params });
     return response.data;
   },
 

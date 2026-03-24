@@ -1,15 +1,16 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from users.models import User
 from users.serializers import UserSerializer, UserPublicSerializer, UserCreateUpdateSerializer
 from users.services import UserService
+from users.permissions import IsAdmin
 from django.core.exceptions import ValidationError
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_queryset(self):
         # Admins can see all users
