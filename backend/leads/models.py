@@ -85,7 +85,6 @@ class Lead(BaseModel):
     last_contacted_at = models.DateTimeField(null=True, blank=True)
     next_follow_up_date = models.DateField(null=True, blank=True)
 
-    # P0 enrichment fields
     lead_status_reason = models.CharField(max_length=255, null=True, blank=True,
         help_text="Reason for current status, e.g. why lost or why qualified")
     lost_reason = models.CharField(max_length=255, null=True, blank=True,

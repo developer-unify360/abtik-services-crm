@@ -3,14 +3,30 @@ from django.core.exceptions import ValidationError
 from bookings.models import Booking, Bank
 from clients.models import Client
 from audit.models import AuditLog
+from services.models import Service
+from attributes.models import PaymentType
+from leads.services import LeadService
+from leads.models import Lead, LeadActivity
 
 
 class BookingService:
     @staticmethod
+    def _resolve_service(service_reference):
+        if not service_reference:
+            return None
+
+        if isinstance(service_reference, Service):
+            return service_reference
+
+        try:
+            return Service.objects.get(id=service_reference)
+        except (Service.DoesNotExist, ValidationError, ValueError, TypeError):
+            return None
+
+    @staticmethod
     def _resolve_payment_type(data):
         payment_type_id = data.get('payment_type')
         if payment_type_id:
-            from attributes.models import PaymentType
             try:
                 return PaymentType.objects.get(id=payment_type_id)
             except PaymentType.DoesNotExist:
@@ -42,7 +58,7 @@ class BookingService:
 
     @staticmethod
     @transaction.atomic
-    def create_booking(data, user):
+    def create_booking(data, user, service_id=None):
         """Create a new booking record."""
         try:
             client = Client.objects.get(id=data['client_id'])
@@ -74,13 +90,20 @@ class BookingService:
             lead_source=data.get('lead_source', None),
         )
         
-        # Sync with Lead record (clients are leads)
-        from leads.services import LeadService
-        LeadService.ensure_lead_exists(client, user, source=booking.lead_source)
+        service = BookingService._resolve_service(service_id)
+        
+        LeadService.ensure_lead_exists(
+            client, 
+            user, 
+            source=booking.lead_source,
+            bde_name=bde_name,
+            industry=client.industry,
+            service=service,
+            status='closed_won'
+        )
         
         lead_id = data.get('lead_id')
         if lead_id:
-            from leads.models import Lead, LeadActivity
             try:
                 lead = Lead.objects.get(id=lead_id)
                 if lead.status != 'closed_won':
@@ -110,7 +133,7 @@ class BookingService:
         return booking
 
     @staticmethod
-    def update_booking(booking, data, user):
+    def update_booking(booking, data, user, service_id=None):
         """Update an existing booking record."""
         updatable_fields = [
             'booking_date', 'payment_date',
@@ -155,10 +178,17 @@ class BookingService:
         booking.full_clean()
         booking.save()
         
-        # Sync with Lead record if source or client changed
-        if 'lead_source' in updated_fields:
-            from leads.services import LeadService
-            LeadService.ensure_lead_exists(booking.client, user, source=booking.lead_source)
+        service = BookingService._resolve_service(service_id)
+        
+        LeadService.ensure_lead_exists(
+            booking.client, 
+            user, 
+            source=booking.lead_source,
+            bde_name=booking.bde_name,
+            industry=booking.client.industry,
+            service=service,
+            status='closed_won'
+        )
 
         AuditLog.objects.create(
             user=user,

@@ -5,7 +5,6 @@ from audit.models import AuditLog
 from bookings.services import BookingService
 from services.services import ServiceRequestService
 from leads.models import Lead
-from leads.services import LeadService
 
 
 class ClientService:
@@ -23,7 +22,7 @@ class ClientService:
             gst_pan=data.get('gst_pan', ''),
             email=data['email'],
             mobile=data['mobile'],
-            industry=data.get('industry', ''),
+            industry=data.get('industry'),
             created_by=user,
         )
 
@@ -41,7 +40,7 @@ class ClientService:
 
     @staticmethod
     @transaction.atomic
-    def create_client_with_booking_and_request(client_data, booking_data, request_data, user):
+    def create_client_with_booking_and_request(client_data, booking_data, request_data, user, service_id=None):
         """Create or update client, then create booking and optional service request."""
         email = client_data.get('email')
         mobile = client_data.get('mobile')
@@ -101,14 +100,7 @@ class ClientService:
             except Lead.DoesNotExist:
                 pass
         
-        booking = BookingService.create_booking(data=booking_payload, user=user)
-
-        # Ensure a lead record exists (clients are the leads)
-        LeadService.ensure_lead_exists(
-            client=client, 
-            user=user, 
-            source=booking_payload.get('lead_source')
-        )
+        booking = BookingService.create_booking(data=booking_payload, user=user, service_id=service_id)
 
         service_request = None
         if request_data:

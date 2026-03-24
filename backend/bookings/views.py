@@ -145,11 +145,13 @@ class BookingViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            service_id = service_serializer.validated_data.get('service') if service_serializer else None
             result = ClientService.create_client_with_booking_and_request(
                 client_data=dict(client_serializer.validated_data),
                 booking_data=dict(booking_serializer.validated_data),
                 request_data=dict(service_serializer.validated_data) if service_serializer else {},
                 user=request.user,
+                service_id=service_id
             )
             return Response(
                 {
@@ -180,11 +182,13 @@ class BookingViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            service_id = service_serializer.validated_data.get('service') if service_serializer else None
             result = ClientService.create_client_with_booking_and_request(
                 client_data=dict(client_serializer.validated_data),
                 booking_data=dict(booking_serializer.validated_data),
                 request_data=dict(service_serializer.validated_data) if service_serializer else {},
                 user=None,
+                service_id=service_id
             )
             return Response(
                 {
@@ -215,8 +219,9 @@ class BookingViewSet(viewsets.ModelViewSet):
                 if client_serializer:
                     ClientService.update_client(booking.client, client_serializer.validated_data, user=request.user)
 
+                service_id = service_serializer.validated_data.get('service') if service_serializer else None
                 updated_booking = BookingService.update_booking(
-                    booking, booking_serializer.validated_data, user=request.user
+                    booking, booking_serializer.validated_data, user=request.user, service_id=service_id
                 )
 
                 existing_request = updated_booking.service_requests.order_by('created_at').first()

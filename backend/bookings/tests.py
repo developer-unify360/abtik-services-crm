@@ -1,9 +1,12 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
+import json
 from users.models import User
 from clients.models import Client
 from bookings.models import Booking
+from leads.models import Lead
+from services.models import Service, ServiceRequest
 from datetime import date
 
 
@@ -79,3 +82,76 @@ class BookingAPITest(TestCase):
         self.api_client.force_authenticate(user=self.admin_user)
         response = self.api_client.get('/api/v1/bookings/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_bde_form_create_accepts_validated_service_instance_and_syncs_lead(self):
+        service = Service.objects.create(name='Certificate & Licence')
+
+        self.api_client.force_authenticate(user=self.admin_user)
+        response = self.api_client.post(
+            '/api/v1/bookings/bde-form/',
+            data={
+                'client': json.dumps({
+                    'client_name': 'Lead Client',
+                    'company_name': 'Lead Corp',
+                    'email': 'lead@test.com',
+                    'mobile': '8888888888',
+                }),
+                'booking': json.dumps({
+                    'bde_name': self.admin_user.name,
+                    'booking_date': str(date.today()),
+                }),
+                'service_request': json.dumps({
+                    'service': str(service.id),
+                    'priority': 'medium',
+                }),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        booking = Booking.objects.get(client__email='lead@test.com')
+        service_request = ServiceRequest.objects.get(booking=booking)
+        lead = Lead.objects.get(client=booking.client)
+
+        self.assertEqual(service_request.service, service)
+        self.assertEqual(lead.service, service)
+
+    def test_bde_form_create_updates_existing_lead_service_on_conversion(self):
+        existing_lead = Lead.objects.create(
+            client=None,
+            client_name='Existing Lead',
+            company_name='Existing Corp',
+            email='existing@test.com',
+            mobile='7777777777',
+            status='qualified',
+        )
+        service = Service.objects.create(name='Certificate & Licence')
+
+        self.api_client.force_authenticate(user=self.admin_user)
+        response = self.api_client.post(
+            '/api/v1/bookings/bde-form/',
+            data={
+                'client': json.dumps({
+                    'client_name': 'Existing Lead',
+                    'company_name': 'Existing Corp',
+                    'email': 'existing@test.com',
+                    'mobile': '7777777777',
+                }),
+                'booking': json.dumps({
+                    'bde_name': self.admin_user.name,
+                    'booking_date': str(date.today()),
+                    'lead_id': str(existing_lead.id),
+                }),
+                'service_request': json.dumps({
+                    'service': str(service.id),
+                    'priority': 'medium',
+                }),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        existing_lead.refresh_from_db()
+        self.assertIsNotNone(existing_lead.client)
+        self.assertEqual(existing_lead.status, 'closed_won')
+        self.assertEqual(existing_lead.service, service)

@@ -97,6 +97,7 @@ class BookingCreateUpdateSerializer(serializers.Serializer):
     bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     lead_source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
     status = serializers.ChoiceField(choices=Booking.STATUS_CHOICES, required=False, default='pending')
+    service_request = serializers.DictField(required=False, allow_null=True)
 
     def validate_booking_date(self, value):
         from django.utils import timezone
