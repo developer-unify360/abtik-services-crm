@@ -1,12 +1,27 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import environ
+
+# Initialize environment variables
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-very-long-random-string-at-least-32-chars')
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['*']
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-fallback-key-should-be-at-least-32-chars')
+DEBUG = env('DEBUG')
+
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
+    "api.abtikservices.in",
+    "localhost",
+    "127.0.0.1",
+])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -67,14 +82,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'saas_db'),
-        'USER': os.environ.get('DB_USER', 'saas_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'saas_password'),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+    'default': env.db('DATABASE_URL', default=f'postgres://{env("DB_USER", default="saas_user")}:{env("DB_PASSWORD", default="saas_password")}@{env("DB_HOST", default="127.0.0.1")}:{env("DB_PORT", default="5432")}/{env("DB_NAME", default="saas_db")}')
 }
 
 AUTH_USER_MODEL = 'users.User'
@@ -118,14 +126,18 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+    'https://crm.abtikservices.in',
     'http://localhost:5173',
-    'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
-]
+])
+
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'https://crm.abtikservices.in',
+])
+
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',

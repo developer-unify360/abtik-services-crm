@@ -235,10 +235,11 @@ const BookingFormPage: React.FC = () => {
       setLoadingLeads(true);
       const data = await LeadService.listForDropdown(search);
       // Handle both paginated and non-paginated responses
-      const leadsArray = data.results || data;
-      setLeads(leadsArray);
+      const leadsArray = Array.isArray(data) ? data : (data?.results || []);
+      setLeads(Array.isArray(leadsArray) ? leadsArray : []);
     } catch (error) {
       console.error('Failed to load leads:', error);
+      setLeads([]);
     } finally {
       setLoadingLeads(false);
     }

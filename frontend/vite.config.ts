@@ -14,6 +14,12 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: '0.0.0.0',
+      port: 5173,
+      hmr: {
+        host: env.VITE_HMR_HOST || 'crm.abtikservices.in',
+        protocol: env.VITE_HMR_PROTOCOL || 'wss',
+      },
       proxy: {
         '/api': {
           target: apiTarget,
