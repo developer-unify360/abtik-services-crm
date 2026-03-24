@@ -45,7 +45,7 @@ services:
       redis:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -59,7 +59,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_TARGET: "http://backend:8000"
+      VITE_API_TARGET: "http://crm.abtikservices.in"
       NODE_OPTIONS: "--dns-result-order=ipv4first"
     depends_on:
       backend:
