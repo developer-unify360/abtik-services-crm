@@ -107,12 +107,12 @@ const PublicLeadFormPage: React.FC = () => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+  const filteredUsers = (users || []).filter(user => 
+    (user?.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    (user?.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
-  const selectedUser = users.find(u => u.id === formState.assigned_to);
+  const selectedUser = (users || []).find(u => u.id === formState.assigned_to);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -143,7 +143,7 @@ const PaymentFormPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
 
-  const clientOptions = useMemo(() => clients.slice().sort((left, right) => {
+  const clientOptions = useMemo(() => (clients || []).slice().sort((left, right) => {
     const leftLabel = `${left.client_name} ${left.company_name}`.trim().toLowerCase();
     const rightLabel = `${right.client_name} ${right.company_name}`.trim().toLowerCase();
     return leftLabel.localeCompare(rightLabel);

@@ -97,10 +97,10 @@ const BanksPage: React.FC = () => {
     }
   };
 
-  const filteredBanks = banks.filter(bank => 
-    bank.bank_name.toLowerCase().includes(search.toLowerCase()) ||
-    bank.account_number.toLowerCase().includes(search.toLowerCase()) ||
-    bank.branch_name?.toLowerCase().includes(search.toLowerCase())
+  const filteredBanks = (banks || []).filter(bank => 
+    (bank.bank_name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (bank.account_number || '').toLowerCase().includes(search.toLowerCase()) ||
+    (bank.branch_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
