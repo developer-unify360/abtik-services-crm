@@ -46,7 +46,8 @@ const LeadAssignmentRulesPage: React.FC = () => {
   const fetchRules = async () => {
     try {
       setLoading(true);
-      const token = useAuthStore.getState().token;
+      const stored = JSON.parse(localStorage.getItem('user') || 'null');
+      const token = stored?.access || stored?.token || stored?.user?.access;
       const headers = { Authorization: `Bearer ${token}` };
       const [rulesRes, sourcesRes, servicesRes, usersRes] = await Promise.all([
         axios.get('/api/leads/assignment-rules/', { headers }),
@@ -70,7 +71,8 @@ const LeadAssignmentRulesPage: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
-    const token = useAuthStore.getState().token;
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    const token = stored?.access || stored?.token || stored?.user?.access;
     const headers = { Authorization: `Bearer ${token}` };
     try {
       if (editingRule?.id) {
@@ -86,7 +88,8 @@ const LeadAssignmentRulesPage: React.FC = () => {
   };
 
   const toggleActive = async (rule: AssignmentRule) => {
-    const token = useAuthStore.getState().token;
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    const token = stored?.access || stored?.token || stored?.user?.access;
     const headers = { Authorization: `Bearer ${token}` };
     try {
       await axios.patch(`/api/leads/assignment-rules/${rule.id}/`, { is_active: !rule.is_active }, { headers });

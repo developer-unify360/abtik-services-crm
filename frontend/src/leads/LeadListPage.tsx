@@ -6,18 +6,11 @@ import {
   X,
   Phone,
   ArrowUpRight,
-  ChevronRight,
-  MoreVertical,
   Layers,
-  Play,
-  Pause
+  Play
 } from 'lucide-react';
 import { LeadService } from './LeadService';
 import type { Lead, LeadSummary } from './LeadService';
-import AttributeService, { type Attribute } from '../attributes/AttributeService';
-import { ServiceApi, type Service } from '../services/api/ServiceApi';
-import { UserService } from '../users/UserService';
-import type { User } from '../users/UserService';
 import { useAuthStore } from '../auth/authStore';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {

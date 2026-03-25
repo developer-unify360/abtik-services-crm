@@ -4,17 +4,17 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   // Default to empty string for relative paths in production (behind Nginx)
   const apiBaseUrl = env.VITE_API_BASE_URL || ''
-  
+
   return {
+    base: apiBaseUrl ? (apiBaseUrl.endsWith('/') ? apiBaseUrl : `${apiBaseUrl}/`) : '/',
     plugins: [react()],
     server: {
       host: '0.0.0.0',
       port: 5173,
       hmr: {
-        // Use localhost for dev, but allow override via env for codespaces/tunnels
         host: env.VITE_HMR_HOST || 'localhost',
         protocol: env.VITE_HMR_PROTOCOL || 'ws',
       },

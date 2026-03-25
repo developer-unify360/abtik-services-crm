@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, LogOut, Search } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
 import { useNavigate } from 'react-router-dom';
 import { DRAWER_WIDTH } from './Sidebar';
