@@ -7,6 +7,7 @@ import ClientListPage from './clients/ClientListPage';
 import BookingListPage from './bookings/BookingListPage';
 import BookingFormPage from './bookings/BookingFormPage';
 import LeadListPage from './leads/LeadListPage';
+import LeadAssignmentRulesPage from './leads/LeadAssignmentRulesPage';
 import PublicLeadFormPage from './leads/PublicLeadFormPage';
 import AttributesPage from './attributes/AttributesPage';
 import PaymentListPage from './payments/PaymentListPage';
@@ -34,6 +35,7 @@ function App() {
             <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
             <Route path="/attributes" element={<AttributesPage />} />
             <Route path="/leads" element={<LeadListPage />} />
+            <Route path="/leads/assignment-rules" element={<LeadAssignmentRulesPage />} />
             {/* Catch-all: redirect unknown routes to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

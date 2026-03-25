@@ -1,19 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
-  Filter, 
-  Clock, 
-  BarChart3, 
-  CheckCircle2, 
-  AlertCircle,
-  TrendingUp,
-  Target,
-  ArrowUpRight,
-  Edit2,
   X,
-  Save
+  Phone,
+  ArrowUpRight,
+  ChevronRight,
+  MoreVertical,
+  Layers,
+  Play,
+  Pause
 } from 'lucide-react';
 import { LeadService } from './LeadService';
 import type { Lead, LeadSummary } from './LeadService';
@@ -21,571 +18,403 @@ import AttributeService, { type Attribute } from '../attributes/AttributeService
 import { ServiceApi, type Service } from '../services/api/ServiceApi';
 import { UserService } from '../users/UserService';
 import type { User } from '../users/UserService';
+import { useAuthStore } from '../auth/authStore';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  'new': { label: 'New', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-  'contacted': { label: 'Contacted', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-  'qualified': { label: 'Qualified', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-  'proposal_sent': { label: 'Proposal', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
-  'negotiation': { label: 'Negotiation', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
-  'closed_won': { label: 'Won', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
-  'closed_lost': { label: 'Lost', color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100' },
+  'new': { label: 'New', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
+  'contacted': { label: 'Contacted', color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200' },
+  'qualified': { label: 'Qualified', color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-200' },
+  'proposal_sent': { label: 'Proposal Sent', color: 'text-indigo-700', bg: 'bg-indigo-100', border: 'border-indigo-200' },
+  'negotiation': { label: 'Negotiation', color: 'text-purple-700', bg: 'bg-purple-100', border: 'border-purple-200' },
+  'closed_won': { label: 'Closed Won', color: 'text-green-700', bg: 'bg-green-100', border: 'border-green-200' },
+  'closed_lost': { label: 'Closed Lost', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
-  'low': { label: 'Low', color: 'bg-slate-400' },
-  'medium': { label: 'Medium', color: 'bg-blue-500' },
-  'high': { label: 'High', color: 'bg-orange-500' },
-  'urgent': { label: 'Urgent', color: 'bg-red-600' },
+  'low': { label: 'Low', color: 'text-slate-500' },
+  'medium': { label: 'Medium', color: 'text-blue-600' },
+  'high': { label: 'High', color: 'text-orange-600' },
+  'urgent': { label: 'Urgent', color: 'text-red-600' },
 };
 
 const LeadListPage: React.FC = () => {
   const navigate = useNavigate();
+  const currentUser = useAuthStore((state) => state.user);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState<LeadSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'unassigned' | 'my' | 'overdue'>('all');
   
-  // Edit modal state
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<Lead>>({});
-  const [saving, setSaving] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showWorkspace, setShowWorkspace] = useState(false);
   
-  // Dropdown data
-  const [industries, setIndustries] = useState<Attribute[]>([]);
-  const [leadSources, setLeadSources] = useState<Attribute[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [callNotes, setCallNotes] = useState('');
+  const [callStatus, setCallStatus] = useState('contacted');
+  const [savingCall, setSavingCall] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [leadsData, summaryData, industriesData, sourcesData, servicesData, usersData] = await Promise.all([
-          LeadService.list(),
-          LeadService.getSummary(),
-          AttributeService.listIndustries(),
-          AttributeService.listLeadSources(),
-          ServiceApi.list(),
-          UserService.list()
-        ]);
-        setLeads(leadsData.results || leadsData);
-        setSummary(summaryData);
-        setIndustries(industriesData.filter((ind: Attribute) => ind.is_active));
-        setLeadSources(sourcesData.filter((src: Attribute) => src.is_active));
-        setServices(servicesData);
-        setUsers((usersData.results || usersData).filter((u: User) => u.status !== false));
-      } catch (error) {
-        console.error('Failed to fetch leads:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // Edit handlers
-  const openEditModal = (lead: Lead) => {
-    setEditingLead(lead);
-    setEditFormData({
-      client_name: lead.client_name,
-      company_name: lead.company_name,
-      email: lead.email,
-      mobile: lead.mobile,
-      industry: lead.industry || '',
-      source: lead.source || '',
-      service: lead.service || '',
-      assigned_to: lead.assigned_to || '',
-      bde_name: lead.bde_name,
-      status: lead.status,
-      priority: lead.priority,
-      lead_score: lead.lead_score,
-      notes: lead.notes,
-      next_follow_up_date: lead.next_follow_up_date || ''
-    });
-    setShowEditModal(true);
-  };
-
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setEditingLead(null);
-    setEditFormData({});
-  };
-
-  const handleEditSave = async () => {
-    if (!editingLead) return;
-    setSaving(true);
+  const fetchLeads = async () => {
     try {
-      const updateData = {
-        ...editFormData,
-        industry: editFormData.industry || null,
-        source: editFormData.source || null,
-        service: editFormData.service || null,
-        assigned_to: editFormData.assigned_to || null,
-      };
-      await LeadService.update(editingLead.id, updateData);
-      // Refresh leads list
-      const leadsData = await LeadService.list();
+      setLoading(true);
+      const [leadsData, summaryData] = await Promise.all([
+        LeadService.list(),
+        LeadService.getSummary(),
+      ]);
       setLeads(leadsData.results || leadsData);
-      closeEditModal();
+      setSummary(summaryData);
     } catch (error) {
-      console.error('Failed to update lead:', error);
+      console.error('Failed to fetch:', error);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !filterStatus || lead.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const filteredLeads = useMemo(() => {
+    let result = leads.filter(lead => {
+      const nameMatch = lead.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const companyMatch = lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      return nameMatch || companyMatch;
+    });
+
+    if (activeTab === 'unassigned') result = result.filter(l => !l.assigned_to);
+    if (activeTab === 'my') result = result.filter(l => l.assigned_to === currentUser?.id);
+    if (activeTab === 'overdue') {
+      const today = new Date().toISOString().split('T')[0];
+      result = result.filter(l => l.next_follow_up_date && l.next_follow_up_date < today && l.status !== 'closed_won' && l.status !== 'closed_lost');
+    }
+
+    return result;
+  }, [leads, searchTerm, activeTab, currentUser]);
+
+  const handleLogCall = async () => {
+    if (!selectedLead) return;
+    setSavingCall(true);
+    try {
+      await LeadService.logActivity(selectedLead.id, {
+        activity_type: 'call',
+        description: `Call Logged: ${callNotes}`
+      });
+      await LeadService.updateStatus(selectedLead.id, {
+        status: callStatus
+      });
+      setShowCallModal(false);
+      setCallNotes('');
+      fetchLeads();
+      const updated = await LeadService.get(selectedLead.id);
+      setSelectedLead(updated);
+    } catch (error) {
+      console.error('Call log fail:', error);
+    } finally {
+      setSavingCall(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
-      <div className="shrink-0 w-full">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Sales Pipeline</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">Leads</h1>
-            <p className="mt-1 text-xs text-slate-600">
-              Nurture and convert your high-potential opportunities.
-            </p>
-          </div>
-          <button 
-            onClick={() => navigate('/leads/new')}
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-          >
-            <Plus size={14} />
-            New Lead
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Stats cards */}
-      {summary && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Total</p>
-                <h3 className="text-lg font-bold text-slate-900">{summary.total_leads}</h3>
-              </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Target size={16} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 w-fit px-1.5 py-0.5 rounded">
-              <TrendingUp size={10} />
-              <span>+12.5%</span>
-            </div>
-          </div>
-
-          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Qualified</p>
-                <h3 className="text-lg font-bold text-slate-900">{summary.qualified_leads}</h3>
-              </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                <BarChart3 size={16} />
+    <div className="flex flex-col h-full bg-white overflow-hidden shadow-inner no-select">
+      {/* Page Header */}
+      <div className="shrink-0 border-b border-slate-200 px-6 py-4 bg-white/50 backdrop-blur-md">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">Lead Processing Inbox</h1>
+            <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+              <div className="flex items-center bg-slate-100 p-1 rounded-lg gap-1 border border-slate-200">
+                {(['all', 'unassigned', 'my', 'overdue'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      activeTab === tab ? 'bg-white text-indigo-600 shadow-sm' : 'hover:text-slate-900'
+                    }`}
+                  >
+                    {tab === 'my' ? 'Assigned' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-
-          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Won</p>
-                <h3 className="text-lg font-bold text-slate-900">{summary.closed_won}</h3>
-              </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                <CheckCircle2 size={16} />
-              </div>
-            </div>
-            <div className="mt-2 text-[10px] font-medium text-slate-500">
-              {summary.conversion_rate}% rate
-            </div>
-          </div>
-
-          <div className="group relative overflow-hidden rounded-lg bg-white p-3 shadow-sm border border-slate-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">New</p>
-                <h3 className="text-lg font-bold text-slate-900">{summary.new_leads}</h3>
-              </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                <AlertCircle size={16} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 w-fit px-1.5 py-0.5 rounded">
-              <Clock size={10} />
-              <span>Attention</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main List Section */}
-      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
-        {/* Controls */}
-        <div className="shrink-0 border-b border-slate-100 bg-slate-50/50 p-3">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
               <input 
                 type="text" 
-                placeholder="Search leads..." 
-                className="input-field pl-8 py-1.5 text-sm w-full md:w-56"
+                placeholder="Find leads by name..."
+                className="input-field pl-10 w-64 shadow-sm"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <select 
-                className="input-field py-1.5 text-sm w-32"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="">All Status</option>
-                {Object.entries(statusConfig).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.label}</option>
+            <button 
+              onClick={() => navigate('/leads/new')}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus size={16} /> New Lead
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex min-h-0">
+        {/* Main List Area */}
+        <div className={`flex-1 flex flex-col min-w-0 ${showWorkspace ? 'border-r border-slate-200 shadow-2xl z-10' : ''}`}>
+          <div className="flex-1 overflow-auto scroll-y bg-slate-50/30">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-200 shadow-sm">
+                <tr className="table-header">
+                  <th className="px-6 py-4 w-16 text-center">Score</th>
+                  <th className="px-6 py-4">Lead Details</th>
+                  <th className="px-6 py-4">Service & Origin</th>
+                  <th className="px-6 py-4">Current Status</th>
+                  <th className="px-6 py-4">Priority</th>
+                  <th className="px-6 py-4 text-right">Follow-up</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr><td colSpan={6} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-sm animate-pulse">Retrieving inbox...</td></tr>
+                ) : filteredLeads.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-sm">No leads in this queue</td></tr>
+                ) : filteredLeads.map(lead => (
+                  <tr 
+                    key={lead.id} 
+                    onClick={() => { setSelectedLead(lead); setShowWorkspace(true); }}
+                    className={`table-row cursor-pointer transition-all ${selectedLead?.id === lead.id ? 'bg-indigo-50/80 border-l-4 border-indigo-600 scale-[1.002]' : ''}`}
+                  >
+                    <td className="px-6 py-5 text-center">
+                      <span className={`text-sm font-black p-2 rounded-lg border ${
+                        lead.lead_score > 70 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                        lead.lead_score > 40 ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                        'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
+                        {lead.lead_score}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-slate-900 tracking-tight">{lead.client_name}</span>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[200px]">{lead.company_name || 'Individual'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-tight">{lead.service_name || 'Generic Inquiry'}</span>
+                        <span className="text-[11px] text-slate-400 font-bold italic">{lead.source_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`badge ${statusConfig[lead.status]?.bg} ${statusConfig[lead.status]?.color} border-2 ${statusConfig[lead.status]?.border} shadow-sm px-3 py-1 font-black`}>
+                        {statusConfig[lead.status]?.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`text-xs font-black uppercase tracking-widest ${priorityConfig[lead.priority]?.color}`}>
+                        {priorityConfig[lead.priority]?.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <span className={`text-xs font-black ${
+                        lead.next_follow_up_date && lead.next_follow_up_date < new Date().toISOString().split('T')[0] ? 'text-rose-600' : 'text-slate-500'
+                      }`}>
+                        {lead.next_follow_up_date || 'TBD'}
+                      </span>
+                    </td>
+                  </tr>
                 ))}
-              </select>
+              </tbody>
+            </table>
+          </div>
+          
+          {/* List Footer */}
+          <div className="shrink-0 h-10 bg-white border-t border-slate-200 px-6 flex items-center justify-between shadow-inner">
+            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Queue Density: {filteredLeads.length} Records</span>
+            <div className="flex items-center gap-6">
+              {summary && (
+                <>
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1"><Play size={10} fill="currentColor" /> Closed Won: {summary.closed_won}</span>
+                  <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1"><Layers size={10} fill="currentColor" /> Pipeline Velocity: {summary.conversion_rate}%</span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="h-full overflow-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 z-10 bg-slate-50">
-              <tr className="text-xs font-semibold text-slate-600">
-                <th className="px-3 py-2 text-left whitespace-nowrap">Lead Contact</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">BDE & Source</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Service</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Status & Priority</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Assigned To</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Score</th>
-                <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                    Loading...
-                  </td>
-                </tr>
-              ) : filteredLeads.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                    No leads found.
-                  </td>
-                </tr>
-              ) : filteredLeads.map((lead) => {
-                const cfg = statusConfig[lead.status] || statusConfig['new'];
-                const pcfg = priorityConfig[lead.priority] || priorityConfig['medium'];
-                
-                return (
-                  <tr 
-                    key={lead.id} 
-                    className="border-b border-slate-100 hover:bg-slate-50"
-                  >
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
-                          {lead.client_name?.[0].toUpperCase() || 'L'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 text-sm">{lead.client_name}</p>
-                          <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{lead.company_name}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-slate-700">{lead.bde_name || 'System'}</span>
-                        <span className="text-[10px] text-slate-400">{lead.source_name}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="text-xs text-slate-700">
-                        {lead.service_name || <span className="text-slate-400">—</span>}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`badge ${cfg.bg} ${cfg.color} text-[10px] px-1.5 py-0.5`}>
-                          {cfg.label}
-                        </span>
-                        <span className={`text-[10px] ${pcfg.color.replace('bg-', 'text-')}`}>{lead.priority_display}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <div className="h-4 w-4 rounded-full bg-slate-200" />
-                        <span>{lead.assigned_to_name || '—'}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="text-sm font-bold text-slate-900">{lead.lead_score}</span>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button 
-                          title="Edit Lead"
-                          onClick={() => openEditModal(lead)}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                        >
-                          <Edit2 size={12} />
-                          Edit
-                        </button>
-                        <button 
-                          title="Convert to Booking"
-                          onClick={() => {
-                            LeadService.convert(lead.id).catch(console.error);
-                            navigate('/bookings/new', { 
-                              state: { 
-                                prefill: {
-                                  client_name: lead.client_name,
-                                  company_name: lead.company_name,
-                                  email: lead.email,
-                                  mobile: lead.mobile,
-                                  bde_name: lead.bde_name,
-                                  lead_source: lead.source,
-                                  service: lead.service,
-                                  lead_id: lead.id,
-                                } 
-                              } 
-                            });
-                          }}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                        >
-                          <ArrowUpRight size={12} />
-                          Open
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Edit Modal */}
-      {showEditModal && editingLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2">
-          <div className="absolute bg-black/50 backdrop-blur-sm" onClick={closeEditModal} />
-          <div className="relative w-full max-w-3xl max-h-[85vh] rounded-xl bg-white shadow-2xl flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                  <Edit2 size={16} />
+        {/* Sidebar Workspace */}
+        {showWorkspace && selectedLead && (
+          <div className="w-[480px] shrink-0 bg-white flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 shadow-2xl border-l border-slate-200">
+            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 shadow-lg relative overflow-hidden">
+              <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/20">
+                  {selectedLead.client_name?.[0]}
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">Edit Lead</h2>
-                  <p className="text-[10px] text-slate-500">{editingLead.client_name}</p>
+                <div className="leading-tight">
+                  <p className="text-lg font-black text-white tracking-tight leading-none mb-1">{selectedLead.client_name}</p>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.15em]">{selectedLead.company_name || 'Individual Client'}</p>
                 </div>
               </div>
               <button 
-                onClick={closeEditModal}
-                className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                onClick={() => setShowWorkspace(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white"
               >
-                <X size={14} />
+                <X size={20} />
               </button>
             </div>
 
-            {/* Modal Content - Compact grid */}
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="grid gap-2 md:grid-cols-4 text-xs">
-                {/* Row 1: Client Details */}
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Client Name</label>
-                  <input
-                    type="text"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.client_name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, client_name: e.target.value })}
-                  />
+            <div className="flex-1 overflow-auto scroll-y p-6 space-y-8 bg-slate-50/40">
+              {/* Profile Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">Mobile Contact</p>
+                  <p className="text-sm font-black text-slate-900">{selectedLead.mobile || 'Not provided'}</p>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Company Name</label>
-                  <input
-                    type="text"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.company_name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
-                  />
+                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">Email Channel</p>
+                  <p className="text-sm font-black text-slate-900 truncate">{selectedLead.email || 'Not provided'}</p>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Email</label>
-                  <input
-                    type="email"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.email || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Mobile</label>
-                  <input
-                    type="text"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.mobile || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Industry</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.industry || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, industry: e.target.value })}
-                  >
-                    <option value="">-</option>
-                    {industries.map((ind) => (
-                      <option key={ind.id} value={ind.id}>{ind.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Lead Source</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.source || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
-                  >
-                    <option value="">-</option>
-                    {leadSources.map((src) => (
-                      <option key={src.id} value={src.id}>{src.name}</option>
-                    ))}
-                  </select>
-                </div>
+              </div>
 
-                {/* Row 2: Status, Priority, Score */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Status</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.status || 'new'}
-                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+              {/* Action Engine */}
+              <div className="space-y-4">
+                <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => { setCallStatus('contacted'); setShowCallModal(true); }}
+                    className="flex flex-col items-center justify-center gap-2 p-5 bg-white text-indigo-700 border-2 border-indigo-50 shadow-sm rounded-2xl hover:bg-indigo-50 hover:border-indigo-100 transition-all active:scale-95 group"
                   >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="proposal_sent">Proposal</option>
-                    <option value="negotiation">Negotiation</option>
-                    <option value="closed_won">Won</option>
-                    <option value="closed_lost">Lost</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Priority</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.priority || 'medium'}
-                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                    <div className="p-3 bg-indigo-100 rounded-xl group-hover:scale-110 transition-transform"><Phone size={24} /></div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Log Outreach</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      LeadService.convert(selectedLead.id).then(() => {
+                        navigate('/bookings/new', { 
+                          state: { 
+                            prefill: {
+                              client_name: selectedLead.client_name,
+                              company_name: selectedLead.company_name,
+                              email: selectedLead.email,
+                              mobile: selectedLead.mobile,
+                              bde_name: selectedLead.bde_name,
+                              lead_source: selectedLead.source,
+                              service: selectedLead.service,
+                              lead_id: selectedLead.id,
+                            } 
+                          } 
+                        });
+                      });
+                    }}
+                    className="flex flex-col items-center justify-center gap-2 p-5 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 rounded-2xl hover:bg-emerald-700 transition-all active:scale-95 group"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
+                    <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform"><ArrowUpRight size={24} /></div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Convert Lead</span>
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Score</label>
-                  <input
-                    type="number"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.lead_score || 0}
-                    onChange={(e) => setEditFormData({ ...editFormData, lead_score: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Service</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.service || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, service: e.target.value })}
-                  >
-                    <option value="">-</option>
-                    {services.map((srv) => (
-                      <option key={srv.id} value={srv.id}>{srv.name}</option>
-                    ))}
-                  </select>
-                </div>
+              </div>
 
-                {/* Row 3: Assign, BDE, Follow-up */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Assign To</label>
-                  <select
-                    className="input-field py-1 text-xs"
-                    value={editFormData.assigned_to || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, assigned_to: e.target.value })}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>{user.name}</option>
-                    ))}
-                  </select>
+              {/* Activity Timeline */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Interactions</p>
+                  <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">BDE Name</label>
-                  <input
-                    type="text"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.bde_name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, bde_name: e.target.value })}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Follow-up Date</label>
-                  <input
-                    type="date"
-                    className="input-field py-1 text-xs"
-                    value={editFormData.next_follow_up_date || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, next_follow_up_date: e.target.value })}
-                  />
-                </div>
-
-                {/* Notes - full width */}
-                <div className="col-span-4">
-                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Notes</label>
-                  <textarea
-                    className="input-field py-1 text-xs min-h-[40px]"
-                    value={editFormData.notes || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                    placeholder="Notes..."
-                  />
+                <div className="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
+                  {!selectedLead.activities || selectedLead.activities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
+                       <p className="text-[11px] font-bold uppercase tracking-widest mb-1">Timeline Empty</p>
+                       <p className="text-[10px]">Log your first interaction above</p>
+                    </div>
+                  ) : (
+                    selectedLead.activities.slice(0, 5).map((activity) => (
+                      <div key={activity.id} className="relative pl-8">
+                        <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center z-10 shadow-sm">
+                           <Play size={10} className="text-indigo-600" fill="currentColor" />
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">{activity.activity_type}</p>
+                            <p className="text-[9px] text-slate-400 font-black uppercase">{new Date(activity.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium leading-relaxed">{activity.description}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
+            
+            <div className="shrink-0 p-6 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Manager Intelligence / Notes</label>
+               <textarea 
+                  className="w-full p-4 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[100px] shadow-inner"
+                  placeholder="Strategic notes about this client's requirements..."
+                  defaultValue={selectedLead.notes || ''}
+                  onBlur={(e) => LeadService.update(selectedLead.id, { notes: e.target.value })}
+               />
+            </div>
+          </div>
+        )}
+      </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2">
-              <button
-                onClick={closeEditModal}
-                className="rounded px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+      {/* Outreach Modal */}
+      {showCallModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
+          <div className="w-[450px] bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600"><Phone size={20} /></div>
+                <span className="text-sm font-black uppercase tracking-widest text-slate-900">Log Interaction Outcome</span>
+              </div>
+              <button onClick={() => setShowCallModal(false)} className="text-slate-400 hover:text-slate-600 p-2"><X size={24} /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Interaction Narrative</label>
+                <textarea 
+                  autoFocus
+                  className="input-field min-h-[120px] rounded-2xl p-4 text-sm" 
+                  placeholder="Briefly describe the discussion flow, objections, and next steps..."
+                  value={callNotes}
+                  onChange={e => setCallNotes(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Update Pipeline</label>
+                  <select 
+                    className="input-field rounded-xl"
+                    value={callStatus}
+                    onChange={e => setCallStatus(e.target.value)}
+                  >
+                    {Object.entries(statusConfig).map(([key, cfg]) => (
+                      <option key={key} value={key}>{cfg.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Engagement Quality</label>
+                  <select className="input-field rounded-xl font-bold">
+                    <option>High Interest</option>
+                    <option>Discovery Call</option>
+                    <option>No Contact</option>
+                    <option>Busy/Reschedule</option>
+                    <option>Qualified</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
+              <button onClick={() => setShowCallModal(false)} className="btn-secondary flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-2xl">Dismiss</button>
+              <button 
+                onClick={handleLogCall}
+                disabled={savingCall}
+                className="btn-primary flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg !bg-emerald-600 border-none"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditSave}
-                disabled={saving}
-                className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? (
-                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Save size={12} />
-                )}
-                Save
+                {savingCall ? 'Uploading...' : 'Confirm Outcome'}
               </button>
             </div>
           </div>

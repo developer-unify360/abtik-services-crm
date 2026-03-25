@@ -8,14 +8,14 @@ class UserAdmin(BaseUserAdmin):
     """
     Admin configuration for User model.
     """
-    list_display = ('email', 'username', 'name', 'status', 'is_active', 'is_staff', 'created_at')
-    list_filter = ('is_active', 'is_staff', 'is_superuser', 'status')
+    list_display = ('email', 'username', 'name', 'role', 'status', 'is_active', 'is_staff', 'created_at')
+    list_filter = ('role', 'is_active', 'is_staff', 'is_superuser', 'status')
     search_fields = ('email', 'username', 'name', 'phone')
     ordering = ('-created_at',)
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('email', 'username', 'password', 'name', 'phone')
+            'fields': ('email', 'username', 'password', 'name', 'phone', 'role')
         }),
         ('Status', {
             'fields': ('status',)
@@ -31,7 +31,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         ('Create User', {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'password', 'name', 'status', 'is_staff', 'is_active'),
+            'fields': ('email', 'username', 'password', 'name', 'role', 'status', 'is_staff', 'is_active'),
         }),
     )
     

@@ -15,53 +15,56 @@ const HeaderBar: React.FC = () => {
 
   return (
     <header 
-      className="fixed top-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-40"
+      className="fixed top-0 right-0 h-10 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-40 no-select"
       style={{ 
         left: DRAWER_WIDTH,
         width: `calc(100% - ${DRAWER_WIDTH}px)`
       }}
     >
-      {/* Left - Title */}
-      <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold text-slate-800">
-          Business Service Management
+      {/* Left - Title (Minimal) */}
+      <div className="flex items-center gap-2">
+        <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+          CRM Operations
         </h2>
+        <span className="text-[10px] text-slate-300">/</span>
+        <span className="text-[11px] font-bold text-indigo-600 uppercase">Abtik ERP</span>
       </div>
 
-      {/* Right - Actions */}
-      <div className="flex items-center gap-4">
-        {/* Search */}
+      {/* Right - Actions (Compact) */}
+      <div className="flex items-center gap-2">
+        {/* Compact Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
           <input
             type="text"
-            placeholder="Search..."
-            className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-64"
+            placeholder="Search leads..."
+            className="pl-7 pr-2 py-1 bg-slate-50 border border-slate-200 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48"
           />
         </div>
 
-        {/* Notifications */}
-        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-          <Bell size={20} />
-        </button>
+        <div className="h-4 w-px bg-slate-200 mx-1" />
 
-        {/* User Avatar */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-            {user?.name?.[0] || 'A'}
+        {/* User Info - Compact */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex flex-col items-end leading-none">
+            <span className="text-[10px] font-bold text-slate-900 uppercase">
+              {user?.name || 'Admin'}
+            </span>
+            <span className="text-[9px] text-slate-400 font-medium">
+              {user?.role === 'admin' ? 'Systems Admin' : 'BDE Manager'}
+            </span>
           </div>
-          <span className="text-sm font-medium text-slate-700 hidden md:block">
-            {user?.name || 'Admin'}
-          </span>
+          <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded flex items-center justify-center text-slate-600 text-[10px] font-bold">
+            {user?.name?.[0]?.toUpperCase() || 'A'}
+          </div>
         </div>
 
-        {/* Logout */}
         <button 
           onClick={handleLogout}
-          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
           title="Logout"
         >
-          <LogOut size={20} />
+          <LogOut size={14} />
         </button>
       </div>
     </header>

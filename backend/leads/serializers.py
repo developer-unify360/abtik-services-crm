@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db import models
 from django.contrib.auth import get_user_model
-from leads.models import Lead, LeadActivity
+from leads.models import Lead, LeadActivity, LeadAssignmentRule
 from clients.models import Client
 from attributes.models import LeadSource, Industry
 from services.models import Service
@@ -186,3 +186,19 @@ class ExternalLeadSerializer(serializers.Serializer):
             assigned_to=validated_data.get('assigned_to', None),
         )
         return lead
+
+class LeadAssignmentRuleSerializer(serializers.ModelSerializer):
+    trigger_source_name = serializers.CharField(source='trigger_source.name', read_only=True)
+    trigger_service_name = serializers.CharField(source='trigger_service.name', read_only=True)
+    eligible_users_count = serializers.IntegerField(source='eligible_users_count', read_only=True)
+
+    class Meta:
+        model = LeadAssignmentRule
+        fields = [
+            'id', 'name', 'priority', 'strategy', 'is_active',
+            'trigger_source', 'trigger_source_name', 
+            'trigger_service', 'trigger_service_name',
+            'eligible_users', 'eligible_users_count',
+            'last_assigned_user', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_assigned_user']

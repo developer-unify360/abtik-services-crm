@@ -147,6 +147,54 @@ class LeadActivity(BaseModel):
     class Meta:
         ordering = ['-created_at']
 
+class LeadAssignmentRule(BaseModel):
+    """
+    Rules for automatic lead distribution amongst system users.
+    Managed by Admin only.
+    """
+    STRATEGY_CHOICES = [
+        ('round_robin', 'Round Robin'),
+        ('load_balanced', 'Load Balanced (Future)'),
+    ]
+
+    name = models.CharField(max_length=255)
+    priority = models.IntegerField(default=0, help_text="Higher number = checked first")
+    strategy = models.CharField(max_length=20, choices=STRATEGY_CHOICES, default='round_robin')
+    is_active = models.BooleanField(default=True)
+    
+    # Dynamic Triggers (Admin configurable)
+    trigger_source = models.ForeignKey(
+        'attributes.LeadSource', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        help_text="If lead source matches this, the rule triggers"
+    )
+    trigger_service = models.ForeignKey(
+        'services.Service', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        help_text="If interested service matches this, the rule triggers"
+    )
+    
+    eligible_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, 
+        related_name='assignment_rules',
+        help_text="Users who can receive leads under this rule"
+    )
+    
+    last_assigned_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='last_rule_assignments',
+        help_text="Tracked for Round Robin logic"
+    )
+
+    class Meta:
+        ordering = ['-priority', 'name']
+
     def __str__(self):
-        name = self.lead.client.client_name if self.lead.client else self.lead.client_name
-        return f"{self.activity_type} for {name} on {self.created_at}"
+        return f"Rule: {self.name} ({'Active' if self.is_active else 'Inactive'})"

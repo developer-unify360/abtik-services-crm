@@ -5,7 +5,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from rest_framework import permissions
 from rest_framework.permissions import AllowAny
-from leads.models import Lead, LeadActivity
+from leads.models import Lead, LeadActivity, LeadAssignmentRule
+from users.permissions import IsAdmin, IsManagerOrAdmin
 from attributes.models import LeadSource
 from leads.serializers import (
     LeadSerializer, 
@@ -13,7 +14,8 @@ from leads.serializers import (
     LeadCreateSerializer,
     LeadActivitySerializer,
     LeadUpdateStatusSerializer,
-    ExternalLeadSerializer
+    ExternalLeadSerializer,
+    LeadAssignmentRuleSerializer
 )
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -179,3 +181,14 @@ def external_lead_create(request):
         )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LeadAssignmentRuleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Admin-only management of lead assignment rules.
+    """
+    queryset = LeadAssignmentRule.objects.all()
+    serializer_class = LeadAssignmentRuleSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['priority', 'name', 'created_at']
+    ordering = ['-priority', 'name']
