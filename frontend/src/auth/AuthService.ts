@@ -4,7 +4,7 @@ const API_AUTH_URL = '/api/v1/auth'; // Using relative paths for proxy
 
 export const AuthService = {
     login: async (email: string, password: string) => {
-        const response = await axios.post(`${API_AUTH_URL}/login/`, { email, password });
+        const response = await axios.post(`${API_AUTH_URL}/login`, { email, password });
         if (response.data.access) {
             localStorage.setItem('user', JSON.stringify(response.data));
         }
