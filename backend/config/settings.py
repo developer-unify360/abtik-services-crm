@@ -21,6 +21,9 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     "api.abtikservices.in",
     "localhost",
     "127.0.0.1",
+    "backend",
+    "backend:8000",
+    "host.docker.internal",
 ])
 
 INSTALLED_APPS = [

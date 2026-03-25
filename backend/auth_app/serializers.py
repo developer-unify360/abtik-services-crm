@@ -5,6 +5,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('username', None)
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
@@ -12,9 +19,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        email = attrs.get('email', '')
+        password = attrs.get('password', '')
+
+        if not email or not password:
+            raise serializers.ValidationError({'non_field_errors': ['Email and password are required']})
+
         authenticate_kwargs = {
-            'username': attrs['email'],
-            'password': attrs['password'],
+            'username': email,
+            'password': password,
         }
 
         user = authenticate(**authenticate_kwargs)
