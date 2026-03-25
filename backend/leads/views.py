@@ -83,6 +83,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     def log_activity(self, request, pk=None):
         """Log an interaction with the lead."""
         lead = self.get_object()
+        print("lead Data===========", lead)
         serializer = LeadActivitySerializer(data=request.data)
         
         if serializer.is_valid():

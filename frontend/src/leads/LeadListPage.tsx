@@ -49,6 +49,7 @@ const LeadListPage: React.FC = () => {
     try {
       setLoading(true);
       const leadsData = await LeadService.list();
+      console.log("leads Data==============", leadsData);
       setLeads(leadsData.results || leadsData);
     } catch (error) {
       console.error('Failed to fetch:', error);
@@ -67,7 +68,6 @@ const LeadListPage: React.FC = () => {
       const companyMatch = lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
       return nameMatch || companyMatch;
     });
-
     if (activeTab === 'unassigned') result = result.filter(l => !l.assigned_to);
     if (activeTab === 'my') result = result.filter(l => l.assigned_to === currentUser?.id);
     if (activeTab === 'overdue') {
@@ -222,12 +222,17 @@ const LeadListPage: React.FC = () => {
           <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 shadow-lg relative overflow-hidden">
             <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="flex items-center gap-4 relative z-10">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/20">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-500/20">
                 {selectedLead.client_name?.[0]}
               </div>
               <div className="leading-tight">
-                <p className="text-lg font-black text-white tracking-tight leading-none mb-1">{selectedLead.client_name}</p>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.15em]">{selectedLead.company_name || 'Individual Client'}</p>
+                <p className="text-md font-semibold text-white tracking-tight leading-none mb-1">
+                  {selectedLead.client_name}
+                  <span className="text-xs text-slate-400 font-medium ml-2">
+                    | {selectedLead.mobile || 'No Mobile'} | {selectedLead.email || 'No Email'}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-400 font-medium">{selectedLead.company_name || 'Individual Client'}</p>
               </div>
             </div>
             <button
@@ -238,29 +243,17 @@ const LeadListPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-auto scroll-y p-6 space-y-8 bg-slate-50/40">
-            {/* Profile Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">Mobile Contact</p>
-                <p className="text-sm font-black text-slate-900">{selectedLead.mobile || 'Not provided'}</p>
-              </div>
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">Email Channel</p>
-                <p className="text-sm font-black text-slate-900 truncate">{selectedLead.email || 'Not provided'}</p>
-              </div>
-            </div>
-
+          <div className="flex-1 overflow-auto scroll-y p-6 space-y-6 bg-slate-50/40">
             {/* Action Engine */}
             <div className="space-y-4">
-              <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-sm font-semibold text-slate-900 border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
+              <div className="flex gap-2">
                 <button
                   onClick={() => { setCallStatus('contacted'); setShowCallModal(true); }}
-                  className="flex flex-col items-center justify-center gap-2 p-5 bg-white text-indigo-700 border-2 border-indigo-50 shadow-sm rounded-2xl hover:bg-indigo-50 hover:border-indigo-100 transition-all active:scale-95 group"
+                  className="flex items-center gap-1 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
                 >
-                  <div className="p-3 bg-indigo-100 rounded-xl group-hover:scale-110 transition-transform"><Phone size={24} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">Log Outreach</span>
+                  <div className="p-3 bg-indigo-100 rounded-xl group-hover:scale-110 transition-transform"><Phone size={14} /></div>
+                  <span className="text-xs font-semibold">Log Outreach</span>
                 </button>
                 <button
                   onClick={() => {
@@ -281,25 +274,25 @@ const LeadListPage: React.FC = () => {
                       });
                     });
                   }}
-                  className="flex flex-col items-center justify-center gap-2 p-5 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 rounded-2xl hover:bg-emerald-700 transition-all active:scale-95 group"
+                  className="flex items-center gap-1 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
                 >
-                  <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform"><ArrowUpRight size={24} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">Convert Lead</span>
+                  <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform"><ArrowUpRight size={14} /></div>
+                  <span className="text-xs font-semibold">Convert Lead</span>
                 </button>
               </div>
             </div>
 
             {/* Activity Timeline */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Interactions</p>
-                <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
+                <p className="text-sm font-semibold text-slate-900">Interactions</p>
+                <button className="text-xs font-medium text-indigo-600 hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
               </div>
-              <div className="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
+              <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
                 {!selectedLead.activities || selectedLead.activities.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
-                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1">Timeline Empty</p>
-                    <p className="text-[10px]">Log your first interaction above</p>
+                    <p className="text-sm font-medium mb-1">Timeline Empty</p>
+                    <p className="text-xs">Log your first interaction above</p>
                   </div>
                 ) : (
                   selectedLead.activities.slice(0, 5).map((activity) => (
@@ -309,10 +302,10 @@ const LeadListPage: React.FC = () => {
                       </div>
                       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">{activity.activity_type}</p>
-                          <p className="text-[9px] text-slate-400 font-black uppercase">{new Date(activity.created_at).toLocaleDateString()}</p>
+                          <p className="text-sm font-medium text-slate-900">{activity.activity_type}</p>
+                          <p className="text-xs text-slate-500 font-medium">{new Date(activity.created_at).toLocaleDateString()}</p>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed">{activity.description}</p>
+                        <p className="text-sm text-slate-600">{activity.description}</p>
                       </div>
                     </div>
                   ))
@@ -322,7 +315,7 @@ const LeadListPage: React.FC = () => {
           </div>
 
           <div className="shrink-0 p-6 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Manager Intelligence / Notes</label>
+            <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
             <textarea
               className="w-full p-4 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[100px] shadow-inner"
               placeholder="Strategic notes about this client's requirements..."
@@ -341,13 +334,13 @@ const LeadListPage: React.FC = () => {
               <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600"><Phone size={20} /></div>
-                  <span className="text-sm font-black uppercase tracking-widest text-slate-900">Log Interaction Outcome</span>
+                  <span className="text-sm font-semibold text-slate-900">Log Interaction Outcome</span>
                 </div>
                 <button onClick={() => setShowCallModal(false)} className="text-slate-400 hover:text-slate-600 p-2"><X size={24} /></button>
               </div>
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Interaction Narrative</label>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Interaction Narrative</label>
                   <textarea
                     autoFocus
                     className="input-field min-h-[120px] rounded-2xl p-4 text-sm"
@@ -358,7 +351,7 @@ const LeadListPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Update Pipeline</label>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Update Pipeline</label>
                     <select
                       className="input-field rounded-xl"
                       value={callStatus}
@@ -370,8 +363,8 @@ const LeadListPage: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Engagement Quality</label>
-                    <select className="input-field rounded-xl font-bold">
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Engagement Quality</label>
+                    <select className="input-field rounded-xl">
                       <option>High Interest</option>
                       <option>Discovery Call</option>
                       <option>No Contact</option>
@@ -382,11 +375,11 @@ const LeadListPage: React.FC = () => {
                 </div>
               </div>
               <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-                <button onClick={() => setShowCallModal(false)} className="btn-secondary flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-2xl">Dismiss</button>
+                <button onClick={() => setShowCallModal(false)} className="btn-secondary flex-1 py-4 text-sm font-semibold rounded-2xl">Dismiss</button>
                 <button
                   onClick={handleLogCall}
                   disabled={savingCall}
-                  className="btn-primary flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg !bg-emerald-600 border-none"
+                  className="btn-primary flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg !bg-emerald-600 border-none"
                 >
                   {savingCall ? 'Uploading...' : 'Confirm Outcome'}
                 </button>

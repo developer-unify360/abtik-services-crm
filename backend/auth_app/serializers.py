@@ -49,6 +49,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'id': str(user.id),
             'name': user.get_full_name() or getattr(user, 'name', user.username),
             'email': user.email,
+            'role': user.role,
             'is_staff': user.is_staff,
             'is_admin': user.is_staff or user.is_superuser,
         }

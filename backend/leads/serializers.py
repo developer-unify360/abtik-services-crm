@@ -23,7 +23,7 @@ class LeadActivitySerializer(serializers.ModelSerializer):
             'id', 'lead', 'activity_type', 'description', 
             'performed_by', 'performed_by_name', 'created_at'
         ]
-        read_only_fields = ['id', 'performed_by', 'created_at']
+        read_only_fields = ['id', 'lead', 'performed_by', 'created_at']
 
 class LeadSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source='assigned_to.name', read_only=True)
