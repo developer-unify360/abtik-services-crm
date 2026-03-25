@@ -17,11 +17,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-fallback-key-should-be-at-least-32-chars')
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
-    "api.abtikservices.in",
-    "localhost",
-    "127.0.0.1",
-])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*']) # Flexible default for containers
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -46,7 +42,7 @@ INSTALLED_APPS = [
     'payments',
     'services',
     'audit',
-    'leads',
+    'leads.apps.LeadsConfig',
     'attributes',
 ]
 
@@ -104,6 +100,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -128,15 +126,9 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
-    'https://crm.abtikservices.in',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-])
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173', 'http://127.0.0.1:5173'])
 
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
-    'https://crm.abtikservices.in',
-])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=['http://localhost:5173', 'http://127.0.0.1:5173'])
 
 CORS_ALLOW_HEADERS = [
     'accept',
