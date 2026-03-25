@@ -103,7 +103,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -128,11 +128,15 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+_cors_origins = env.list('CORS_ALLOWED_ORIGINS', default=[
     'https://crm.abtikservices.in',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ])
+if env.bool('CORS_ALLOW_ALL_ORIGINS', default=False):
+    CORS_ALLOWED_ORIGINS = ['*']
+else:
+    CORS_ALLOWED_ORIGINS = _cors_origins
 
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'https://crm.abtikservices.in',
@@ -149,3 +153,4 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+STATIC_ROOT = BASE_DIR / 'staticfiles'

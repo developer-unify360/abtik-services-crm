@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
+const API_BASE_URL = '/api/v1'; // Use relative path for proxy
 
 // Public API client without auth redirect on 401
 const publicApiClient = axios.create({
