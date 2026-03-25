@@ -134,7 +134,7 @@ _cors_origins = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://127.0.0.1:5173',
 ])
 if env.bool('CORS_ALLOW_ALL_ORIGINS', default=False):
-    CORS_ALLOWED_ORIGINS = ['*']
+    CORS_ALLOWED_ORIGINS = []
 else:
     CORS_ALLOWED_ORIGINS = _cors_origins
 
