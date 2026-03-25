@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U saas_user -d saas_db"]
       interval: 5s
@@ -24,7 +24,6 @@ services:
 
   backend:
     build: ./backend
-    # Override for dev: use django dev server instead of gunicorn
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
@@ -37,7 +36,6 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/1
-      - DEBUG=True
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
       - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin123}
@@ -50,29 +48,24 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      start_period: 20s
 
   frontend:
-    build: 
-      context: ./frontend
-      # Use dev-specific build if needed, or just let CMD override
-    # Override for dev: use vite dev server instead of nginx
-    command: npm run dev -- --host
+    build: ./frontend
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
-      - VITE_API_TARGET=http://backend:8000
-      - VITE_HMR_HOST=localhost
-      - VITE_HMR_PROTOCOL=ws
-      - NODE_OPTIONS=--dns-result-order=ipv4first
+      VITE_API_BASE_URL: "http://crm.abtikservices.in"
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
     depends_on:
       backend:
         condition: service_healthy
     restart: on-failure
+    
 
 volumes:
-  postgres_data_dev:
+  postgres_data:

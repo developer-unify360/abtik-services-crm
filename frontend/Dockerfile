@@ -1,28 +1,17 @@
-# Stage 1: Build stage
-FROM node:20-alpine AS build-stage
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Install curl for backend health wait
+RUN apk add --no-cache curl
 
 COPY package*.json ./
 RUN npm install
 
+RUN npm install -D tailwindcss postcss autoprefixer
+
 COPY . .
 
-# Set dynamic API URL for production build (can be overridden during build)
-ARG VITE_API_BASE_URL=""
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+EXPOSE 5173
 
-RUN npm run build
-
-# Stage 2: Production stage
-FROM nginx:stable-alpine AS production-stage
-
-# Copy build artifacts from build stage
-COPY --from=build-stage /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "until curl -fsS http://crm.abtikservices.in/api/v1/health/; do echo 'Waiting for backend...'; sleep 2; done; npm run dev -- --host"]
