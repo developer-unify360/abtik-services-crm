@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -44,11 +44,50 @@ const LeadListPage: React.FC = () => {
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showWorkspace, setShowWorkspace] = useState(false);
+  const [loadingSelectedLead, setLoadingSelectedLead] = useState(false);
+  const selectedLeadIdRef = useRef<string | null>(null);
 
   const [showCallModal, setShowCallModal] = useState(false);
   const [callNotes, setCallNotes] = useState('');
   const [callStatus, setCallStatus] = useState('contacted');
   const [savingCall, setSavingCall] = useState(false);
+
+  const syncLeadInList = (updatedLead: Lead) => {
+    setLeads((currentLeads) =>
+      currentLeads.map((lead) =>
+        lead.id === updatedLead.id
+          ? { ...lead, ...updatedLead }
+          : lead
+      )
+    );
+  };
+
+  const loadLeadDetails = async (leadId: string, previewLead?: Lead) => {
+    selectedLeadIdRef.current = leadId;
+    if (previewLead) {
+      setSelectedLead(previewLead);
+    }
+    setLoadingSelectedLead(true);
+
+    try {
+      const leadDetails = await LeadService.get(leadId);
+      if (selectedLeadIdRef.current !== leadId) return;
+
+      setSelectedLead(leadDetails);
+      syncLeadInList(leadDetails);
+    } catch (error) {
+      console.error('Failed to fetch lead details:', error);
+    } finally {
+      if (selectedLeadIdRef.current === leadId) {
+        setLoadingSelectedLead(false);
+      }
+    }
+  };
+
+  const openLeadWorkspace = (lead: Lead) => {
+    setShowWorkspace(true);
+    void loadLeadDetails(lead.id, lead);
+  };
 
   const fetchLeads = async () => {
     try {
@@ -99,23 +138,34 @@ const LeadListPage: React.FC = () => {
   const handleLogCall = async () => {
     if (!selectedLead) return;
     setSavingCall(true);
+    const leadId = selectedLead.id;
     try {
-      await LeadService.logActivity(selectedLead.id, {
+      await LeadService.logActivity(leadId, {
         activity_type: 'call',
         description: `Call Logged: ${callNotes}`
       });
-      await LeadService.updateStatus(selectedLead.id, {
+      await LeadService.updateStatus(leadId, {
         status: callStatus
       });
       setShowCallModal(false);
       setCallNotes('');
-      fetchLeads();
-      const updated = await LeadService.get(selectedLead.id);
-      setSelectedLead(updated);
+      await loadLeadDetails(leadId);
     } catch (error) {
       console.error('Call log fail:', error);
     } finally {
       setSavingCall(false);
+    }
+  };
+
+  const handleNotesBlur = async (notes: string) => {
+    if (!selectedLead) return;
+
+    try {
+      const updatedLead = await LeadService.update(selectedLead.id, { notes });
+      setSelectedLead(updatedLead);
+      syncLeadInList(updatedLead);
+    } catch (error) {
+      console.error('Failed to save notes:', error);
     }
   };
 
@@ -192,7 +242,7 @@ const LeadListPage: React.FC = () => {
               ) : paginatedLeads.map(lead => (
                 <tr
                   key={lead.id}
-                  onClick={() => { setSelectedLead(lead); setShowWorkspace(true); }}
+                  onClick={() => openLeadWorkspace(lead)}
                   className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${selectedLead?.id === lead.id ? 'bg-indigo-50' : ''}`}
                 >
                   <td className="px-3 py-2 text-center whitespace-nowrap">
@@ -339,7 +389,12 @@ const LeadListPage: React.FC = () => {
                   <button className="text-xs font-medium text-indigo-600 hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
                 </div>
                 <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
-                  {!selectedLead.activities || selectedLead.activities.length === 0 ? (
+                  {loadingSelectedLead ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
+                      <p className="text-sm font-medium mb-1">Loading Timeline</p>
+                      <p className="text-xs">Fetching recent outreach history...</p>
+                    </div>
+                  ) : !selectedLead.activities || selectedLead.activities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
                       <p className="text-sm font-medium mb-1">Timeline Empty</p>
                       <p className="text-xs">Log your first interaction above</p>
@@ -367,10 +422,11 @@ const LeadListPage: React.FC = () => {
             <div className="shrink-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
               <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
               <textarea
+                key={selectedLead.id}
                 className="w-full p-3 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[80px] shadow-inner"
                 placeholder="Strategic notes about this client's requirements..."
                 defaultValue={selectedLead.notes || ''}
-                onBlur={(e) => LeadService.update(selectedLead.id, { notes: e.target.value })}
+                onBlur={(e) => void handleNotesBlur(e.target.value)}
               />
             </div>
           </div>
