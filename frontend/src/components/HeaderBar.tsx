@@ -13,8 +13,8 @@ const HeaderBar: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-10 bg-white border-b border-slate-200 z-30">
-      <div className="relative flex items-center justify-between h-full px-2 lg:px-4">
+    <header className="fixed top-0 left-0 right-0 lg:left-60 h-10 bg-white border-b border-slate-200 z-30">
+      <div className="relative flex items-center h-full px-2 lg:px-4">
 
         <button
           onClick={() => window.dispatchEvent(new Event('toggleSidebar'))}
@@ -29,7 +29,7 @@ const HeaderBar: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-1 lg:gap-2">
+        <div className="flex items-center gap-1 lg:gap-2 ml-auto">
           <div className="relative hidden md:block">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
             <input
