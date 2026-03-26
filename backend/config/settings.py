@@ -18,6 +18,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-fallback-key-should-be-a
 DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
+    "crm.abtikservices.in",
     "api.abtikservices.in",
     "localhost",
     "127.0.0.1",

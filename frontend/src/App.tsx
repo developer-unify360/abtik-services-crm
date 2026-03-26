@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LoginPage from './auth/LoginPage';
 import PrivateRoute from './auth/PrivateRoute';
 import Layout from './components/Layout';
@@ -13,11 +14,49 @@ import AttributesPage from './attributes/AttributesPage';
 import PaymentListPage from './payments/PaymentListPage';
 import PaymentFormPage from './payments/PaymentFormPage';
 
+function getAdminBaseUrl() {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/+$/, '');
+  }
+
+  const { protocol, hostname } = window.location;
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:8000`;
+  }
+
+  if (hostname.startsWith('crm.')) {
+    return `${protocol}//${hostname.replace(/^crm\./, 'api.')}`;
+  }
+
+  return window.location.origin;
+}
+
+function AdminRedirect() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const adminBaseUrl = getAdminBaseUrl();
+    const adminPath = location.pathname.startsWith('/admin/')
+      ? location.pathname
+      : '/admin/';
+    const targetUrl = `${adminBaseUrl}${adminPath}${location.search}${location.hash}`;
+
+    window.location.replace(targetUrl);
+  }, [location.hash, location.pathname, location.search]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         {/* Public routes */}
+        <Route path="/admin" element={<AdminRedirect />} />
+        <Route path="/admin/*" element={<AdminRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/bookings/new" element={<BookingFormPage />} />
         <Route path="/leads/new" element={<PublicLeadFormPage />} />
