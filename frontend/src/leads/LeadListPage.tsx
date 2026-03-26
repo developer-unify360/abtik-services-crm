@@ -390,7 +390,7 @@ const LeadListPage: React.FC = () => {
                               mobile: selectedLead.mobile,
                               bde_name: selectedLead.bde_name,
                               lead_source: selectedLead.source,
-                              service: selectedLead.service,
+                              services: selectedLead.service ? [selectedLead.service] : [],
                               lead_id: selectedLead.id,
                             }
                           }

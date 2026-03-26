@@ -40,8 +40,8 @@ class ClientService:
 
     @staticmethod
     @transaction.atomic
-    def create_client_with_booking_and_request(client_data, booking_data, request_data, user, service_id=None):
-        """Create or update client, then create booking and optional service request."""
+    def create_client_with_booking_and_request(client_data, booking_data, request_data_list, user, service_id=None):
+        """Create or update client, then create booking and optional service requests."""
         email = client_data.get('email')
         mobile = client_data.get('mobile')
         
@@ -102,19 +102,22 @@ class ClientService:
         
         booking = BookingService.create_booking(data=booking_payload, user=user, service_id=service_id)
 
-        service_request = None
-        if request_data:
+        service_requests = []
+        for request_data in request_data_list or []:
             request_payload = dict(request_data)
             request_payload['booking'] = booking
-            service_request = ServiceRequestService.create_request(
-                data=request_payload,
-                user=user,
+            service_requests.append(
+                ServiceRequestService.create_request(
+                    data=request_payload,
+                    user=user,
+                )
             )
 
         return {
             'client': client,
             'booking': booking,
-            'service_request': service_request,
+            'service_request': service_requests[0] if service_requests else None,
+            'service_requests': service_requests,
         }
 
     @staticmethod

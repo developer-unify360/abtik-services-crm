@@ -173,7 +173,7 @@ const TaskQueue: React.FC = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">Update Status</h3>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {['pending', 'assigned', 'in_progress', 'completed'].map(s => (
                 <button 
                   key={s}

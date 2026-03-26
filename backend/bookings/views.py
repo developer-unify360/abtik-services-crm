@@ -72,6 +72,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         client_payload = self._parse_nested_payload('client')
         booking_payload = self._parse_nested_payload('booking')
         service_payload = self._parse_nested_payload('service_request', default={})
+        service_payload_provided = 'service_request' in self.request.data
 
         attachment = self.request.FILES.get('attachment')
         if attachment is not None:
@@ -86,15 +87,46 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking_serializer.is_valid(raise_exception=True)
 
         service_serializer = None
-        if service_payload.get('service'):
-            normalized = {
-                'service': service_payload.get('service'),
-                'priority': service_payload.get('priority', 'medium'),
-            }
-            service_serializer = ServiceRequestCreateUpdateSerializer(data=normalized, partial=True)
+        normalized_service_payloads = self._normalize_service_payloads(service_payload)
+        if normalized_service_payloads:
+            service_serializer = ServiceRequestCreateUpdateSerializer(
+                data=normalized_service_payloads,
+                many=True,
+                partial=True,
+            )
             service_serializer.is_valid(raise_exception=True)
 
-        return client_serializer, booking_serializer, service_serializer
+        return client_serializer, booking_serializer, service_serializer, service_payload_provided
+
+    def _normalize_service_payloads(self, service_payload):
+        if not isinstance(service_payload, dict):
+            raise ValidationError({'service_request': "Invalid service request payload."})
+
+        raw_services = service_payload.get('services')
+        if raw_services is None:
+            raw_services = [service_payload.get('service')] if service_payload.get('service') else []
+        elif not isinstance(raw_services, list):
+            raw_services = [raw_services]
+
+        priority = service_payload.get('priority', 'medium')
+        normalized_payloads = []
+        seen_service_ids = set()
+
+        for raw_service in raw_services:
+            if raw_service in [None, '']:
+                continue
+
+            service_key = str(raw_service)
+            if service_key in seen_service_ids:
+                continue
+
+            seen_service_ids.add(service_key)
+            normalized_payloads.append({
+                'service': raw_service,
+                'priority': priority,
+            })
+
+        return normalized_payloads
 
     def create(self, request, *args, **kwargs):
         serializer = BookingCreateUpdateSerializer(data=request.data)
@@ -138,21 +170,23 @@ class BookingViewSet(viewsets.ModelViewSet):
     def bde_form_create(self, request):
         """Authenticated full-form booking creation (admin creating on behalf of BDE)."""
         try:
-            client_serializer, booking_serializer, service_serializer = self._validate_full_form_payload()
+            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload()
             if not client_serializer:
                 return Response(
                     {"success": False, "error": {"code": "INVALID_INPUT", "message": "Client information is required."}},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            service_id = service_serializer.validated_data.get('service') if service_serializer else None
+            service_request_data_list = [dict(item) for item in service_serializer.validated_data] if service_serializer else []
+            service_id = service_request_data_list[0].get('service') if service_request_data_list else None
             result = ClientService.create_client_with_booking_and_request(
                 client_data=dict(client_serializer.validated_data),
                 booking_data=dict(booking_serializer.validated_data),
-                request_data=dict(service_serializer.validated_data) if service_serializer else {},
+                request_data_list=service_request_data_list,
                 user=request.user,
                 service_id=service_id
             )
+            serialized_service_requests = ServiceRequestSerializer(result['service_requests'], many=True).data
             return Response(
                 {
                     "success": True,
@@ -160,6 +194,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                         "client": ClientSerializer(result['client']).data,
                         "booking": BookingSerializer(result['booking'], context={'request': request}).data,
                         "service_request": ServiceRequestSerializer(result['service_request']).data if result['service_request'] else None,
+                        "service_requests": serialized_service_requests,
                     },
                     "message": "Booking submitted successfully",
                 },
@@ -175,21 +210,23 @@ class BookingViewSet(viewsets.ModelViewSet):
     def public_form_create(self, request):
         """Public booking form — no authentication required."""
         try:
-            client_serializer, booking_serializer, service_serializer = self._validate_full_form_payload()
+            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload()
             if not client_serializer:
                 return Response(
                     {"success": False, "error": {"code": "INVALID_INPUT", "message": "Client information is required."}},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            service_id = service_serializer.validated_data.get('service') if service_serializer else None
+            service_request_data_list = [dict(item) for item in service_serializer.validated_data] if service_serializer else []
+            service_id = service_request_data_list[0].get('service') if service_request_data_list else None
             result = ClientService.create_client_with_booking_and_request(
                 client_data=dict(client_serializer.validated_data),
                 booking_data=dict(booking_serializer.validated_data),
-                request_data=dict(service_serializer.validated_data) if service_serializer else {},
+                request_data_list=service_request_data_list,
                 user=None,
                 service_id=service_id
             )
+            serialized_service_requests = ServiceRequestSerializer(result['service_requests'], many=True).data
             return Response(
                 {
                     "success": True,
@@ -197,6 +234,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                         "client": ClientSerializer(result['client']).data,
                         "booking": BookingSerializer(result['booking'], context={'request': request}).data,
                         "service_request": ServiceRequestSerializer(result['service_request']).data if result['service_request'] else None,
+                        "service_requests": serialized_service_requests,
                     },
                     "message": "Booking submitted successfully",
                 },
@@ -213,39 +251,34 @@ class BookingViewSet(viewsets.ModelViewSet):
         """Full-form booking update (admin edits client + booking in one request)."""
         booking = self.get_object()
         try:
-            client_serializer, booking_serializer, service_serializer = self._validate_full_form_payload(partial=True)
+            client_serializer, booking_serializer, service_serializer, service_payload_provided = self._validate_full_form_payload(partial=True)
+            service_request_data_list = [dict(item) for item in service_serializer.validated_data] if service_serializer else []
 
             with transaction.atomic():
                 if client_serializer:
                     ClientService.update_client(booking.client, client_serializer.validated_data, user=request.user)
 
-                service_id = service_serializer.validated_data.get('service') if service_serializer else None
+                service_id = service_request_data_list[0].get('service') if service_request_data_list else None
                 updated_booking = BookingService.update_booking(
                     booking, booking_serializer.validated_data, user=request.user, service_id=service_id
                 )
 
-                existing_request = updated_booking.service_requests.order_by('created_at').first()
-                updated_service_request = existing_request
-                if service_serializer:
-                    request_data = dict(service_serializer.validated_data)
-                    request_data['booking'] = updated_booking
-                    if existing_request:
-                        updated_service_request = ServiceRequestService.update_request(
-                            existing_request,
-                            {'service': request_data['service'], 'priority': request_data.get('priority', existing_request.priority), 'booking': updated_booking},
-                            user=request.user,
-                        )
-                    else:
-                        updated_service_request = ServiceRequestService.create_request(
-                            data=request_data, user=request.user
-                        )
+                if service_payload_provided:
+                    updated_service_requests = ServiceRequestService.sync_requests(
+                        updated_booking,
+                        service_request_data_list,
+                        user=request.user,
+                    )
+                else:
+                    updated_service_requests = list(updated_booking.service_requests.order_by('created_at'))
 
             return Response({
                 "success": True,
                 "data": {
                     "client": ClientSerializer(updated_booking.client).data,
                     "booking": BookingSerializer(updated_booking, context={'request': request}).data,
-                    "service_request": ServiceRequestSerializer(updated_service_request).data if updated_service_request else None,
+                    "service_request": ServiceRequestSerializer(updated_service_requests[0]).data if updated_service_requests else None,
+                    "service_requests": ServiceRequestSerializer(updated_service_requests, many=True).data,
                 },
                 "message": "Booking updated successfully",
             })

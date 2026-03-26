@@ -56,6 +56,13 @@ class ServicesAPITest(TestCase):
             is_staff=True,
             is_superuser=True,
         )
+        self.sales_user = User.objects.create_user(
+            username='sales@test.com',
+            email='sales@test.com',
+            password='testpass',
+            name='Sales User',
+            role='sales_manager',
+        )
         self.client_record = Client.objects.create(
             client_name='Test Client',
             company_name='Test Corp',
@@ -84,3 +91,26 @@ class ServicesAPITest(TestCase):
         self.api_client.force_authenticate(user=self.admin_user)
         response = self.api_client.get('/api/v1/service-requests/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_non_staff_booking_scoped_list_includes_unassigned_requests(self):
+        service = Service.objects.create(name='SEO')
+        service_request = ServiceRequest.objects.create(
+            booking=self.booking,
+            service=service,
+            status='pending',
+            created_by=self.admin_user,
+        )
+
+        self.api_client.force_authenticate(user=self.sales_user)
+
+        general_response = self.api_client.get('/api/v1/service-requests/')
+        self.assertEqual(general_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(general_response.data['data'], [])
+
+        booking_response = self.api_client.get(
+            '/api/v1/service-requests/',
+            {'booking_id': str(self.booking.id)},
+        )
+        self.assertEqual(booking_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(booking_response.data['data']), 1)
+        self.assertEqual(booking_response.data['data'][0]['id'], str(service_request.id))

@@ -80,17 +80,20 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
         return ServiceRequestSerializer
 
     def get_queryset(self):
+        booking_id = self.request.query_params.get('booking_id')
         filters = {
             'status': self.request.query_params.get('status'),
             'assigned_to': self.request.query_params.get('assigned_to'),
             'priority': self.request.query_params.get('priority'),
-            'booking_id': self.request.query_params.get('booking_id')
+            'booking_id': booking_id,
         }
         filters = {k: v for k, v in filters.items() if v}
 
         queryset = ServiceRequestService.list_requests(filters or None)
 
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
+        # Booking forms need to rehydrate all requests for a booking, even before
+        # they have been assigned to a delivery user.
+        if not booking_id and not (self.request.user.is_staff or self.request.user.is_superuser):
             queryset = queryset.filter(assigned_to=self.request.user)
 
         return queryset

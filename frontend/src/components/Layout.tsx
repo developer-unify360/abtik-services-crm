@@ -11,7 +11,7 @@ const Layout: React.FC = () => {
       <Sidebar />
       <div className="min-w-0 flex-1 flex flex-col lg:ml-60 min-h-0 h-full">
         <HeaderBar />
-        <main className="min-w-0 flex-1 overflow-hidden p-3 pt-14 pb-3 min-h-0">
+        <main className="min-w-0 flex-1 overflow-y-auto p-1 pt-10 pb-3">
           <Outlet />
         </main>
       </div>

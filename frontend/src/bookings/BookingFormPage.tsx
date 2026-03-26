@@ -8,6 +8,7 @@ import { ClientService } from '../clients/ClientService';
 import { LeadService, type Lead } from '../leads/LeadService';
 import { ServiceApi, ServiceRequestApi, type Service, type ServiceRequest } from '../services/api/ServiceApi';
 import { BankApi, type Bank } from './api/BankApi';
+import MultiSelect from '../components/MultiSelect';
 
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
 
@@ -24,7 +25,7 @@ interface BookingFormState {
   bank: string;
   booking_date: string;
   payment_date: string;
-  service: string;
+  service_ids: string[];
   total_payment_amount: string;
   total_payment_remarks: string;
   received_amount: string;
@@ -53,7 +54,7 @@ const emptyFormState = (): BookingFormState => ({
   bank: '',
   booking_date: new Date().toISOString().split('T')[0],
   payment_date: '',
-  service: '',
+  service_ids: [],
   total_payment_amount: '',
   total_payment_remarks: '',
   received_amount: '',
@@ -69,6 +70,25 @@ const emptyFormState = (): BookingFormState => ({
 });
 
 const toInputValue = (value?: string | number | null) => (value === null || value === undefined ? '' : String(value));
+
+const normalizeSelectedServiceIds = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return Array.from(
+      new Set(
+        value
+          .map((item) => (item === null || item === undefined ? '' : String(item).trim()))
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? [normalized] : [];
+};
 
 const calculateRemainingAmount = (totalAmount: string, receivedAmount: string) => {
   if (!totalAmount || !receivedAmount) {
@@ -167,12 +187,18 @@ const BookingFormPage: React.FC = () => {
         setPaymentTypes(paymentData.filter((pt: Attribute) => pt.is_active));
 
         if (!isEditMode || !bookingId) {
-          const prefill = location.state?.prefill;
+          const prefill = location.state?.prefill ?? {};
           const initialBdeName = prefill?.bde_name || authUser?.name || '';
+          const {
+            service: prefillService,
+            services: prefillServices,
+            ...prefillFields
+          } = prefill;
           setFormState((prev) => ({ 
             ...prev, 
-            ...prefill,
+            ...prefillFields,
             bde_name: initialBdeName,
+            service_ids: normalizeSelectedServiceIds(prefillServices ?? prefillService),
           }));
           setLoading(false);
           return;
@@ -184,12 +210,11 @@ const BookingFormPage: React.FC = () => {
           ServiceRequestApi.list({ booking_id: bookingId }),
         ]);
 
-        const currentServiceRequest = Array.isArray(serviceRequests) && serviceRequests.length > 0
-          ? serviceRequests[0]
+        const normalizedServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
+        const currentServiceRequest = normalizedServiceRequests.length > 0
+          ? normalizedServiceRequests[0]
           : null;
         setExistingServiceRequest(currentServiceRequest);
-
-        let selectedServiceId = currentServiceRequest?.service || '';
 
         setFormState({
           client_name: client.client_name || '',
@@ -204,7 +229,9 @@ const BookingFormPage: React.FC = () => {
           bank: booking.bank || '',
           booking_date: booking.booking_date || '',
           payment_date: booking.payment_date || '',
-          service: selectedServiceId,
+          service_ids: normalizeSelectedServiceIds(
+            normalizedServiceRequests.map((serviceRequest) => serviceRequest.service),
+          ),
           total_payment_amount: toInputValue(booking.total_payment_amount),
           total_payment_remarks: booking.total_payment_remarks || '',
           received_amount: toInputValue(booking.received_amount),
@@ -291,7 +318,7 @@ const BookingFormPage: React.FC = () => {
   // Filter leads for dropdown display
   const filteredLeads = leads;
 
-  const handleFieldChange = (field: keyof BookingFormState, value: string | boolean | File | null) => {
+  const handleFieldChange = (field: keyof BookingFormState, value: string | string[] | boolean | File | null) => {
     setFormState((previous) => {
       const nextState = { ...previous, [field]: value } as BookingFormState;
 
@@ -345,9 +372,9 @@ const BookingFormPage: React.FC = () => {
           remove_attachment: formState.remove_attachment,
           lead_id: formState.lead_id || null,
         },
-        service_request: formState.service
+        service_request: formState.service_ids.length > 0
           ? {
-              service: formState.service,
+              services: formState.service_ids,
               priority: existingServiceRequest?.priority || 'medium',
             }
           : {},
@@ -427,6 +454,10 @@ const BookingFormPage: React.FC = () => {
 
   const attachmentName = formState.attachment?.name
     || (formState.existingAttachmentUrl ? decodeURIComponent(formState.existingAttachmentUrl.split('/').pop() || 'Current attachment') : '');
+  const serviceOptions = services.map((service) => ({
+    value: service.id,
+    label: service.name,
+  }));
 
   // Public submission success screen
   if (submitSuccess) {
@@ -450,7 +481,7 @@ const BookingFormPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex flex-col min-h-0">
 
       <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm flex flex-col">
         <div className="bg-slate-900 px-3 py-2 text-white flex-shrink-0">
@@ -470,9 +501,10 @@ const BookingFormPage: React.FC = () => {
               Loading booking form...
             </div>
           ) : (
-            <form className="space-y-2" onSubmit={handleSubmit}>
-              {/* Main layout: Left column (Booking + Service + Additional) and Right column (Client + Payment) */}
-              <div className="flex flex-col lg:flex-row gap-2">
+            <>
+              <form className="space-y-1" onSubmit={handleSubmit}>
+                {/* Main layout: Left column (Booking + Service + Additional) and Right column (Client + Payment) */}
+                <div className="flex flex-col lg:flex-row gap-2">
                 {/* Left column: Booking Details + Service Details + Additional Info */}
                 <div className="flex-1 flex flex-col gap-2">
                   <SectionCard title="Booking Details" icon={<CalendarDays size={14} />}>
@@ -548,25 +580,16 @@ const BookingFormPage: React.FC = () => {
 
                   <SectionCard title="Service Details" icon={<Wrench size={14} />}>
                     <div className="grid gap-2 grid-cols-1">
-                      <Field label="Service">
-                        <select
-                          className="input-field py-1.5 text-sm"
-                          value={formState.service}
-                          onChange={(event) => handleFieldChange('service', event.target.value)}
-                        >
-                          <option value="">Select</option>
-                          {services.map((service) => (
-                            <option key={service.id} value={service.id}>
-                              {service.name}
-                            </option>
-                          ))}
-                        </select>
+                      <Field label="Services">
+                        <MultiSelect
+                          options={serviceOptions}
+                          value={formState.service_ids}
+                          onChange={(nextValue) => handleFieldChange('service_ids', nextValue)}
+                          placeholder="Select services"
+                          searchPlaceholder="Search services..."
+                          emptyMessage="No services available."
+                        />
                       </Field>
-                      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 flex items-center">
-                        {services.length > 0
-                          ? 'Select service for this booking.'
-                          : 'No services available.'}
-                      </div>
                     </div>
                   </SectionCard>
 
@@ -850,6 +873,7 @@ const BookingFormPage: React.FC = () => {
                 </button>
               </div>
             </form>
+            </>
           )}
         </div>
       </div>

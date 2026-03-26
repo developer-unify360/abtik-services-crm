@@ -73,6 +73,62 @@ class ServiceRequestService:
         return service_request
 
     @staticmethod
+    def delete_request(service_request, user):
+        details = {
+            'request_id': str(service_request.id),
+            'booking_id': str(service_request.booking.id),
+            'service_id': str(service_request.service.id),
+        }
+        service_request.delete()
+
+        AuditLog.objects.create(
+            user=user,
+            action='service_request.delete',
+            module='services',
+            details=details,
+        )
+
+    @staticmethod
+    def sync_requests(booking, request_data_list, user):
+        existing_requests = list(
+            booking.service_requests.select_related('service').order_by('created_at', 'id')
+        )
+        requests_by_service_id = {}
+        for existing_request in existing_requests:
+            requests_by_service_id.setdefault(str(existing_request.service_id), []).append(existing_request)
+
+        synced_requests = []
+        for request_data in request_data_list:
+            request_payload = dict(request_data)
+            service = request_payload['service']
+            service_key = str(service.id)
+            matching_requests = requests_by_service_id.get(service_key, [])
+
+            if matching_requests:
+                current_request = matching_requests.pop(0)
+                updates = {}
+
+                if current_request.booking_id != booking.id:
+                    updates['booking'] = booking
+                if request_payload.get('priority') and current_request.priority != request_payload['priority']:
+                    updates['priority'] = request_payload['priority']
+
+                if updates:
+                    current_request = ServiceRequestService.update_request(current_request, updates, user=user)
+
+                synced_requests.append(current_request)
+                continue
+
+            request_payload['booking'] = booking
+            synced_requests.append(ServiceRequestService.create_request(data=request_payload, user=user))
+
+        for remaining_requests in requests_by_service_id.values():
+            for stale_request in remaining_requests:
+                ServiceRequestService.delete_request(stale_request, user=user)
+
+        return synced_requests
+
+    @staticmethod
     def assign_task(service_request, assigned_to_user, user):
         service_request.assigned_to = assigned_to_user
         if service_request.status == 'pending':

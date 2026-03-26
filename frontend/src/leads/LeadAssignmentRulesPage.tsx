@@ -299,7 +299,7 @@ const LeadAssignmentRulesPage: React.FC = () => {
                 </div>
 
                 {/* User Selection */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <p className="border-b border-slate-100 pb-2 text-sm font-semibold text-slate-800">Eligible BDEs</p>
                   <div className="grid h-10 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                     {users.map(user => {

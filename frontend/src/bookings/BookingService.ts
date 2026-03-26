@@ -57,6 +57,7 @@ export interface BookingFullFormData {
   booking: BookingCreateData;
   service_request?: {
     service?: string;
+    services?: string[];
     priority?: 'low' | 'medium' | 'high' | 'urgent';
   };
   attachment?: File | null;

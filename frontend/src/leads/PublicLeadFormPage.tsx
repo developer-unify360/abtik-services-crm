@@ -150,7 +150,7 @@ const PublicLeadFormPage: React.FC = () => {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-green-600">
             <CheckCircle size={40} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <h2 className="text-2xl font-bold text-slate-900">Lead Submitted!</h2>
             <p className="text-slate-500">
               The lead has been recorded successfully. Our team will follow up on this shortly.

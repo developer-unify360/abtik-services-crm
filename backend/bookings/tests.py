@@ -116,6 +116,45 @@ class BookingAPITest(TestCase):
         self.assertEqual(service_request.service, service)
         self.assertEqual(lead.service, service)
 
+    def test_bde_form_create_accepts_multiple_services_and_creates_multiple_requests(self):
+        primary_service = Service.objects.create(name='Certificate & Licence')
+        secondary_service = Service.objects.create(name='GST Filing')
+
+        self.api_client.force_authenticate(user=self.admin_user)
+        response = self.api_client.post(
+            '/api/v1/bookings/bde-form/',
+            data={
+                'client': json.dumps({
+                    'client_name': 'Bundle Client',
+                    'company_name': 'Bundle Corp',
+                    'email': 'bundle@test.com',
+                    'mobile': '6666666666',
+                }),
+                'booking': json.dumps({
+                    'bde_name': self.admin_user.name,
+                    'booking_date': str(date.today()),
+                }),
+                'service_request': json.dumps({
+                    'services': [str(primary_service.id), str(secondary_service.id)],
+                    'priority': 'high',
+                }),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        booking = Booking.objects.get(client__email='bundle@test.com')
+        lead = Lead.objects.get(client=booking.client)
+        service_requests = list(ServiceRequest.objects.filter(booking=booking).order_by('created_at'))
+
+        self.assertEqual(len(service_requests), 2)
+        self.assertCountEqual(
+            [service_request.service for service_request in service_requests],
+            [primary_service, secondary_service],
+        )
+        self.assertEqual(lead.service, primary_service)
+        self.assertEqual(len(response.data['data']['service_requests']), 2)
+
     def test_bde_form_create_updates_existing_lead_service_on_conversion(self):
         existing_lead = Lead.objects.create(
             client=None,
@@ -155,3 +194,53 @@ class BookingAPITest(TestCase):
         self.assertIsNotNone(existing_lead.client)
         self.assertEqual(existing_lead.status, 'closed_won')
         self.assertEqual(existing_lead.service, service)
+
+    def test_bde_form_update_syncs_multiple_service_requests(self):
+        original_service = Service.objects.create(name='Original Service')
+        replacement_service = Service.objects.create(name='Replacement Service')
+        additional_service = Service.objects.create(name='Additional Service')
+        booking = Booking.objects.create(
+            client=self.client_record,
+            bde_name=self.admin_user.name,
+            booking_date=date.today(),
+        )
+        existing_request = ServiceRequest.objects.create(
+            booking=booking,
+            service=original_service,
+            created_by=self.admin_user,
+            priority='medium',
+        )
+
+        self.api_client.force_authenticate(user=self.admin_user)
+        response = self.api_client.put(
+            f'/api/v1/bookings/{booking.id}/bde-form/',
+            data={
+                'client': json.dumps({
+                    'client_name': self.client_record.client_name,
+                    'company_name': self.client_record.company_name,
+                    'email': self.client_record.email,
+                    'mobile': self.client_record.mobile,
+                }),
+                'booking': json.dumps({
+                    'bde_name': self.admin_user.name,
+                    'booking_date': str(booking.booking_date),
+                }),
+                'service_request': json.dumps({
+                    'services': [str(replacement_service.id), str(additional_service.id)],
+                    'priority': 'high',
+                }),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        booking.refresh_from_db()
+        synced_requests = list(ServiceRequest.objects.filter(booking=booking).order_by('created_at'))
+        self.assertEqual(len(synced_requests), 2)
+        self.assertCountEqual(
+            [service_request.service for service_request in synced_requests],
+            [replacement_service, additional_service],
+        )
+        self.assertFalse(ServiceRequest.objects.filter(id=existing_request.id).exists())
+        self.assertTrue(all(service_request.priority == 'high' for service_request in synced_requests))
+        self.assertEqual(len(response.data['data']['service_requests']), 2)
