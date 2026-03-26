@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+
+from .forms import UserAdminChangeForm, UserAdminCreationForm
 from .models import User
 
 
@@ -8,6 +10,8 @@ class UserAdmin(BaseUserAdmin):
     """
     Admin configuration for User model.
     """
+    form = UserAdminChangeForm
+    add_form = UserAdminCreationForm
     list_display = ('email', 'username', 'name', 'role', 'status', 'is_active', 'is_staff', 'created_at')
     list_filter = ('role', 'is_active', 'is_staff', 'is_superuser', 'status')
     search_fields = ('email', 'username', 'name', 'phone')
@@ -31,7 +35,18 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         ('Create User', {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'password', 'name', 'role', 'status', 'is_staff', 'is_active'),
+            'fields': (
+                'email',
+                'username',
+                'name',
+                'phone',
+                'role',
+                'status',
+                'is_staff',
+                'is_active',
+                'password1',
+                'password2',
+            ),
         }),
     )
     
