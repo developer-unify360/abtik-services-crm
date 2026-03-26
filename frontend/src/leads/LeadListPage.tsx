@@ -5,6 +5,7 @@ import {
   Search,
   X,
   Phone,
+  Download,
   ArrowUpRight,
   Play,
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
 import { LeadService } from './LeadService';
 import type { Lead } from './LeadService';
 import { useAuthStore } from '../auth/authStore';
+import { downloadLeadInteractionHistoryPdf } from './leadHistoryPdf';
 
 const PAGE_SIZE = 10;
 
@@ -51,6 +53,7 @@ const LeadListPage: React.FC = () => {
   const [callNotes, setCallNotes] = useState('');
   const [callStatus, setCallStatus] = useState('contacted');
   const [savingCall, setSavingCall] = useState(false);
+  const [exportingHistory, setExportingHistory] = useState(false);
 
   const syncLeadInList = (updatedLead: Lead) => {
     setLeads((currentLeads) =>
@@ -166,6 +169,26 @@ const LeadListPage: React.FC = () => {
       syncLeadInList(updatedLead);
     } catch (error) {
       console.error('Failed to save notes:', error);
+    }
+  };
+
+  const handleDownloadFullHistory = async () => {
+    if (!selectedLead) return;
+
+    const leadId = selectedLead.id;
+    setExportingHistory(true);
+
+    try {
+      const latestLead = await LeadService.get(leadId);
+      if (selectedLeadIdRef.current !== leadId) return;
+
+      setSelectedLead(latestLead);
+      syncLeadInList(latestLead);
+      downloadLeadInteractionHistoryPdf(latestLead);
+    } catch (error) {
+      console.error('Failed to download interaction history:', error);
+    } finally {
+      setExportingHistory(false);
     }
   };
 
@@ -386,7 +409,16 @@ const LeadListPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <p className="text-sm font-semibold text-slate-900">Interactions</p>
-                  <button className="text-xs font-medium text-indigo-600 hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => void handleDownloadFullHistory()}
+                      disabled={loadingSelectedLead || exportingHistory}
+                      className="inline-flex items-center gap-1 rounded bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Download size={12} />
+                      {exportingHistory ? 'Preparing PDF...' : 'Download Full History'}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
                   {loadingSelectedLead ? (
