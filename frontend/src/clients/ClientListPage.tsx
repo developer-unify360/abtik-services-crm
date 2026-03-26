@@ -81,26 +81,26 @@ const ClientListPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+    <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
       <div className="shrink-0 w-full">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-purple-700">Client Directory</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">Clients</h1>
-            <p className="mt-1 text-xs text-slate-600">
-              Manage your client relationships and contact information.
-            </p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-purple-700">Client Directory</p>
+          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
+            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Clients</h1>
+            <button onClick={handleOpenCreate} className="page-header-action bg-purple-600 hover:bg-purple-700">
+              <Plus size={12} />
+              New Client
+            </button>
           </div>
-          <button onClick={handleOpenCreate} className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700">
-            <Plus size={14} />
-            New Client
-          </button>
+          <p className="mt-1 text-xs text-slate-600">
+            Manage your client relationships and contact information.
+          </p>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="relative w-full md:w-56">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -118,17 +118,17 @@ const ClientListPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
-        <div className="h-full overflow-auto">
-          <table className="w-full">
+      <div className="flex min-w-0 flex-1 min-h-0 w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="table-scroll min-w-0 flex-1 min-h-0 overflow-auto">
+          <table className="w-full min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr className="text-xs font-semibold text-slate-600">
                 <th className="px-3 py-2 text-left whitespace-nowrap">Client</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Company</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Email</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap hidden md:table-cell">Email</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Mobile</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Industry</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap hidden lg:table-cell">Industry</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap hidden lg:table-cell">Created</th>
                 <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -144,28 +144,28 @@ const ClientListPage: React.FC = () => {
                   <tr key={client.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{client.client_name}</td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[120px] truncate">{client.company_name}</td>
-                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{client.email}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap hidden md:table-cell">{client.email}</td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{client.mobile}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 hidden lg:table-cell">
                       {client.industry_name && (
                         <span className="badge bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5">{client.industry_name}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(client.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap hidden lg:table-cell">{new Date(client.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
                     <td className="px-3 py-2 text-center">
-                      <button 
+                      <button
                         onClick={() => setViewingClient(client)}
                         className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                       >
                         <Eye size={12} />
-                        View
+                        <span className="hidden sm:inline">View</span>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleOpenEdit(client)}
                         className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50 ml-1"
                       >
                         <Edit size={12} />
-                        Edit
+                        <span className="hidden sm:inline">Edit</span>
                       </button>
                     </td>
                   </tr>
@@ -174,10 +174,10 @@ const ClientListPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {totalCount > rowsPerPage && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+          <div className="flex min-w-0 flex-col gap-2 border-t border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs text-slate-500">
               {`${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount}`}
             </span>
@@ -203,21 +203,21 @@ const ClientListPage: React.FC = () => {
 
       {/* Create / Edit Modal */}
       {openForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <h2 className="text-lg font-semibold text-slate-800">
                 {editingClient ? 'Edit Client' : 'Add New Client'}
               </h2>
-              <button 
+              <button
                 onClick={() => setOpenForm(false)}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Client Name *</label>
                   <input
@@ -278,7 +278,7 @@ const ClientListPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
               <button onClick={() => setOpenForm(false)} className="btn-secondary">
                 Cancel
               </button>
@@ -292,18 +292,18 @@ const ClientListPage: React.FC = () => {
 
       {/* View Detail Modal */}
       {viewingClient && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <h2 className="text-lg font-semibold text-slate-800">Client Details</h2>
-              <button 
+              <button
                 onClick={() => setViewingClient(null)}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-3">
+            <div className="p-6 space-y-3 overflow-y-auto flex-1">
               <p><strong className="text-gray-700">Name:</strong> <span className="text-gray-600">{viewingClient.client_name}</span></p>
               <p><strong className="text-gray-700">Company:</strong> <span className="text-gray-600">{viewingClient.company_name}</span></p>
               <p><strong className="text-gray-700">Email:</strong> <span className="text-gray-600">{viewingClient.email}</span></p>
@@ -313,7 +313,7 @@ const ClientListPage: React.FC = () => {
               <p><strong className="text-gray-700">Created By:</strong> <span className="text-gray-600">{viewingClient.created_by_name || '—'}</span></p>
               <p><strong className="text-gray-700">Created:</strong> <span className="text-gray-600">{new Date(viewingClient.created_at).toLocaleString()}</span></p>
             </div>
-            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100">
+            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 shrink-0">
               <button onClick={() => setViewingClient(null)} className="btn-secondary">
                 Close
               </button>
@@ -324,9 +324,8 @@ const ClientListPage: React.FC = () => {
 
       {/* Toast */}
       {snackbar.open && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
-          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        } text-white flex items-center gap-3 z-50`}>
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          } text-white flex items-center gap-3 z-50`}>
           <span>{snackbar.message}</span>
           <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
             <X size={18} />

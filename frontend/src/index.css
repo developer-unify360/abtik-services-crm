@@ -15,7 +15,7 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5;
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5 min-w-0 max-w-full;
   }
   
   .btn-primary {
@@ -25,13 +25,17 @@
   .btn-secondary {
     @apply bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors duration-200;
   }
+
+  .page-header-action {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white transition-colors duration-200;
+  }
   
   .input-field {
     @apply w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200;
   }
   
   .table-container {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden;
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-w-0 max-w-full;
   }
   
   .table-header {
@@ -72,5 +76,27 @@
   
   .badge-gray {
     @apply bg-gray-100 text-gray-700;
+  }
+
+  /* Custom Scrollbar for better visibility */
+  .table-scroll {
+    overscroll-behavior-x: contain;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .table-scroll::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full border-2 border-transparent bg-clip-padding transition-colors;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-300;
   }
 }

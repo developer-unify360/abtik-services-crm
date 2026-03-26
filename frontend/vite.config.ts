@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     proxyConfig['/api'] = {
       target: 'http://localhost',
       changeOrigin: true,
-      bypass(req: any) {
+      bypass() {
         return undefined
       },
     }

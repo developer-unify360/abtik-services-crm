@@ -28,8 +28,8 @@ const LoginPage: React.FC = () => {
     };
 
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f4f6f8' }}>
-            <Paper elevation={3} sx={{ padding: 4, width: '100%', maxWidth: 400 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f6f8', p: 2 }}>
+            <Paper elevation={3} sx={{ padding: { xs: 3, sm: 4 }, width: '100%', maxWidth: 400 }}>
                 <Typography variant="h5" align="center" gutterBottom fontWeight={700}>
                     Admin Sign In
                 </Typography>
@@ -47,6 +47,7 @@ const LoginPage: React.FC = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={loading}
+                        size="small"
                     />
                     <TextField
                         fullWidth
@@ -58,6 +59,7 @@ const LoginPage: React.FC = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={loading}
+                        size="small"
                     />
                     <Button
                         fullWidth

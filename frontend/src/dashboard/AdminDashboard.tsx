@@ -72,25 +72,25 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8 px-2 lg:px-0">
       {/* Header */}
-      <div>
+      <div className="px-2 lg:px-0">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600">Overview</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="mt-2 text-2xl lg:text-3xl font-bold text-slate-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-500 hidden sm:block">
           Real-time summary of all clients and bookings managed through the BDE form.
         </p>
       </div>
 
       {/* Stats Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-28 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           <StatCard
             label="Total Clients"
             value={stats.totalClients}

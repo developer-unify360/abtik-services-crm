@@ -8,8 +8,8 @@ export interface Attribute {
 
 const AttributeService = {
   // Industries
-  listIndustries: async () => {
-    const response = await apiClient.get('/attributes/industries/');
+  listIndustries: async (signal?: AbortSignal) => {
+    const response = await apiClient.get('/attributes/industries/', { signal });
     // Handle paginated response
     return response.data.results ?? response.data;
   },
@@ -27,8 +27,8 @@ const AttributeService = {
   },
 
   // Lead Sources
-  listLeadSources: async () => {
-    const response = await apiClient.get('/attributes/lead-sources/');
+  listLeadSources: async (signal?: AbortSignal) => {
+    const response = await apiClient.get('/attributes/lead-sources/', { signal });
     // Handle paginated response
     return response.data.results ?? response.data;
   },
@@ -46,8 +46,8 @@ const AttributeService = {
   },
 
   // Payment Types
-  listPaymentTypes: async () => {
-    const response = await apiClient.get('/attributes/payment-types/');
+  listPaymentTypes: async (signal?: AbortSignal) => {
+    const response = await apiClient.get('/attributes/payment-types/', { signal });
     // Handle paginated response
     return response.data.results ?? response.data;
   },

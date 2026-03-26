@@ -98,18 +98,18 @@ const UserListPage: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Users</h1>
-        <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2">
-          <Plus size={18} />
+      <div className="mb-6 flex min-w-0 items-start justify-between gap-3">
+        <h1 className="min-w-0 text-2xl font-bold text-slate-800">Users</h1>
+        <button onClick={handleOpenCreate} className="page-header-action bg-indigo-600 hover:bg-indigo-700">
+          <Plus size={12} />
           Add User
         </button>
       </div>
 
       {/* Toolbar */}
-      <div className="card mb-6">
+      <div className="card mb-6 min-w-0">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -123,8 +123,9 @@ const UserListPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="table-container">
-        <table className="w-full">
+      <div className="table-container flex min-w-0 flex-col overflow-hidden">
+        <div className="table-scroll min-w-0 overflow-x-auto">
+        <table className="w-full min-w-[920px]">
           <thead>
             <tr className="table-header">
               <th className="text-left px-6 py-3 font-semibold">Name</th>
@@ -176,9 +177,10 @@ const UserListPage: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
         
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+        <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-gray-500">
             Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
           </span>

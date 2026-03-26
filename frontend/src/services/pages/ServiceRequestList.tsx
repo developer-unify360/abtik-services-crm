@@ -189,11 +189,11 @@ const ServiceRequestList: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-6 overflow-x-hidden">
 
       {/* Filters */}
-      <div className="card mb-6">
-        <div className="flex items-center gap-4">
+      <div className="card table-scroll overflow-x-auto">
+        <div className="flex min-w-[420px] items-center gap-4">
           <Filter size={18} className="text-gray-400" />
           <select
             className="input-field w-40"
@@ -223,105 +223,107 @@ const ServiceRequestList: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="table-container">
+      <div className="table-container flex min-w-0 flex-1 min-h-0 flex-col overflow-hidden">
         {isLoading ? (
-          <div className="flex justify-center py-12">
+          <div className="flex min-h-[240px] items-center justify-center py-12">
             <p className="text-gray-500">Loading...</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="table-header">
-                <th className="text-left px-6 py-3 font-semibold">Service</th>
-                <th className="text-left px-6 py-3 font-semibold">Client / Booking</th>
-                <th className="text-left px-6 py-3 font-semibold">Priority</th>
-                <th className="text-left px-6 py-3 font-semibold">Assigned To</th>
-                <th className="text-left px-6 py-3 font-semibold">Status</th>
-                <th className="text-left px-6 py-3 font-semibold">Created</th>
-                <th className="text-right px-6 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceRequests.map((request) => (
-                <tr key={request.id} className="table-row">
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-slate-800">{request.service_name}</p>
-                    {request.category_name ? (
-                      <p className="text-xs text-gray-500">{request.category_name}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-gray-600">{request.booking_details?.company_name || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">
-                      {request.booking_details?.booking_date ? new Date(request.booking_details.booking_date).toLocaleDateString() : 'N/A'}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getPriorityBadge(request.priority)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {request.assigned_user ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                          <User size={14} className="text-indigo-600" />
+          <div className="table-scroll min-w-0 overflow-auto">
+            <table className="w-full min-w-[880px]">
+              <thead>
+                <tr className="table-header">
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold">Service</th>
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold">Client / Booking</th>
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold hidden md:table-cell">Priority</th>
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold hidden lg:table-cell">Assigned To</th>
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold">Status</th>
+                  <th className="text-left px-4 lg:px-6 py-3 font-semibold hidden lg:table-cell">Created</th>
+                  <th className="text-right px-4 lg:px-6 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {serviceRequests.map((request) => (
+                  <tr key={request.id} className="table-row">
+                    <td className="px-6 py-4">
+                      <p className="font-medium text-slate-800">{request.service_name}</p>
+                      {request.category_name ? (
+                        <p className="text-xs text-gray-500">{request.category_name}</p>
+                      ) : null}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-gray-600">{request.booking_details?.company_name || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">
+                        {request.booking_details?.booking_date ? new Date(request.booking_details.booking_date).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      {getPriorityBadge(request.priority)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {request.assigned_user ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <User size={14} className="text-indigo-600" />
+                          </div>
+                          <span className="text-gray-600">{request.assigned_user.name}</span>
                         </div>
-                        <span className="text-gray-600">{request.assigned_user.name}</span>
+                      ) : (
+                        <span className="text-gray-400">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(request.status)}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {new Date(request.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {(isServiceOps || isAdmin) && (
+                        <button
+                          onClick={() => openAssignModal(request)}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                          title="Assign"
+                        >
+                          <User size={18} />
+                        </button>
+                      )}
+
+                      {(isServiceOps || isAdmin) && (
+                        <button
+                          onClick={() => openStatusModal(request)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
+                          title="Update Status"
+                        >
+                          <ArrowRight size={18} />
+                        </button>
+                      )}
+
+                      {(isSalesManager || isServiceOps || isAdmin) && (
+                        <button
+                          onClick={() => handleCreateTask(request)}
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-block ml-1"
+                          title="Create Task"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {serviceRequests.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <Plus size={40} className="text-gray-300 mb-2" />
+                        <p className="text-gray-500">No service requests found</p>
                       </div>
-                    ) : (
-                      <span className="text-gray-400">Unassigned</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(request.status)}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {new Date(request.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {(isServiceOps || isAdmin) && (
-                      <button 
-                        onClick={() => openAssignModal(request)}
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
-                        title="Assign"
-                      >
-                        <User size={18} />
-                      </button>
-                    )}
-
-                    {(isServiceOps || isAdmin) && (
-                      <button 
-                        onClick={() => openStatusModal(request)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block ml-1"
-                        title="Update Status"
-                      >
-                        <ArrowRight size={18} />
-                      </button>
-                    )}
-
-                    {(isSalesManager || isServiceOps || isAdmin) && (
-                      <button
-                        onClick={() => handleCreateTask(request)}
-                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-block ml-1"
-                        title="Create Task"
-                      >
-                        <Plus size={18} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {serviceRequests.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center">
-                      <Plus size={40} className="text-gray-300 mb-2" />
-                      <p className="text-gray-500">No service requests found</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -473,9 +475,8 @@ const ServiceRequestList: React.FC = () => {
 
       {/* Toast */}
       {snackbar.open && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${
-          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        } text-white flex items-center gap-3 z-50`}>
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg ${snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          } text-white flex items-center gap-3 z-50`}>
           <span>{snackbar.message}</span>
           <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
             <X size={18} />

@@ -73,26 +73,6 @@ const calculateRemainingAmount = (totalAmount: string, receivedAmount: string) =
   return (total - received).toFixed(2);
 };
 
-const SectionCard = ({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-        {icon}
-      </div>
-      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-    </div>
-    <div className="p-4">{children}</div>
-  </section>
-);
-
 const CompactSection = ({
   title,
   icon,

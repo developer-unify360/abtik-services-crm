@@ -190,7 +190,7 @@ class ExternalLeadSerializer(serializers.Serializer):
 class LeadAssignmentRuleSerializer(serializers.ModelSerializer):
     trigger_source_name = serializers.CharField(source='trigger_source.name', read_only=True)
     trigger_service_name = serializers.CharField(source='trigger_service.name', read_only=True)
-    eligible_users_count = serializers.IntegerField(source='eligible_users_count', read_only=True)
+    eligible_users_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = LeadAssignmentRule

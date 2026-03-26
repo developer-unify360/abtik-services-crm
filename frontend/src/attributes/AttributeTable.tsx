@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Search, Plus, Edit, X, Trash2, Save, AlertCircle } from 'lucide-react';
 import AttributeService, { type Attribute } from './AttributeService';
 
@@ -16,27 +17,41 @@ const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
   const [formData, setFormData] = useState({ name: '', is_active: true });
   const [error, setError] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       let data: Attribute[] = [];
       if (type === 'industry') {
-        data = await AttributeService.listIndustries();
+        data = await AttributeService.listIndustries(signal);
       } else if (type === 'leadSource') {
-        data = await AttributeService.listLeadSources();
+        data = await AttributeService.listLeadSources(signal);
       } else if (type === 'paymentType') {
-        data = await AttributeService.listPaymentTypes();
+        data = await AttributeService.listPaymentTypes(signal);
       }
+
+      if (signal?.aborted) {
+        return;
+      }
+
       setItems(data);
     } catch (err) {
+      if (signal?.aborted || axios.isCancel(err)) {
+        return;
+      }
       console.error(`Failed to fetch ${type}:`, err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const controller = new AbortController();
+
+    fetchData(controller.signal);
+
+    return () => controller.abort();
   }, [type]);
 
   const handleOpenCreate = () => {

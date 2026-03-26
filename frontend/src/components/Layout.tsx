@@ -7,14 +7,11 @@ const DRAWER_WIDTH = 240;
 
 const Layout: React.FC = () => {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
-      <div 
-        className="flex-1 ml-60"
-        style={{ marginLeft: `${DRAWER_WIDTH}px` }}
-      >
+      <div className="min-w-0 flex-1 flex flex-col lg:ml-60 min-h-0 h-full">
         <HeaderBar />
-        <main className="pt-16 px-3 pb-3">
+        <main className="min-w-0 flex-1 overflow-hidden p-3 pt-14 pb-3 min-h-0">
           <Outlet />
         </main>
       </div>

@@ -7,10 +7,14 @@ import {
   Phone,
   ArrowUpRight,
   Play,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { LeadService } from './LeadService';
 import type { Lead } from './LeadService';
 import { useAuthStore } from '../auth/authStore';
+
+const PAGE_SIZE = 10;
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
   'new': { label: 'New', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
@@ -36,6 +40,7 @@ const LeadListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unassigned' | 'my' | 'overdue'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showWorkspace, setShowWorkspace] = useState(false);
@@ -49,7 +54,6 @@ const LeadListPage: React.FC = () => {
     try {
       setLoading(true);
       const leadsData = await LeadService.list();
-      console.log("leads Data==============", leadsData);
       setLeads(leadsData.results || leadsData);
     } catch (error) {
       console.error('Failed to fetch:', error);
@@ -74,9 +78,23 @@ const LeadListPage: React.FC = () => {
       const today = new Date().toISOString().split('T')[0];
       result = result.filter(l => l.next_follow_up_date && l.next_follow_up_date < today && l.status !== 'closed_won' && l.status !== 'closed_lost');
     }
-
     return result;
   }, [leads, searchTerm, activeTab, currentUser]);
+
+  // Reset to page 1 whenever filter changes
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedLeads = filteredLeads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchTerm(val);
+    setCurrentPage(1);
+  };
 
   const handleLogCall = async () => {
     if (!selectedLead) return;
@@ -102,35 +120,35 @@ const LeadListPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+    <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
       {/* Page Header */}
       <div className="shrink-0 w-full">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-700">Sales Pipeline</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">Leads</h1>
-            <p className="mt-1 text-xs text-slate-600">
-              Nurture and convert your high-potential opportunities.
-            </p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-700">Sales Pipeline</p>
+          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
+            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Leads</h1>
+            <button
+              onClick={() => navigate('/leads/new')}
+              className="page-header-action bg-slate-900 hover:bg-slate-800"
+            >
+              <Plus size={12} /> New Lead
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/leads/new')}
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-          >
-            <Plus size={14} /> New Lead
-          </button>
+          <p className="mt-1 text-xs text-slate-600">
+            Nurture and convert your high-potential opportunities.
+          </p>
         </div>
       </div>
 
       {/* Tabs and Search */}
-      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
             {(['all', 'unassigned', 'my', 'overdue'] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === tab
+                onClick={() => handleTabChange(tab)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeTab === tab
                   ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -139,23 +157,23 @@ const LeadListPage: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="relative w-full md:w-56">
+          <div className="relative w-full md:w-56 shrink-0">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search leads..."
               className="input-field pl-8 py-1.5 text-sm"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => handleSearchChange(e.target.value)}
             />
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
-        <div className="h-full overflow-auto">
-          <table className="w-full">
+      {/* Table Area — flex-1 fills remaining height, only this container scrolls */}
+      <div className="flex min-w-0 flex-1 min-h-0 w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="table-scroll min-w-0 flex-1 min-h-0 overflow-auto">
+          <table className="w-full min-w-[900px]">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr className="text-xs font-semibold text-slate-600">
                 <th className="px-3 py-2 text-center whitespace-nowrap">Score</th>
@@ -169,9 +187,9 @@ const LeadListPage: React.FC = () => {
             <tbody className="text-sm">
               {loading ? (
                 <tr><td colSpan={6} className="text-center py-8 text-slate-500">Loading...</td></tr>
-              ) : filteredLeads.length === 0 ? (
+              ) : paginatedLeads.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-8 text-slate-500">No leads found.</td></tr>
-              ) : filteredLeads.map(lead => (
+              ) : paginatedLeads.map(lead => (
                 <tr
                   key={lead.id}
                   onClick={() => { setSelectedLead(lead); setShowWorkspace(true); }}
@@ -214,183 +232,212 @@ const LeadListPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {filteredLeads.length > PAGE_SIZE && (
+          <div className="shrink-0 flex min-w-0 flex-col gap-2 border-t border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-slate-500">
+              {`${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filteredLeads.length)} of ${filteredLeads.length}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+              <span className="text-xs text-slate-500 px-1">{safePage} / {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Sidebar Workspace */}
+      {/* Workspace Panel — fixed overlay on mobile, side panel on lg+ */}
       {showWorkspace && selectedLead && (
-        <div className="w-[480px] shrink-0 bg-white flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 shadow-2xl border-l border-slate-200">
-          <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 shadow-lg relative overflow-hidden">
-            <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-500/20">
-                {selectedLead.client_name?.[0]}
+        <>
+          {/* Mobile overlay backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setShowWorkspace(false)}
+          />
+          {/* Panel */}
+          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] lg:w-[480px] bg-white flex flex-col shadow-2xl border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            {/* Panel Header */}
+            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 shadow-lg relative overflow-hidden">
+              <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex items-center gap-3 relative z-10 min-w-0">
+                <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-indigo-500/20">
+                  {selectedLead.client_name?.[0]}
+                </div>
+                <div className="leading-tight min-w-0">
+                  <p className="text-sm font-semibold text-white tracking-tight leading-none mb-1 truncate">
+                    {selectedLead.client_name}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">{selectedLead.mobile || 'No Mobile'} · {selectedLead.email || 'No Email'}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">{selectedLead.company_name || 'Individual Client'}</p>
+                </div>
               </div>
-              <div className="leading-tight">
-                <p className="text-md font-semibold text-white tracking-tight leading-none mb-1">
-                  {selectedLead.client_name}
-                  <span className="text-xs text-slate-400 font-medium ml-2">
-                    | {selectedLead.mobile || 'No Mobile'} | {selectedLead.email || 'No Email'}
-                  </span>
-                </p>
-                <p className="text-xs text-slate-400 font-medium">{selectedLead.company_name || 'Individual Client'}</p>
-              </div>
+              <button
+                onClick={() => setShowWorkspace(false)}
+                className="shrink-0 p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white ml-2"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <button
-              onClick={() => setShowWorkspace(false)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white"
-            >
-              <X size={20} />
-            </button>
-          </div>
 
-          <div className="flex-1 overflow-auto scroll-y p-6 space-y-6 bg-slate-50/40">
-            {/* Action Engine */}
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-slate-900 border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setCallStatus('contacted'); setShowCallModal(true); }}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
-                >
-                  <div className="p-3 bg-indigo-100 rounded-xl group-hover:scale-110 transition-transform"><Phone size={14} /></div>
-                  <span className="text-xs font-semibold">Log Outreach</span>
-                </button>
-                <button
-                  onClick={() => {
-                    LeadService.convert(selectedLead.id).then(() => {
-                      navigate('/bookings/new', {
-                        state: {
-                          prefill: {
-                            client_name: selectedLead.client_name,
-                            company_name: selectedLead.company_name,
-                            email: selectedLead.email,
-                            mobile: selectedLead.mobile,
-                            bde_name: selectedLead.bde_name,
-                            lead_source: selectedLead.source,
-                            service: selectedLead.service,
-                            lead_id: selectedLead.id,
+            <div className="flex-1 overflow-auto p-5 space-y-6 bg-slate-50/40">
+              {/* Action Engine */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-900 border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => { setCallStatus('contacted'); setShowCallModal(true); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
+                  >
+                    <div className="p-2 bg-indigo-100 rounded-xl"><Phone size={14} /></div>
+                    <span className="font-semibold">Log Outreach</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      LeadService.convert(selectedLead.id).then(() => {
+                        navigate('/bookings/new', {
+                          state: {
+                            prefill: {
+                              client_name: selectedLead.client_name,
+                              company_name: selectedLead.company_name,
+                              email: selectedLead.email,
+                              mobile: selectedLead.mobile,
+                              bde_name: selectedLead.bde_name,
+                              lead_source: selectedLead.source,
+                              service: selectedLead.service,
+                              lead_id: selectedLead.id,
+                            }
                           }
-                        }
+                        });
                       });
-                    });
-                  }}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
-                >
-                  <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform"><ArrowUpRight size={14} /></div>
-                  <span className="text-xs font-semibold">Convert Lead</span>
-                </button>
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
+                  >
+                    <div className="p-2 bg-emerald-100 rounded-xl"><ArrowUpRight size={14} /></div>
+                    <span className="font-semibold">Convert Lead</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Activity Timeline */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <p className="text-sm font-semibold text-slate-900">Interactions</p>
+                  <button className="text-xs font-medium text-indigo-600 hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
+                </div>
+                <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
+                  {!selectedLead.activities || selectedLead.activities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
+                      <p className="text-sm font-medium mb-1">Timeline Empty</p>
+                      <p className="text-xs">Log your first interaction above</p>
+                    </div>
+                  ) : (
+                    selectedLead.activities.slice(0, 5).map((activity) => (
+                      <div key={activity.id} className="relative pl-8">
+                        <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center z-10 shadow-sm">
+                          <Play size={10} className="text-indigo-600" fill="currentColor" />
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-medium text-slate-900">{activity.activity_type}</p>
+                            <p className="text-xs text-slate-500 font-medium">{new Date(activity.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <p className="text-sm text-slate-600">{activity.description}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Activity Timeline */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <p className="text-sm font-semibold text-slate-900">Interactions</p>
-                <button className="text-xs font-medium text-indigo-600 hover:underline px-2 py-1 bg-indigo-50 rounded">History</button>
-              </div>
-              <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
-                {!selectedLead.activities || selectedLead.activities.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-slate-400 bg-white/50 border border-dashed border-slate-300 rounded-2xl">
-                    <p className="text-sm font-medium mb-1">Timeline Empty</p>
-                    <p className="text-xs">Log your first interaction above</p>
-                  </div>
-                ) : (
-                  selectedLead.activities.slice(0, 5).map((activity) => (
-                    <div key={activity.id} className="relative pl-8">
-                      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center z-10 shadow-sm">
-                        <Play size={10} className="text-indigo-600" fill="currentColor" />
-                      </div>
-                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-medium text-slate-900">{activity.activity_type}</p>
-                          <p className="text-xs text-slate-500 font-medium">{new Date(activity.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <p className="text-sm text-slate-600">{activity.description}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div className="shrink-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
+              <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
+              <textarea
+                className="w-full p-3 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[80px] shadow-inner"
+                placeholder="Strategic notes about this client's requirements..."
+                defaultValue={selectedLead.notes || ''}
+                onBlur={(e) => LeadService.update(selectedLead.id, { notes: e.target.value })}
+              />
             </div>
           </div>
+        </>
+      )}
 
-          <div className="shrink-0 p-6 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
-            <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
-            <textarea
-              className="w-full p-4 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[100px] shadow-inner"
-              placeholder="Strategic notes about this client's requirements..."
-              defaultValue={selectedLead.notes || ''}
-              onBlur={(e) => LeadService.update(selectedLead.id, { notes: e.target.value })}
-            />
+      {/* Outreach Modal — responsive */}
+      {showCallModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-0 sm:p-4">
+          <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 fade-in duration-200">
+            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600"><Phone size={18} /></div>
+                <span className="text-sm font-semibold text-slate-900">Log Interaction Outcome</span>
+              </div>
+              <button onClick={() => setShowCallModal(false)} className="text-slate-400 hover:text-slate-600 p-2"><X size={22} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700 block">Interaction Narrative</label>
+                <textarea
+                  autoFocus
+                  className="input-field min-h-[100px] rounded-2xl p-3 text-sm"
+                  placeholder="Briefly describe the discussion flow, objections, and next steps..."
+                  value={callNotes}
+                  onChange={e => setCallNotes(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 block">Update Pipeline</label>
+                  <select
+                    className="input-field rounded-xl text-sm"
+                    value={callStatus}
+                    onChange={e => setCallStatus(e.target.value)}
+                  >
+                    {Object.entries(statusConfig).map(([key, cfg]) => (
+                      <option key={key} value={key}>{cfg.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 block">Engagement Quality</label>
+                  <select className="input-field rounded-xl text-sm">
+                    <option>High Interest</option>
+                    <option>Discovery Call</option>
+                    <option>No Contact</option>
+                    <option>Busy/Reschedule</option>
+                    <option>Qualified</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button onClick={() => setShowCallModal(false)} className="btn-secondary flex-1 py-3 text-sm font-semibold rounded-2xl">Dismiss</button>
+              <button
+                onClick={handleLogCall}
+                disabled={savingCall}
+                className="btn-primary flex-1 py-3 text-sm font-semibold rounded-2xl shadow-lg !bg-emerald-600 border-none"
+              >
+                {savingCall ? 'Uploading...' : 'Confirm Outcome'}
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Outreach Modal */}
-      {
-        showCallModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
-            <div className="w-[450px] bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200">
-              <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600"><Phone size={20} /></div>
-                  <span className="text-sm font-semibold text-slate-900">Log Interaction Outcome</span>
-                </div>
-                <button onClick={() => setShowCallModal(false)} className="text-slate-400 hover:text-slate-600 p-2"><X size={24} /></button>
-              </div>
-              <div className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 block mb-1">Interaction Narrative</label>
-                  <textarea
-                    autoFocus
-                    className="input-field min-h-[120px] rounded-2xl p-4 text-sm"
-                    placeholder="Briefly describe the discussion flow, objections, and next steps..."
-                    value={callNotes}
-                    onChange={e => setCallNotes(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Update Pipeline</label>
-                    <select
-                      className="input-field rounded-xl"
-                      value={callStatus}
-                      onChange={e => setCallStatus(e.target.value)}
-                    >
-                      {Object.entries(statusConfig).map(([key, cfg]) => (
-                        <option key={key} value={key}>{cfg.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Engagement Quality</label>
-                    <select className="input-field rounded-xl">
-                      <option>High Interest</option>
-                      <option>Discovery Call</option>
-                      <option>No Contact</option>
-                      <option>Busy/Reschedule</option>
-                      <option>Qualified</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-                <button onClick={() => setShowCallModal(false)} className="btn-secondary flex-1 py-4 text-sm font-semibold rounded-2xl">Dismiss</button>
-                <button
-                  onClick={handleLogCall}
-                  disabled={savingCall}
-                  className="btn-primary flex-1 py-4 text-sm font-semibold rounded-2xl shadow-lg !bg-emerald-600 border-none"
-                >
-                  {savingCall ? 'Uploading...' : 'Confirm Outcome'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-    </div>   // ✅ ADD THIS (closing root div)
-
+    </div>
   );
 };
 

@@ -77,30 +77,30 @@ const BookingListPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] space-y-4">
+    <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
       <div className="shrink-0 w-full">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">Bookings</h1>
-            <p className="mt-1 text-xs text-slate-600">
-              All bookings submitted through the BDE form. You can view and edit any booking.
-            </p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
+          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
+            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Bookings</h1>
+            <a
+              href="/bookings/new"
+              target="_blank"
+              rel="noreferrer"
+              className="page-header-action bg-blue-700 hover:bg-blue-800"
+            >
+              <ExternalLink size={12} />
+              Open Form
+            </a>
           </div>
-          <a
-            href="/bookings/new"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
-          >
-            <ExternalLink size={14} />
-            Open Form
-          </a>
+          <p className="mt-1 text-xs text-slate-600">
+            All bookings submitted through the BDE form. You can view and edit any booking.
+          </p>
         </div>
       </div>
 
-      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-slate-400" />
             <select
@@ -125,9 +125,9 @@ const BookingListPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 rounded-lg border border-slate-200 bg-white overflow-hidden">
-        <div className="h-full overflow-auto">
-          <table className="w-full">
+      <div className="flex min-w-0 flex-1 min-h-0 w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="table-scroll min-w-0 flex-1 min-h-0 overflow-auto">
+          <table className="w-full min-w-[900px]">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr className="text-xs font-semibold text-slate-600">
                 <th className="px-3 py-2 text-left whitespace-nowrap">Client</th>
@@ -178,7 +178,7 @@ const BookingListPage: React.FC = () => {
         </div>
 
         {totalCount > rowsPerPage && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+          <div className="flex min-w-0 flex-col gap-2 border-t border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs text-slate-500">
               {`${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount}`}
             </span>
@@ -203,9 +203,8 @@ const BookingListPage: React.FC = () => {
       </div>
 
       {snackbar.open ? (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg ${
-          snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        }`}>
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg ${snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}>
           <span>{snackbar.message}</span>
           <button onClick={() => setSnackbar({ ...snackbar, open: false })}>
             Close

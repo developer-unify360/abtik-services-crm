@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
 import { ServiceApi, type Service } from '../services/api/ServiceApi';
-import { 
-  UserPlus, 
-  CheckCircle, 
-  User, 
-  Building2, 
-  Phone, 
-  Mail, 
+import {
+  UserPlus,
+  CheckCircle,
+  User,
+  Building2,
+  Phone,
+  Mail,
   Send,
   Search,
   Briefcase,
@@ -81,6 +81,19 @@ const PublicLeadFormPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const dropdownTriggerRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
+
+  const openDropdown = () => {
+    if (dropdownTriggerRef.current) {
+      const rect = dropdownTriggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 180;
+      const top = spaceBelow >= dropdownHeight ? rect.bottom + window.scrollY : rect.top + window.scrollY - dropdownHeight;
+      setDropdownPos({ top, left: rect.left + window.scrollX, width: rect.width });
+    }
+    setShowUserDropdown(v => !v);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,7 +120,7 @@ const PublicLeadFormPage: React.FC = () => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
-  const filteredUsers = (users || []).filter(user => 
+  const filteredUsers = (users || []).filter(user =>
     (user?.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
     (user?.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
   );
@@ -155,16 +168,16 @@ const PublicLeadFormPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-slate-50 p-4 overflow-hidden">
-      <div className="mx-auto max-w-4xl h-full flex flex-col">
+    <div className="min-h-screen bg-slate-50 p-3 sm:p-4">
+      <div className="mx-auto max-w-4xl flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 pb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-600 text-white shadow-lg shadow-blue-200">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-600 text-white shadow-lg shadow-blue-200 shrink-0">
             <UserPlus size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Lead Generation Form</h1>
-            <p className="text-xs text-slate-500">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Lead Generation Form</h1>
+            <p className="text-xs text-slate-500 hidden sm:block">
               Fill in the potential client's details
             </p>
           </div>
@@ -176,9 +189,9 @@ const PublicLeadFormPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="mt-2">
           {/* Combined compact form layout */}
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             {/* Agent & Source */}
             <Field label="BDE Name" required>
               <div className="relative">
@@ -207,9 +220,10 @@ const PublicLeadFormPage: React.FC = () => {
             </Field>
             <Field label="Assign To">
               <div className="relative">
-                <div 
+                <div
+                  ref={dropdownTriggerRef}
                   className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm"
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  onClick={openDropdown}
                 >
                   <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
                     {selectedUser ? selectedUser.name : 'Select user'}
@@ -217,8 +231,11 @@ const PublicLeadFormPage: React.FC = () => {
                   <Search size={14} className="text-slate-400" />
                 </div>
 
-                {showUserDropdown && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg animate-in fade-in zoom-in duration-200">
+                {showUserDropdown && dropdownPos && (
+                  <div
+                    className="fixed z-[9999] rounded-lg border border-slate-200 bg-white shadow-xl animate-in fade-in zoom-in duration-200"
+                    style={{ top: dropdownPos.top, left: dropdownPos.left, width: Math.min(dropdownPos.width, window.innerWidth - 16) }}
+                  >
                     <div className="p-2 border-b border-slate-100">
                       <input
                         autoFocus
@@ -229,7 +246,7 @@ const PublicLeadFormPage: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
-                    <div className="max-h-[100px] overflow-y-auto p-1">
+                    <div className="max-h-[140px] overflow-y-auto p-1">
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map(user => (
                           <div
@@ -238,6 +255,7 @@ const PublicLeadFormPage: React.FC = () => {
                             onClick={() => {
                               handleFieldChange('assigned_to', user.id);
                               setShowUserDropdown(false);
+                              setDropdownPos(null);
                               setUserSearchTerm('');
                             }}
                           >
@@ -391,7 +409,7 @@ const PublicLeadFormPage: React.FC = () => {
             </Field>
 
             {/* Notes - spans full width */}
-            <div className="md:col-span-4">
+            <div className="col-span-full">
               <Field label="Notes">
                 <textarea
                   className="input-field min-h-[50px] py-1.5 text-sm pt-2"
