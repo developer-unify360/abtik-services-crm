@@ -39,6 +39,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({'non_field_errors': ['User account is disabled']})
 
         refresh = self.get_token(user)
+        normalized_role = (user.role or '').strip().lower() or None
+        is_admin = bool(user.is_staff or user.is_superuser or normalized_role == 'admin')
 
         data = {
             'access': str(refresh.access_token),
@@ -49,9 +51,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'id': str(user.id),
             'name': user.get_full_name() or getattr(user, 'name', user.username),
             'email': user.email,
-            'role': user.role,
+            'role': normalized_role,
             'is_staff': user.is_staff,
-            'is_admin': user.is_staff or user.is_superuser,
+            'is_superuser': user.is_superuser,
+            'is_admin': is_admin,
         }
 
         return data

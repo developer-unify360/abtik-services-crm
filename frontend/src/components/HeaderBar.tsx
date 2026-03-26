@@ -1,11 +1,12 @@
 import React from 'react';
 import { LogOut, Search, Menu } from 'lucide-react';
-import { useAuthStore } from '../auth/authStore';
+import { hasAdminAccess, useAuthStore } from '../auth/authStore';
 import { useNavigate } from 'react-router-dom';
 
 const HeaderBar: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const isAdmin = hasAdminAccess(user);
 
   const handleLogout = () => {
     logout();
@@ -47,7 +48,7 @@ const HeaderBar: React.FC = () => {
                 {user?.name || 'Admin'}
               </span>
               <span className="text-[9px] text-slate-400 font-medium">
-                {user?.role === 'admin' ? 'Systems Admin' : 'BDE Manager'}
+                {isAdmin ? 'Systems Admin' : 'BDE Manager'}
               </span>
             </div>
             <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded flex items-center justify-center text-slate-600 text-[10px] font-bold">

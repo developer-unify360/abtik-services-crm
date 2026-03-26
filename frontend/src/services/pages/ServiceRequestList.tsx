@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useServiceStore } from '../store/useServiceStore';
 import { BookingService } from '../../bookings/BookingService';
 import { UserService } from '../../users/UserService';
-import { useAuthStore } from '../../auth/authStore';
+import { hasAdminAccess, normalizeRole, useAuthStore } from '../../auth/authStore';
 import { Plus, User, ArrowRight, Filter, X } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -56,10 +56,10 @@ const ServiceRequestList: React.FC = () => {
   });
 
   const authUser = useAuthStore((state) => state.user);
-  const userRole = authUser?.role || '';
+  const userRole = normalizeRole(authUser?.role) || '';
   const isSalesManager = userRole === 'sales_manager';
   const isServiceOps = userRole === 'service_ops';
-  const isAdmin = userRole === 'admin';
+  const isAdmin = hasAdminAccess(authUser);
 
   const [formData, setFormData] = useState({
     booking: '',

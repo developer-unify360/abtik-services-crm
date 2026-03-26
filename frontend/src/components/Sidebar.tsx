@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Trophy, Layers, CreditCard, LogOut, Cog } from 'lucide-react';
-import { useAuthStore } from '../auth/authStore';
+import { hasAdminAccess, useAuthStore } from '../auth/authStore';
 
 const DRAWER_WIDTH = 240;
 
@@ -18,6 +18,7 @@ const Sidebar: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const { logout } = useAuthStore();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const canAccessAdminNav = hasAdminAccess(user);
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
@@ -29,7 +30,7 @@ const Sidebar: React.FC = () => {
     { label: 'Settings', path: '/attributes', icon: <Cog size={18} />, adminOnly: true },
   ];
 
-  const filteredNavItems = navItems.filter(item => !item.adminOnly || user?.role === 'admin');
+  const filteredNavItems = navItems.filter(item => !item.adminOnly || canAccessAdminNav);
   const matchingNavItems = filteredNavItems.filter((item) =>
     location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
   );
