@@ -45,10 +45,10 @@ const HeaderBar: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <div className="flex flex-col items-end leading-none hidden lg:flex">
               <span className="text-[10px] font-bold text-slate-900 uppercase">
-                {user?.name || 'Admin'}
+                {user?.name || 'User'}
               </span>
               <span className="text-[9px] text-slate-400 font-medium">
-                {isAdmin ? 'Systems Admin' : 'BDE Manager'}
+                {isAdmin ? 'Systems Admin' : 'Abtik User'}
               </span>
             </div>
             <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded flex items-center justify-center text-slate-600 text-[10px] font-bold">
