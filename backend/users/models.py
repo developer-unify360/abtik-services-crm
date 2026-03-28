@@ -9,6 +9,7 @@ class User(AbstractUser, BaseModel):
         ('sales_manager', 'Sales Manager'),
         ('booking_ops', 'Booking Ops'),
         ('finance', 'Finance'),
+        ('hr', 'HR'),
         ('service_ops', 'Service Ops'),
     ]
 

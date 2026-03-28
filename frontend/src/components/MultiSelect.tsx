@@ -13,6 +13,11 @@ interface MultiSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  emptySearchMessage?: string;
+  itemLabelSingular?: string;
+  itemLabelPlural?: string;
+  emptySelectionHint?: string;
+  compact?: boolean;
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
@@ -22,6 +27,11 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   placeholder = 'Select options',
   searchPlaceholder = 'Search...',
   emptyMessage = 'No options available.',
+  emptySearchMessage,
+  itemLabelSingular = 'service',
+  itemLabelPlural = 'services',
+  emptySelectionHint = 'Search and select multiple services. Your selections will appear here as removable tags.',
+  compact = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +83,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const hasAvailableOptions = options.length > 0;
   const allVisibleSelected = filteredOptions.length > 0
     && filteredOptions.every((option) => value.includes(option.value));
+  const resolvedEmptySearchMessage = emptySearchMessage || `No ${itemLabelPlural} match "${searchTerm}".`;
 
   const toggleValue = (optionValue: string) => {
     if (value.includes(optionValue)) {
@@ -101,26 +112,26 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       <button
         type="button"
         onClick={() => hasAvailableOptions && setIsOpen((open) => !open)}
-        className={`w-full rounded-xl border px-3 py-2.5 text-left shadow-sm transition ${
+        className={`w-full rounded-lg border px-3 text-left shadow-sm transition ${
           isOpen
             ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100'
             : 'border-slate-200 bg-white hover:border-slate-300'
-        } ${!hasAvailableOptions ? 'cursor-not-allowed opacity-60' : ''}`}
+        } ${compact ? 'py-2' : 'py-2.5'} ${!hasAvailableOptions ? 'cursor-not-allowed opacity-60' : ''}`}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         disabled={!hasAvailableOptions}
       >
-        <div className="flex items-start gap-3">
+        <div className={`flex items-start ${compact ? 'gap-2' : 'gap-3'}`}>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-slate-800">
+            <div className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-slate-800`}>
               {selectedOptions.length > 0
-                ? `${selectedOptions.length} service${selectedOptions.length === 1 ? '' : 's'} selected`
+                ? `${selectedOptions.length} ${selectedOptions.length === 1 ? itemLabelSingular : itemLabelPlural} selected`
                 : placeholder}
             </div>
-            <div className="mt-1 truncate text-xs text-slate-500">
+            <div className={`${compact ? 'mt-0.5 text-[11px]' : 'mt-1 text-xs'} truncate text-slate-500`}>
               {selectedOptions.length > 0
                 ? selectedOptions.map((option) => option.label).join(', ')
-                : 'Choose one or more services from a searchable list.'}
+                : emptySelectionHint}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -136,9 +147,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       </button>
 
       {isOpen ? (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-xl">
-          <div className="border-b border-slate-100 p-3">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-xl">
+          <div className={`border-b border-slate-100 ${compact ? 'p-2.5' : 'p-3'}`}>
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100">
               <Search size={14} className="text-slate-400" />
               <input
                 ref={searchInputRef}
@@ -151,7 +162,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             </div>
           </div>
 
-          <div className="max-h-64 space-y-1 overflow-y-auto p-2">
+          <div className={`max-h-64 space-y-1 overflow-y-auto ${compact ? 'p-1.5' : 'p-2'}`}>
             {!hasAvailableOptions ? (
               <div className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
                 {emptyMessage}
@@ -165,11 +176,11 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                   <label
                     key={option.value}
                     htmlFor={optionId}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 transition ${
                       isSelected
                         ? 'border-blue-200 bg-blue-50'
                         : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'
-                    }`}
+                    } ${compact ? 'py-2' : 'py-2.5'}`}
                   >
                     <input
                       id={optionId}
@@ -179,7 +190,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-slate-800">{option.label}</div>
+                      <div className={`${compact ? 'text-xs' : 'text-sm'} truncate font-medium text-slate-800`}>{option.label}</div>
                     </div>
                     {isSelected ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
@@ -192,16 +203,16 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               })
             ) : (
               <div className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-                No services match "{searchTerm}".
+                {resolvedEmptySearchMessage}
               </div>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 px-3 py-2.5">
+          <div className={`flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 px-3 ${compact ? 'py-2' : 'py-2.5'}`}>
             <span className="text-xs text-slate-500">
               {selectedOptions.length > 0
-                ? `${selectedOptions.length} service${selectedOptions.length === 1 ? '' : 's'} ready for this booking`
-                : 'No services selected yet'}
+                ? `${selectedOptions.length} ${selectedOptions.length === 1 ? itemLabelSingular : itemLabelPlural} selected`
+                : `No ${itemLabelPlural} selected yet`}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -225,13 +236,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5">
+      <div className={`rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 ${compact ? 'py-2' : 'py-2.5'}`}>
         {selectedOptions.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {selectedOptions.map((option) => (
               <span
                 key={option.value}
-                className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
               >
                 {option.label}
                 <button
@@ -247,7 +258,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           </div>
         ) : (
           <div className="text-xs text-slate-500">
-            Search and select multiple services. Your selections will appear here as removable tags.
+            {emptySelectionHint}
           </div>
         )}
       </div>

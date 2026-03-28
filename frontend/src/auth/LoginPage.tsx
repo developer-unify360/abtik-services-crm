@@ -3,6 +3,7 @@ import { Box, Button, TextField, Typography, Paper, Alert } from '@mui/material'
 import { AuthService } from './AuthService';
 import { useAuthStore } from './authStore';
 import { useNavigate } from 'react-router-dom';
+import { getDefaultRouteForUser } from './roleUtils';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ const LoginPage: React.FC = () => {
         try {
             const data = await AuthService.login(email, password);
             login(data);
-            navigate('/dashboard', { replace: true });
+            navigate(getDefaultRouteForUser(data.user), { replace: true });
         } catch (err) {
             setError('Invalid email or password. Please try again.');
         } finally {

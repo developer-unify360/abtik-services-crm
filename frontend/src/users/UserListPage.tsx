@@ -9,6 +9,7 @@ const UserListPage: React.FC = () => {
     { value: 'sales_manager', label: 'Sales Manager' },
     { value: 'booking_ops', label: 'Booking Ops' },
     { value: 'finance', label: 'Finance' },
+    { value: 'hr', label: 'HR' },
     { value: 'service_ops', label: 'Service Ops' },
   ];
   const [search, setSearch] = useState('');

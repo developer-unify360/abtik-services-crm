@@ -1,9 +1,45 @@
+import { normalizeAuthUser, normalizeRole } from './authStore';
+
 export const getRoleName = (user: any | null | undefined): string => {
-  if (!user) return '';
-  return 'Admin';
+  const normalizedUser = normalizeAuthUser(user);
+  const normalizedRole = normalizedUser?.role;
+
+  if (normalizedUser?.is_admin) {
+    return 'Admin';
+  }
+
+  switch (normalizedRole) {
+    case 'sales_manager':
+      return 'Sales Manager';
+    case 'booking_ops':
+      return 'Booking Ops';
+    case 'finance':
+      return 'Finance';
+    case 'hr':
+      return 'HR';
+    case 'service_ops':
+      return 'Service Ops';
+    default:
+      return normalizedRole || '';
+  }
 };
 
-export const isAdminUser = (user: any | null | undefined): boolean => !!user;
+export const isAdminUser = (user: any | null | undefined): boolean => Boolean(normalizeAuthUser(user)?.is_admin);
 
-export const getDefaultRouteForUser = (_user?: any): string => '/dashboard';
+export const isHrUser = (user: any | null | undefined): boolean => normalizeRole(user?.role) === 'hr';
+
+export const hasPayrollAccess = (user: any | null | undefined): boolean => {
+  const normalizedUser = normalizeAuthUser(user);
+  const normalizedRole = normalizedUser?.role;
+
+  return Boolean(
+    normalizedUser?.is_admin
+    || normalizedRole === 'hr'
+    || normalizedRole === 'finance'
+  );
+};
+
+export const getDefaultRouteForUser = (user?: any): string => (
+  isHrUser(user) ? '/payroll/company-setup' : '/dashboard'
+);
 

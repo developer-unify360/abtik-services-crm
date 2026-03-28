@@ -18,8 +18,19 @@ export default defineConfig(({ mode }) => {
       target: apiTarget,
       changeOrigin: true,
     }
+    proxyConfig['/media'] = {
+      target: apiTarget,
+      changeOrigin: true,
+    }
   } else {
     proxyConfig['/api'] = {
+      target: 'http://localhost',
+      changeOrigin: true,
+      bypass() {
+        return undefined
+      },
+    }
+    proxyConfig['/media'] = {
       target: 'http://localhost',
       changeOrigin: true,
       bypass() {
