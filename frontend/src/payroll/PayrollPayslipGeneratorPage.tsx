@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileText, Plus, RefreshCcw, Save, Trash2 } from 'lucide-react';
-
+import { CheckSquare, ChevronDown, ChevronUp, Download, FileText, Plus, RefreshCcw, Save, Search, Square, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import MultiSelect from '../components/MultiSelect';
 import { downloadPayslipPdf } from './payslipPdf';
 import {
@@ -13,11 +12,9 @@ import {
   type PayslipWriteData,
 } from './PayrollService';
 import { Field, Panel, PayrollWorkspace, currencyFormatter } from './payrollShared';
+import { toastError, toastSuccess } from '../services/toastNotify';
 
 interface GeneratorRowState {
-  total_days: string;
-  paid_days_override: string;
-  notes: string;
   leave_values: Record<string, string>;
 }
 
@@ -36,9 +33,6 @@ const formatMonthLabel = (monthValue: string) => {
 };
 
 const buildEmptyRowState = (leaveTypes: PayrollConfiguration['leave_types']): GeneratorRowState => ({
-  total_days: '',
-  paid_days_override: '',
-  notes: '',
   leave_values: Object.fromEntries(leaveTypes.map((leaveType) => [leaveType.name, ''])),
 });
 
@@ -56,9 +50,13 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
   const [existingPayslipIdsByKey, setExistingPayslipIdsByKey] = useState<Record<string, string>>({});
   const [previewMap, setPreviewMap] = useState<Record<string, { preview?: PayslipPreview; error?: string }>>({});
   const [pageError, setPageError] = useState('');
-  const [toast, setToast] = useState('');
   const [pdfDownloadingKey, setPdfDownloadingKey] = useState('');
+  const [batchDownloading, setBatchDownloading] = useState(false);
   const [deletingPayslipId, setDeletingPayslipId] = useState('');
+  const [expandedRowKeys, setExpandedRowKeys] = useState<Set<string>>(new Set());
+  const [savedSearch, setSavedSearch] = useState('');
+  const [savedEmployeeId, setSavedEmployeeId] = useState('');
+  const [selectedSavedIds, setSelectedSavedIds] = useState<Set<string>>(new Set());
   const previewRequestId = useRef(0);
 
   const leaveTypes = configuration?.leave_types || [];
@@ -124,15 +122,6 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!toast) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setToast(''), 3400);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
     if (!configuration) {
       return;
     }
@@ -152,6 +141,11 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
       });
 
       return nextState;
+    });
+
+    setExpandedRowKeys((previous) => {
+      const allowedKeys = new Set(generatedRows.map((row) => row.key));
+      return new Set(Array.from(previous).filter((key) => allowedKeys.has(key)));
     });
 
     setExistingPayslipIdsByKey((previous) => {
@@ -176,10 +170,10 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
     return {
       employee: employeeId,
       month: `${month}-01`,
-      total_days: rowState.total_days || null,
-      paid_days_override: rowState.paid_days_override || null,
+      total_days: null,
+      paid_days_override: null,
       leave_breakdown: leaveBreakdown,
-      notes: rowState.notes,
+      notes: '',
     };
   };
 
@@ -240,14 +234,16 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
     setSelectedMonths((previous) => previous.filter((item) => item !== month));
   };
 
-  const updateRowField = (rowKey: string, field: keyof Omit<GeneratorRowState, 'leave_values'>, value: string) => {
-    setRowStateByKey((previous) => ({
-      ...previous,
-      [rowKey]: {
-        ...(previous[rowKey] || buildEmptyRowState(leaveTypes)),
-        [field]: value,
-      },
-    }));
+  const toggleRowExpansion = (rowKey: string) => {
+    setExpandedRowKeys((previous) => {
+      const next = new Set(previous);
+      if (next.has(rowKey)) {
+        next.delete(rowKey);
+      } else {
+        next.add(rowKey);
+      }
+      return next;
+    });
   };
 
   const updateRowLeaveValue = (rowKey: string, leaveName: string, value: string) => {
@@ -267,6 +263,7 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
     setSelectedEmployeeIds([]);
     setSelectedMonths([]);
     setRowStateByKey({});
+    setExpandedRowKeys(new Set());
     setExistingPayslipIdsByKey({});
     setPreviewMap({});
     setPageError('');
@@ -288,7 +285,7 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
 
   const savePayslips = async () => {
     if (!generatedRows.length) {
-      setPageError('Select at least one employee and one month to continue.');
+      toastError('Select at least one employee and one month to continue.');
       return;
     }
 
@@ -310,26 +307,96 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
             }
             return { rowKey: row.key, rowLabel, payslipId: existingPayslipIdsByKey[row.key] };
           } catch (error: any) {
-            const errorMessage =
-              error.response?.data?.error?.message
-              || error.response?.data?.detail
-              || 'Unable to save this payslip.';
-            return { rowKey: row.key, rowLabel, error: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage) };
+            // Already handled by global interceptor if we wanted, 
+            // but for batch saving, we might want to collect all and show one toast?
+            // Actually, the interceptor is only for mutation calls. 
+            // Let's let the interceptor handle individual errors as they happen? 
+            // Promise.all will reject if any fail. 
+            throw error;
           }
         }),
       );
 
-      const failedRows = results.filter((result) => 'error' in result);
-      if (failedRows.length > 0) {
-        setPageError(failedRows.map((result) => `${result.rowLabel}: ${result.error}`).join(' | '));
-      } else {
-        setToast(`${generatedRows.length} payslip${generatedRows.length === 1 ? '' : 's'} saved.`);
-      }
+      toastSuccess(`${generatedRows.length} payslip${generatedRows.length === 1 ? '' : 's'} saved.`);
 
       const payslipResponse = await PayrollService.listPayslips({ page_size: '100' });
       setPayslips(payslipResponse.results || payslipResponse);
+    } catch (error: any) {
+      // toastError(error); // Interceptor already does this
+      console.error('Batch save failed:', error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const downloadBatchGeneratorPdf = async () => {
+    const readyPreviews = generatedRows
+      .map((row) => previewMap[row.key]?.preview)
+      .filter((preview): preview is PayslipPreview => !!preview);
+
+    if (readyPreviews.length === 0) {
+      return;
+    }
+
+    try {
+      setBatchDownloading(true);
+      for (const preview of readyPreviews) {
+        await downloadPayslipPdf(preview);
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+      }
+      toastSuccess('Bulk download complete.');
+    } finally {
+      setBatchDownloading(false);
+    }
+  };
+
+  const downloadBatchSavedPdf = async () => {
+    const selectedPayslips = payslips.filter((p) => selectedSavedIds.has(p.id));
+    if (selectedPayslips.length === 0) {
+      return;
+    }
+
+    try {
+      setBatchDownloading(true);
+      for (const payslip of selectedPayslips) {
+        if (payslip.calculation_snapshot) {
+          await downloadPayslipPdf(payslip.calculation_snapshot as PayslipPreview);
+          await new Promise((resolve) => window.setTimeout(resolve, 300));
+        }
+      }
+      toastSuccess(`${selectedPayslips.length} payslips downloaded.`);
+    } finally {
+      setBatchDownloading(false);
+    }
+  };
+
+  const filteredSavedPayslips = useMemo(() => {
+    return payslips.filter((payslip) => {
+      const matchesSearch = !savedSearch ||
+        payslip.employee_name.toLowerCase().includes(savedSearch.toLowerCase()) ||
+        payslip.month_label.toLowerCase().includes(savedSearch.toLowerCase());
+      const matchesEmployee = !savedEmployeeId || payslip.employee === savedEmployeeId;
+      return matchesSearch && matchesEmployee;
+    });
+  }, [payslips, savedSearch, savedEmployeeId]);
+
+  const toggleSavedSelection = (id: string) => {
+    setSelectedSavedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllSavedSelection = () => {
+    if (selectedSavedIds.size === filteredSavedPayslips.length) {
+      setSelectedSavedIds(new Set());
+    } else {
+      setSelectedSavedIds(new Set(filteredSavedPayslips.map((p) => p.id)));
     }
   };
 
@@ -348,12 +415,10 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
     setExistingPayslipIdsByKey({ [key]: payslip.id });
     setRowStateByKey({
       [key]: {
-        total_days: payslip.total_days || '',
-        paid_days_override: payslip.paid_days || '',
-        notes: payslip.notes || '',
         leave_values: leaveValues,
       },
     });
+    setExpandedRowKeys(new Set([key]));
   };
 
   const deleteSavedPayslip = async (payslip: PayslipRecord) => {
@@ -363,19 +428,19 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
 
     try {
       setDeletingPayslipId(payslip.id);
-      setPageError('');
       await PayrollService.deletePayslip(payslip.id);
       setPayslips((previous) => previous.filter((item) => item.id !== payslip.id));
+      setSelectedSavedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(payslip.id);
+        return next;
+      });
       setExistingPayslipIdsByKey((previous) => Object.fromEntries(
         Object.entries(previous).filter(([, payslipId]) => payslipId !== payslip.id),
       ));
-      setToast(`Deleted saved payslip for ${payslip.employee_name}.`);
+      toastSuccess(`Deleted saved payslip for ${payslip.employee_name}.`);
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.error?.message
-        || error.response?.data?.detail
-        || 'Unable to delete this payslip.';
-      setPageError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+      // toastError(error); // Interceptor handles this
     } finally {
       setDeletingPayslipId('');
     }
@@ -404,8 +469,6 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
         </div>
       )}
     >
-      {pageError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div> : null}
-
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.35fr]">
         <Panel title="Batch Selection" icon={<FileText size={18} />}>
           {loading ? (
@@ -472,7 +535,21 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
           )}
         </Panel>
 
-        <Panel title="Employee-Month Rows" icon={<FileText size={18} />}>
+        <Panel
+          title="Employee-Month Rows"
+          icon={<FileText size={18} />}
+          actions={generatedRows.length > 0 && (
+            <button
+              type="button"
+              onClick={downloadBatchGeneratorPdf}
+              disabled={batchDownloading || !generatedRows.some((r) => previewMap[r.key]?.preview)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <Download size={14} />
+              {batchDownloading ? 'Downloading...' : 'Download All Selected'}
+            </button>
+          )}
+        >
           {!generatedRows.length ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
               Select employees and months to create payroll rows here.
@@ -483,77 +560,121 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
                 const rowState = rowStateByKey[row.key] || buildEmptyRowState(leaveTypes);
                 const rowPreview = previewMap[row.key]?.preview;
                 const rowError = previewMap[row.key]?.error;
+                const isExpanded = expandedRowKeys.has(row.key);
 
                 return (
-                  <div key={row.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-900">{row.employee.full_name}</h3>
-                        <p className="text-xs text-slate-600">{`${row.employee.employee_code} - ${formatMonthLabel(row.month)}`}</p>
+                  <div key={row.key} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <div
+                      className={`flex cursor-pointer items-center justify-between gap-4 p-3 transition-colors hover:bg-slate-100/50 ${isExpanded ? 'border-b border-slate-200 bg-white' : ''}`}
+                      onClick={() => toggleRowExpansion(row.key)}
+                    >
+                      <div className="flex flex-1 items-start gap-3">
+                        <div className={`mt-0.5 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <ChevronDown size={18} className="text-slate-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-semibold text-slate-900">{row.employee.full_name}</h3>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
+                            <span>{row.employee.employee_code}</span>
+                            <span className="text-slate-300">•</span>
+                            <span>{formatMonthLabel(row.month)}</span>
+                            {rowPreview && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span className="font-medium text-emerald-700">Net Pay: {currencyFormatter(rowPreview.summary.net_pay, rowPreview.company.currency)}</span>
+                                <span className="text-slate-300">•</span>
+                                <span>Paid Days: {rowPreview.summary.paid_days}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {existingPayslipIdsByKey[row.key] ? <span className="badge badge-info">Editing Saved Payslip</span> : <span className="badge badge-success">New Payslip</span>}
-                        <button type="button" onClick={() => downloadRowPdf(row.key)} disabled={!rowPreview || pdfDownloadingKey === row.key} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60">
-                          <Download size={14} />
-                          {pdfDownloadingKey === row.key ? 'Preparing...' : 'PDF'}
+                      <div className="flex items-center gap-2">
+                        {existingPayslipIdsByKey[row.key] ? (
+                          <span className="hidden badge badge-info sm:inline-flex">Editing</span>
+                        ) : (
+                          <span className="hidden badge badge-success sm:inline-flex">New</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadRowPdf(row.key);
+                          }}
+                          disabled={!rowPreview || pdfDownloadingKey === row.key}
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          <Download size={13} />
+                          {pdfDownloadingKey === row.key ? '...' : 'PDF'}
                         </button>
                       </div>
                     </div>
 
-                    <div className="mt-3 grid gap-3 xl:grid-cols-[1.25fr_0.95fr]">
-                      <div className="space-y-3">
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <Field label="Working Days Override">
-                            <input type="number" min="0.01" step="0.01" className="input-field text-sm" value={rowState.total_days} onChange={(event) => updateRowField(row.key, 'total_days', event.target.value)} />
-                          </Field>
-                          <Field label="Paid Days Override">
-                            <input type="number" min="0" step="0.01" className="input-field text-sm" value={rowState.paid_days_override} onChange={(event) => updateRowField(row.key, 'paid_days_override', event.target.value)} />
-                          </Field>
-                          <Field label="Notes">
-                            <input className="input-field text-sm" value={rowState.notes} onChange={(event) => updateRowField(row.key, 'notes', event.target.value)} />
-                          </Field>
-                        </div>
-
-                        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-                          <h4 className="text-sm font-semibold text-slate-900">Leave Inputs</h4>
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {leaveTypes.map((leaveType) => (
-                              <label key={`${row.key}-${leaveType.name}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-semibold text-slate-900">{leaveType.name}</span>
-                                  <span className={`badge ${leaveType.is_paid ? 'badge-success' : 'badge-warning'}`}>{leaveType.is_paid ? 'Paid' : 'Unpaid'}</span>
+                    {isExpanded && (
+                      <div className="grid gap-4 p-4 lg:grid-cols-2">
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <h4 className="mb-3 text-sm font-semibold text-slate-900">Leave Inputs</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {leaveTypes.map((leaveType) => (
+                                <div key={`${row.key}-${leaveType.name}`} className="space-y-1.5">
+                                  <div className="flex items-center justify-between gap-2 px-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{leaveType.name}</span>
+                                    <span className={`text-[10px] font-bold uppercase ${leaveType.is_paid ? 'text-emerald-600' : 'text-amber-600'}`}>{leaveType.is_paid ? 'Paid' : 'Unpaid'}</span>
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className="input-field h-9 text-sm"
+                                    value={rowState.leave_values[leaveType.name] || ''}
+                                    onChange={(event) => updateRowLeaveValue(row.key, leaveType.name, event.target.value)}
+                                    placeholder="0.00"
+                                  />
                                 </div>
-                                <input type="number" min="0" step="0.01" className="input-field mt-2 text-sm" value={rowState.leave_values[leaveType.name] || ''} onChange={(event) => updateRowLeaveValue(row.key, leaveType.name, event.target.value)} placeholder="0.00" />
-                              </label>
-                            ))}
+                              ))}
+                            </div>
+                            {leaveTypes.length === 0 && (
+                              <p className="py-2 text-center text-xs text-slate-400 italic">No leave types configured.</p>
+                            )}
                           </div>
                         </div>
-                      </div>
 
-                      <div className="rounded-xl bg-slate-900 px-3 py-3 text-white">
-                        <h4 className="text-sm font-semibold text-white">Live Summary</h4>
-                        {rowError ? (
-                          <div className="mt-2.5 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2.5 text-sm text-red-100">
-                            {rowError}
-                          </div>
-                        ) : rowPreview ? (
-                          <div className="mt-2.5 space-y-1.5 text-sm">
-                            <div className="flex items-center justify-between"><span className="text-slate-300">Monthly CTC</span><span>{currencyFormatter(rowPreview.summary.monthly_ctc, rowPreview.company.currency)}</span></div>
-                            <div className="flex items-center justify-between"><span className="text-slate-300">Paid Days</span><span>{rowPreview.summary.paid_days}</span></div>
-                            <div className="flex items-center justify-between"><span className="text-slate-300">LWP</span><span>{rowPreview.summary.leave_without_pay_days}</span></div>
-                            <div className="flex items-center justify-between"><span className="text-slate-300">Gross Earnings</span><span>{currencyFormatter(rowPreview.summary.earnings_total, rowPreview.company.currency)}</span></div>
-                            <div className="flex items-center justify-between"><span className="text-slate-300">Deductions</span><span>{currencyFormatter(rowPreview.summary.deductions_total, rowPreview.company.currency)}</span></div>
-                            <div className="flex items-center justify-between"><span className="text-slate-300">Loss Of Pay</span><span>{currencyFormatter(rowPreview.summary.loss_of_pay_amount, rowPreview.company.currency)}</span></div>
-                            <div className="mt-3 border-t border-white/10 pt-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-300">Net Pay</p>
-                              <p className="mt-1 text-2xl font-black tracking-tight">{currencyFormatter(rowPreview.summary.net_pay, rowPreview.company.currency)}</p>
+                        <div className="rounded-xl bg-slate-900 p-4 text-white">
+                          <h4 className="mb-3 text-sm font-semibold text-white">Live Summary</h4>
+                          {rowError ? (
+                            <div className="rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-xs text-red-100">
+                              {rowError}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="mt-2.5 text-sm text-slate-300">Waiting for preview...</div>
-                        )}
+                          ) : rowPreview ? (
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Monthly CTC</span>
+                                <span className="font-medium">{currencyFormatter(rowPreview.summary.monthly_ctc, rowPreview.company.currency)}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Paid Days</span>
+                                <span className="font-medium">{rowPreview.summary.paid_days}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Gross Earnings</span>
+                                <span className="font-medium">{currencyFormatter(rowPreview.summary.earnings_total, rowPreview.company.currency)}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Deductions</span>
+                                <span className="font-medium">{currencyFormatter(rowPreview.summary.deductions_total, rowPreview.company.currency)}</span>
+                              </div>
+                              <div className="mt-4 border-t border-white/10 pt-4">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400">Net Pay</p>
+                                <p className="mt-1 text-2xl font-black tracking-tight">{currencyFormatter(rowPreview.summary.net_pay, rowPreview.company.currency)}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="py-4 text-center text-xs text-slate-500">Waiting for preview calculation...</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -562,7 +683,58 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
         </Panel>
       </div>
 
-      <Panel title="Saved Payslips" icon={<FileText size={18} />}>
+      <Panel
+        title="Saved Payslips"
+        icon={<FileText size={18} />}
+        actions={(
+          <div className="flex items-center gap-3">
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                type="text"
+                placeholder="Search payslips..."
+                className="input-field h-9 min-w-[200px] pl-9 text-xs"
+                value={savedSearch}
+                onChange={(e) => setSavedSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="input-field h-9 max-w-[180px] text-xs"
+              value={savedEmployeeId}
+              onChange={(e) => setSavedEmployeeId(e.target.value)}
+            >
+              <option value="">All Employees</option>
+              {activeEmployees.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+              ))}
+            </select>
+            {selectedSavedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={downloadBatchSavedPdf}
+                disabled={batchDownloading}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                <Download size={14} />
+                Download ({selectedSavedIds.size})
+              </button>
+            )}
+          </div>
+        )}
+      >
+        <div className="mb-3 flex gap-2 sm:hidden">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="input-field h-9 pl-9 text-xs"
+              value={savedSearch}
+              onChange={(e) => setSavedSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
         {loading ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
             Loading saved payslips...
@@ -572,30 +744,52 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
             <table className="w-full table-fixed">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                 <tr>
+                  <th className="w-12 px-3 py-2.5 text-center">
+                    <button type="button" onClick={toggleAllSavedSelection} className="text-slate-400 hover:text-slate-600">
+                      {selectedSavedIds.size === filteredSavedPayslips.length && filteredSavedPayslips.length > 0 ? (
+                        <CheckSquare size={16} className="text-emerald-600" />
+                      ) : (
+                        <Square size={16} />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-3 py-2.5">Month</th>
                   <th className="px-3 py-2.5">Employee</th>
-                  <th className="px-3 py-2.5 text-right">Paid Days</th>
                   <th className="px-3 py-2.5 text-right">Net Pay</th>
                   <th className="px-3 py-2.5 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {payslips.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">No payslips saved yet.</td></tr>
-                ) : payslips.map((payslip) => (
-                  <tr key={payslip.id} className="border-t border-slate-100">
+                {filteredSavedPayslips.length === 0 ? (
+                  <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-500">No matching payslips found.</td></tr>
+                ) : filteredSavedPayslips.map((payslip) => (
+                  <tr key={payslip.id} className={`border-t border-slate-100 transition-colors ${selectedSavedIds.has(payslip.id) ? 'bg-emerald-50/30' : 'hover:bg-slate-50'}`}>
+                    <td className="px-3 py-2 text-center">
+                      <button type="button" onClick={() => toggleSavedSelection(payslip.id)} className="text-slate-400 hover:text-slate-600">
+                        {selectedSavedIds.has(payslip.id) ? (
+                          <CheckSquare size={16} className="text-emerald-600" />
+                        ) : (
+                          <Square size={16} />
+                        )}
+                      </button>
+                    </td>
                     <td className="truncate px-3 py-2 font-medium text-slate-800">{payslip.month_label}</td>
                     <td className="truncate px-3 py-2">{payslip.employee_name}</td>
-                    <td className="px-3 py-2 text-right text-slate-700">{payslip.paid_days}</td>
-                    <td className="px-3 py-2 text-right text-slate-700">{currencyFormatter(payslip.net_pay, configuration?.currency || 'INR')}</td>
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">{currencyFormatter(payslip.net_pay, configuration?.currency || 'INR')}</td>
                     <td className="px-3 py-2 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1">
                         <button type="button" onClick={() => reuseExistingPayslip(payslip)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
-                          Reuse In Generator
+                          Reuse
                         </button>
-                        <button type="button" onClick={() => deleteSavedPayslip(payslip)} disabled={deletingPayslipId === payslip.id} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60">
-                          <Trash2 size={12} />
-                          {deletingPayslipId === payslip.id ? 'Deleting...' : 'Delete'}
+                        <button type="button" onClick={() => deleteSavedPayslip(payslip)} disabled={deletingPayslipId === payslip.id} className="inline-flex items-center gap-1 rounded-lg px-2 text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadPayslipPdf(payslip.calculation_snapshot as PayslipPreview)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 text-slate-700 hover:bg-slate-100"
+                        >
+                          <Download size={14} />
                         </button>
                       </div>
                     </td>
@@ -606,12 +800,6 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
           </div>
         )}
       </Panel>
-
-      {toast ? (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      ) : null}
     </PayrollWorkspace>
   );
 };

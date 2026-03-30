@@ -136,24 +136,28 @@ export const emptyEmployeeForm = (): EmployeeFormState => ({
   bank_account_number: '',
   bank_ifsc: '',
   annual_ctc: '',
-  custom_salary_components: [],
+  custom_salary_components: [
+    {
+      ...makeEmployeeRule(1, 'Bonus'),
+      formula_type: 'percentage',
+      basis: 'monthly_ctc',
+      value: '12.50',
+    },
+  ],
   is_active: true,
 });
 
 export const currencyFormatter = (value?: string | null, currency = 'INR') => {
-  if (!value) {
-    return 'Rs 0.00';
-  }
-
-  const numericValue = Number(value);
+  const numericValue = Math.round(Number(value || 0));
   if (Number.isNaN(numericValue)) {
-    return value;
+    return value || '';
   }
 
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
   }).format(numericValue);
 };
 

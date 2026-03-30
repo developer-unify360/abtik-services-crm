@@ -9,13 +9,18 @@ from audit.models import AuditLog
 from payroll.models import PayrollConfiguration, PayrollEmployee, Payslip, SalaryComponent
 
 
-MONEY_QUANTIZE = Decimal('0.01')
+MONEY_QUANTIZE = Decimal('1')
+DAYS_QUANTIZE = Decimal('0.01')
 RATIO_QUANTIZE = Decimal('0.0001')
-ZERO = Decimal('0.00')
+ZERO = Decimal('0')
 
 
 def quantize_money(value):
     return Decimal(value or 0).quantize(MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
+
+
+def quantize_days(value):
+    return Decimal(value or 0).quantize(DAYS_QUANTIZE, rounding=ROUND_HALF_UP)
 
 
 def normalize_component_name(value):
@@ -84,6 +89,17 @@ class PayrollService:
             'value': Decimal('12.00'),
             'display_order': 4,
             'apply_proration': False,
+            'is_active': True,
+        },
+        {
+            'name': 'Bonus',
+            'category': SalaryComponent.CATEGORY_EARNING,
+            'formula_type': SalaryComponent.FORMULA_PERCENTAGE,
+            'basis': SalaryComponent.BASIS_MONTHLY_CTC,
+            'reference_component': '',
+            'value': Decimal('12.50'),
+            'display_order': 5,
+            'apply_proration': True,
             'is_active': True,
         },
     ]
@@ -191,11 +207,11 @@ class PayrollService:
 
     @staticmethod
     def _get_total_days(month, total_days, configuration):
-        if total_days not in [None, '']:
-            return quantize_money(total_days)
-        if configuration and configuration.default_working_days:
-            return quantize_money(configuration.default_working_days)
-        return quantize_money(monthrange(month.year, month.month)[1])
+      if total_days not in [None, '']:
+          return quantize_days(total_days)
+      if configuration and configuration.default_working_days:
+          return quantize_days(configuration.default_working_days)
+      return quantize_days(monthrange(month.year, month.month)[1])
 
     @staticmethod
     def _prepare_leave_breakdown(leave_breakdown):
@@ -203,7 +219,7 @@ class PayrollService:
         unpaid_leave_days = ZERO
 
         for entry in leave_breakdown or []:
-            days = quantize_money(entry.get('days'))
+            days = quantize_days(entry.get('days'))
             if days <= 0:
                 continue
 
@@ -217,7 +233,7 @@ class PayrollService:
             if not normalized_entry['is_paid']:
                 unpaid_leave_days += days
 
-        return normalized_entries, quantize_money(unpaid_leave_days)
+        return normalized_entries, quantize_days(unpaid_leave_days)
 
     @staticmethod
     def _resolve_component_basis(component, monthly_ctc, scheduled_totals, component_values):
@@ -295,14 +311,14 @@ class PayrollService:
 
         paid_days_override = data.get('paid_days_override')
         if paid_days_override is not None:
-            paid_days = quantize_money(paid_days_override)
+            paid_days = quantize_days(paid_days_override)
         else:
-            paid_days = quantize_money(max(total_days - unpaid_leave_days, ZERO))
+            paid_days = quantize_days(max(total_days - unpaid_leave_days, ZERO))
 
         if paid_days > total_days:
             raise ValidationError({'paid_days_override': 'Paid days cannot be greater than total days.'})
 
-        leave_without_pay_days = quantize_money(max(total_days - paid_days, ZERO))
+        leave_without_pay_days = quantize_days(max(total_days - paid_days, ZERO))
         paid_ratio = Decimal('1.0000')
         if total_days > 0:
             paid_ratio = (paid_days / total_days).quantize(RATIO_QUANTIZE, rounding=ROUND_HALF_UP)
@@ -344,7 +360,8 @@ class PayrollService:
                 category_scheduled_total=scheduled_totals[component.category],
             )
             actual_amount = scheduled_amount
-            if component.apply_proration:
+            # When leave inputs are given, only earnings should decrease; deductions remain fixed.
+            if component.apply_proration and component.category == SalaryComponent.CATEGORY_EARNING:
                 actual_amount = quantize_money(scheduled_amount * paid_ratio)
 
             scheduled_totals[component.category] = quantize_money(

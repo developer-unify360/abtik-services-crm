@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import LoginPage from './auth/LoginPage';
 import PrivateRoute from './auth/PrivateRoute';
 import { useAuthStore } from './auth/authStore';
@@ -75,55 +76,67 @@ function AdminRedirect() {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/admin" element={<AdminRedirect />} />
-        <Route path="/admin/*" element={<AdminRedirect />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/bookings/new" element={<BookingFormPage />} />
-        <Route path="/leads/new" element={<PublicLeadFormPage />} />
+    <>
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/admin" element={<AdminRedirect />} />
+          <Route path="/admin/*" element={<AdminRedirect />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/bookings/new" element={<BookingFormPage />} />
+          <Route path="/leads/new" element={<PublicLeadFormPage />} />
 
-        {/* Admin-only private routes */}
-        <Route element={<PrivateRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/" element={<DefaultRouteRedirect />} />
+          {/* Admin-only private routes */}
+          <Route element={<PrivateRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<DefaultRouteRedirect />} />
 
-            <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
-              <Route path="/dashboard" element={<AdminDashboard />} />
-              <Route path="/clients" element={<ClientListPage />} />
-              <Route path="/bookings" element={<BookingListPage />} />
-              <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
-              <Route path="/payments" element={<PaymentListPage />} />
-              <Route path="/payments/new" element={<PaymentFormPage />} />
-              <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
-              <Route path="/leads" element={<LeadListPage />} />
+              <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
+                <Route path="/dashboard" element={<AdminDashboard />} />
+                <Route path="/clients" element={<ClientListPage />} />
+                <Route path="/bookings" element={<BookingListPage />} />
+                <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
+                <Route path="/payments" element={<PaymentListPage />} />
+                <Route path="/payments/new" element={<PaymentFormPage />} />
+                <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
+                <Route path="/leads" element={<LeadListPage />} />
+              </Route>
+
+              <Route element={<RouteAccessGuard allow={isAdminUser} />}>
+                <Route path="/attributes" element={<AttributesPage />} />
+                <Route path="/leads/assignment-rules" element={<LeadAssignmentRulesPage />} />
+              </Route>
+
+              <Route element={<RouteAccessGuard allow={hasPayrollAccess} />}>
+                <Route path="/payroll" element={<Navigate to="/payroll/company-setup" replace />} />
+                <Route path="/payroll/company-setup" element={<PayrollCompanySetupPage />} />
+                <Route path="/payroll/salary-rules" element={<PayrollSalaryRulesPage />} />
+                <Route path="/payroll/attendance-rules" element={<PayrollAttendanceRulesPage />} />
+                <Route path="/payroll/employees" element={<PayrollEmployeesPage />} />
+                <Route path="/payroll/employees/new" element={<PayrollEmployeeFormPage />} />
+                <Route path="/payroll/employees/:employeeId/edit" element={<PayrollEmployeeFormPage />} />
+                <Route path="/payroll/payslip-generator" element={<PayrollPayslipGeneratorPage />} />
+              </Route>
+
+              <Route path="*" element={<DefaultRouteRedirect />} />
             </Route>
-
-            <Route element={<RouteAccessGuard allow={isAdminUser} />}>
-              <Route path="/attributes" element={<AttributesPage />} />
-              <Route path="/leads/assignment-rules" element={<LeadAssignmentRulesPage />} />
-            </Route>
-
-            <Route element={<RouteAccessGuard allow={hasPayrollAccess} />}>
-              <Route path="/payroll" element={<Navigate to="/payroll/company-setup" replace />} />
-              <Route path="/payroll/company-setup" element={<PayrollCompanySetupPage />} />
-              <Route path="/payroll/salary-rules" element={<PayrollSalaryRulesPage />} />
-              <Route path="/payroll/attendance-rules" element={<PayrollAttendanceRulesPage />} />
-              <Route path="/payroll/employees" element={<PayrollEmployeesPage />} />
-              <Route path="/payroll/employees/new" element={<PayrollEmployeeFormPage />} />
-              <Route path="/payroll/employees/:employeeId/edit" element={<PayrollEmployeeFormPage />} />
-              <Route path="/payroll/payslip-generator" element={<PayrollPayslipGeneratorPage />} />
-            </Route>
-
-            <Route path="*" element={<DefaultRouteRedirect />} />
           </Route>
-        </Route>
 
-        {/* Unauthenticated catch-all */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+          {/* Unauthenticated catch-all */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Router>
+      <Toaster 
+        position="bottom-right" 
+        reverseOrder={false}
+        toastOptions={{
+          className: 'text-sm font-medium',
+          style: {
+            borderRadius: '12px',
+          },
+        }}
+      />
+    </>
   );
 }
 

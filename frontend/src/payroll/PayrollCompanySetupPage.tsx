@@ -11,14 +11,13 @@ import {
   normalizeConfiguration,
   type ConfigurationFormState,
 } from './payrollShared';
+import { toastError, toastSuccess } from '../services/toastNotify';
 
 const PayrollCompanySetupPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formState, setFormState] = useState<ConfigurationFormState>(initialConfigurationForm);
   const [pageError, setPageError] = useState('');
-  const [formError, setFormError] = useState('');
-  const [toast, setToast] = useState('');
   const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
 
   const loadConfiguration = async () => {
@@ -57,15 +56,6 @@ const PayrollCompanySetupPage: React.FC = () => {
     };
   }, [formState.company_logo, formState.existing_logo_url, formState.remove_logo]);
 
-  useEffect(() => {
-    if (!toast) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setToast(''), 3200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
   const handleFieldChange = (
     field: keyof ConfigurationFormState,
     value: string | boolean | File | null,
@@ -81,7 +71,6 @@ const PayrollCompanySetupPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      setFormError('');
       const payload: PayrollConfigurationUpdateData = {
         company_name: formState.company_name,
         company_address: formState.company_address,
@@ -96,14 +85,10 @@ const PayrollCompanySetupPage: React.FC = () => {
 
       const updatedConfiguration = await PayrollService.updateConfiguration(payload);
       setFormState(normalizeConfiguration(updatedConfiguration));
-      setToast('Company payroll setup saved.');
+      toastSuccess('Company payroll setup saved.');
     } catch (error: any) {
       console.error('Failed to save company payroll setup:', error);
-      const errorMessage =
-        error.response?.data?.error?.message
-        || error.response?.data?.detail
-        || 'Unable to save company payroll setup.';
-      setFormError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+      toastError(error);
     } finally {
       setSubmitting(false);
     }
@@ -221,17 +206,9 @@ const PayrollCompanySetupPage: React.FC = () => {
                 {submitting ? 'Saving...' : 'Save Company Setup'}
               </button>
             </div>
-
-            {formError ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div> : null}
           </form>
         )}
       </Panel>
-
-      {toast ? (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      ) : null}
     </PayrollWorkspace>
   );
 };

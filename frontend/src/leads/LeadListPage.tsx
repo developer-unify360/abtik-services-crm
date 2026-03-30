@@ -15,6 +15,7 @@ import { LeadService } from './LeadService';
 import type { Lead } from './LeadService';
 import { useAuthStore } from '../auth/authStore';
 import { downloadLeadInteractionHistoryPdf } from './leadHistoryPdf';
+import { toastSuccess } from '../services/toastNotify';
 
 const PAGE_SIZE = 10;
 
@@ -152,6 +153,7 @@ const LeadListPage: React.FC = () => {
       });
       setShowCallModal(false);
       setCallNotes('');
+      toastSuccess('Interaction logged successfully.');
       await loadLeadDetails(leadId);
     } catch (error) {
       console.error('Call log fail:', error);
@@ -162,11 +164,13 @@ const LeadListPage: React.FC = () => {
 
   const handleNotesBlur = async (notes: string) => {
     if (!selectedLead) return;
+    if (notes === (selectedLead.notes || '')) return;
 
     try {
       const updatedLead = await LeadService.update(selectedLead.id, { notes });
       setSelectedLead(updatedLead);
       syncLeadInList(updatedLead);
+      toastSuccess('Lead notes updated.');
     } catch (error) {
       console.error('Failed to save notes:', error);
     }
@@ -185,6 +189,7 @@ const LeadListPage: React.FC = () => {
       setSelectedLead(latestLead);
       syncLeadInList(latestLead);
       downloadLeadInteractionHistoryPdf(latestLead);
+      toastSuccess('Interaction history download started.');
     } catch (error) {
       console.error('Failed to download interaction history:', error);
     } finally {

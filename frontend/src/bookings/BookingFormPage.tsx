@@ -11,6 +11,7 @@ import { BankApi, type Bank } from './api/BankApi';
 import MultiSelect from '../components/MultiSelect';
 
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
+import { toastError, toastSuccess } from '../services/toastNotify';
 
 interface BookingFormState {
   client_name: string;
@@ -383,70 +384,22 @@ const BookingFormPage: React.FC = () => {
 
       if (isEditMode && bookingId) {
         await BookingService.updateFull(bookingId, payload);
-        navigate('/bookings', {
-          replace: true,
-          state: { toast: 'Booking updated successfully.', toastType: 'success' },
-        });
+        toastSuccess('Booking updated successfully.');
+        navigate('/bookings');
       } else {
         if (isAuthenticated) {
           await BookingService.createFull(payload);
-          navigate('/bookings', {
-            replace: true,
-            state: { toast: 'Booking created successfully.', toastType: 'success' },
-          });
+          toastSuccess('Booking created successfully.');
+          navigate('/bookings');
         } else {
           await BookingService.createPublicFull(payload);
           setSubmitSuccess(true);
+          toastSuccess('Booking submitted successfully.');
         }
       }
     } catch (error: any) {
       console.error('Booking form submission failed:', error);
-      
-      // Try to extract detailed validation errors
-      const errorData = error.response?.data?.error;
-      let errorMessage = 'Unable to save the booking right now.';
-      
-      if (errorData?.details) {
-        // Build detailed error message from validation details
-        const details = errorData.details;
-        const errorParts: string[] = [];
-        
-        if (details.client) {
-          const clientErrors = details.client;
-          Object.entries(clientErrors).forEach(([field, messages]: [string, any]) => {
-            if (Array.isArray(messages)) {
-              errorParts.push(`Client ${field}: ${messages.join(', ')}`);
-            } else if (typeof messages === 'object') {
-              Object.entries(messages).forEach(([subField, subMessages]: [string, any]) => {
-                errorParts.push(`Client ${field}.${subField}: ${Array.isArray(subMessages) ? subMessages.join(', ') : subMessages}`);
-              });
-            }
-          });
-        }
-        
-        if (details.booking) {
-          const bookingErrors = details.booking;
-          Object.entries(bookingErrors).forEach(([field, messages]: [string, any]) => {
-            if (Array.isArray(messages)) {
-              errorParts.push(`Booking ${field}: ${messages.join(', ')}`);
-            } else if (typeof messages === 'object') {
-              Object.entries(messages).forEach(([subField, subMessages]: [string, any]) => {
-                errorParts.push(`Booking ${field}.${subField}: ${Array.isArray(subMessages) ? subMessages.join(', ') : subMessages}`);
-              });
-            }
-          });
-        }
-        
-        if (errorParts.length > 0) {
-          errorMessage = errorParts.join('\n');
-        } else {
-          errorMessage = errorData.message || errorMessage;
-        }
-      } else {
-        errorMessage = errorData?.message || error.response?.data?.detail || errorMessage;
-      }
-      
-      setPageError(errorMessage);
+      // Interceptor will show the toast automatically for Bad Requests
     } finally {
       setSubmitting(false);
     }
@@ -800,52 +753,51 @@ const BookingFormPage: React.FC = () => {
                           className="input-field py-1.5 text-sm"
                           value={formState.after_fund_disbursement_percentage}
                           onChange={(event) => handleFieldChange('after_fund_disbursement_percentage', event.target.value)}
-                          placeholder="%"
+                          placeholder="Fund %"
                         />
                       </Field>
                     </div>
-                    {/* Remarks dropdown */}
-                    <div className="mt-2">
+                    <div className="mt-2 text-[10px] sm:text-xs">
                       <button
                         type="button"
                         onClick={() => setShowPaymentRemarks(!showPaymentRemarks)}
-                        className="flex items-center gap-1 text-xs text-blue-700 font-medium hover:text-blue-800"
+                        className="flex items-center gap-1 font-bold text-blue-700 hover:text-blue-800"
                       >
-                        {showPaymentRemarks ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {showPaymentRemarks ? 'Hide Remarks' : 'Show Remarks'}
+                        {showPaymentRemarks ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        {showPaymentRemarks ? 'Hide Remarks' : 'Show Payment Remarks'}
                       </button>
                       {showPaymentRemarks && (
-                        <div className="mt-2 grid gap-2 md:grid-cols-2 p-2 bg-slate-50 rounded-lg">
-                          <Field label="Total Remarks">
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                          <Field label="Total Amt Remarks">
                             <input
                               className="input-field py-1.5 text-sm"
                               value={formState.total_payment_remarks}
                               onChange={(event) => handleFieldChange('total_payment_remarks', event.target.value)}
-                              placeholder="Total remarks"
+                              placeholder="Remarks"
                             />
                           </Field>
-                          <Field label="Received Remarks">
+                          <Field label="Received Amt Remarks">
                             <input
                               className="input-field py-1.5 text-sm"
                               value={formState.received_amount_remarks}
                               onChange={(event) => handleFieldChange('received_amount_remarks', event.target.value)}
-                              placeholder="Received remarks"
+                              placeholder="Remarks"
                             />
                           </Field>
-                          <Field label="Remaining Remarks">
+                          <Field label="Remaining Amt Remarks">
                             <input
                               className="input-field py-1.5 text-sm"
                               value={formState.remaining_amount_remarks}
                               onChange={(event) => handleFieldChange('remaining_amount_remarks', event.target.value)}
-                              placeholder="Remaining remarks"
+                              placeholder="Remarks"
                             />
                           </Field>
-                          <Field label="Fund Remarks">
+                          <Field label="Fund % Remarks">
                             <input
                               className="input-field py-1.5 text-sm"
                               value={formState.after_fund_disbursement_remarks}
                               onChange={(event) => handleFieldChange('after_fund_disbursement_remarks', event.target.value)}
-                              placeholder="Fund remarks"
+                              placeholder="Remarks"
                             />
                           </Field>
                         </div>
@@ -853,26 +805,26 @@ const BookingFormPage: React.FC = () => {
                     </div>
                   </SectionCard>
                 </div>
-              </div>
+                </div>
 
-              <div className="flex gap-2 border-t border-slate-200 pt-2 flex-shrink-0">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-blue-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Save size={14} />
-                  {submitting ? 'Saving...' : isEditMode ? 'Update' : 'Submit'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/bookings')}
-                  className="rounded-lg bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div className="sticky bottom-0 mt-4 flex items-center justify-between border-t border-slate-200 bg-white py-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex items-center gap-2 rounded-lg bg-blue-700 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Save size={16} />
+                    {submitting ? 'Saving...' : isEditMode ? 'Update Booking' : 'Save Booking'}
+                  </button>
+                </div>
+              </form>
             </>
           )}
         </div>

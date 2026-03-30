@@ -28,27 +28,25 @@ const formatDate = (value?: string | null) => {
 };
 
 const formatCurrency = (value?: string | null, currency = 'INR') => {
-  const numericValue = Number(value ?? 0);
+  const numericValue = Math.round(Number(value ?? 0));
 
   if (Number.isNaN(numericValue)) {
     return value ?? '0';
   }
 
-  const hasDecimals = Math.abs(numericValue % 1) > 0;
-
   try {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency,
-      minimumFractionDigits: hasDecimals ? 2 : 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     })
       .format(numericValue)
       .replace(/\u00A0/g, ' ');
   } catch {
     return numericValue.toLocaleString('en-IN', {
-      minimumFractionDigits: hasDecimals ? 2 : 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     });
   }
 };
