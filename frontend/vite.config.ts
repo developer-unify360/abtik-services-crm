@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 5173,
+      allowedHosts: ['crm.abtikservices.in'],
       hmr: {
         host: env.VITE_HMR_HOST || 'localhost',
         protocol: env.VITE_HMR_PROTOCOL || 'ws',
