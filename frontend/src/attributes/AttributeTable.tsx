@@ -5,7 +5,7 @@ import AttributeService, { type Attribute } from './AttributeService';
 
 interface AttributeTableProps {
   title: string;
-  type: 'industry' | 'leadSource' | 'paymentType' | 'bde';
+  type: 'industry' | 'leadSource' | 'paymentType';
 }
 
 const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
@@ -27,8 +27,6 @@ const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
         data = await AttributeService.listLeadSources(signal);
       } else if (type === 'paymentType') {
         data = await AttributeService.listPaymentTypes(signal);
-      } else if (type === 'bde') {
-        data = await AttributeService.listBDEs(signal);
       }
 
       if (signal?.aborted) {
@@ -84,8 +82,6 @@ const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
           await AttributeService.updateLeadSource(editingItem.id, formData);
         } else if (type === 'paymentType') {
           await AttributeService.updatePaymentType(editingItem.id, formData);
-        } else if (type === 'bde') {
-          await AttributeService.updateBDE(editingItem.id, formData);
         }
       } else {
         if (type === 'industry') {
@@ -94,8 +90,6 @@ const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
           await AttributeService.createLeadSource(formData);
         } else if (type === 'paymentType') {
           await AttributeService.createPaymentType(formData);
-        } else if (type === 'bde') {
-          await AttributeService.createBDE(formData);
         }
       }
       setOpenForm(false);
@@ -114,8 +108,6 @@ const AttributeTable: React.FC<AttributeTableProps> = ({ title, type }) => {
         await AttributeService.deleteLeadSource(id);
       } else if (type === 'paymentType') {
         await AttributeService.deletePaymentType(id);
-      } else if (type === 'bde') {
-        await AttributeService.deleteBDE(id);
       }
       fetchData();
     } catch (err) {

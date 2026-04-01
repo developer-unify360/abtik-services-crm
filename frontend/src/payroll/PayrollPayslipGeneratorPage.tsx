@@ -1,4 +1,4 @@
-import { CheckSquare, ChevronDown, ChevronUp, Download, FileText, Plus, RefreshCcw, Save, Search, Square, Trash2 } from 'lucide-react';
+import { CheckSquare, ChevronDown, Download, FileText, Plus, RefreshCcw, Save, Search, Square, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import MultiSelect from '../components/MultiSelect';
 import { downloadPayslipPdf } from './payslipPdf';

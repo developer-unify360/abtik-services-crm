@@ -114,19 +114,28 @@ const PublicLeadFormPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, industriesData, sourcesData, servicesData, bdesData] = await Promise.all([
+        const [usersData, industriesData, sourcesData, servicesData] = await Promise.all([
           UserService.publicList(),
           AttributeService.listIndustries(),
           AttributeService.listLeadSources(),
           ServiceApi.list(),
-          AttributeService.listBDEs()
         ]);
-        // Filter only active attributes
-        setUsers((usersData.results || usersData).filter((u: any) => u.is_active !== false));
+        
+        const allUsers = usersData.results || usersData;
+        const activeUsers = allUsers.filter((u: any) => u.is_active !== false);
+        
+        setUsers(activeUsers);
         setIndustries(industriesData.filter((ind: Attribute) => ind.is_active));
         setLeadSources(sourcesData.filter((src: Attribute) => src.is_active));
         setServices(servicesData);
-        setBdes(bdesData.filter((b: Attribute) => b.is_active));
+        
+        // BDEs are now just users with the 'bde' role
+        const filteredBdes = activeUsers.filter((u: any) => u.role === 'bde');
+        setBdes(filteredBdes.map((u: any) => ({
+          id: u.id,
+          name: u.name || u.email,
+          is_active: true
+        })));
       } catch (err) {
         console.error('Failed to load form data:', err);
       }

@@ -163,9 +163,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     return () => window.removeEventListener('toggleSidebar', handler);
   }, []);
 
+
   const itemsToRender = useMemo(() => {
     if (!isCollapsed) return filteredNavItems;
-    return filteredNavItems.flatMap((item) => (item.children ? item.children : [item])) as NavItem[];
+    return filteredNavItems.flatMap((item) => (item.children ? (item.children as NavItem[]) : [item]));
   }, [isCollapsed, filteredNavItems]);
 
   return (

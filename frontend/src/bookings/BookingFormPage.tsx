@@ -11,7 +11,7 @@ import { BankApi, type Bank } from './api/BankApi';
 import MultiSelect from '../components/MultiSelect';
 
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
-import { toastError, toastSuccess } from '../services/toastNotify';
+import { toastSuccess } from '../services/toastNotify';
 
 interface BookingFormState {
   client_name: string;

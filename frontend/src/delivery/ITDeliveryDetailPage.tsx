@@ -2,15 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  CheckCircle2,
   Clock3,
-  RefreshCw,
   Save,
   Search,
   Send,
   User,
   UserCheck,
-  XCircle,
 } from 'lucide-react';
 
 import { hasAdminAccess, useAuthStore } from '../auth/authStore';
@@ -32,15 +29,6 @@ const handoffStatusTone: Record<string, string> = {
   submitted: 'bg-amber-100 text-amber-700',
   accepted: 'bg-emerald-100 text-emerald-700',
   rejected: 'bg-rose-100 text-rose-700',
-};
-
-const executionStatusTone: Record<string, string> = {
-  pending: 'bg-slate-100 text-slate-700',
-  assigned: 'bg-blue-100 text-blue-700',
-  in_progress: 'bg-violet-100 text-violet-700',
-  waiting_client: 'bg-orange-100 text-orange-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  closed: 'bg-slate-200 text-slate-700',
 };
 
 const emptyHandoffForm: ServiceRequestHandoffData = {
@@ -97,15 +85,6 @@ const formatCurrency = (value?: string | null) => {
   }).format(numericValue);
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return 'N/A';
-  return new Date(value).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 const formatDate = (value?: string | null) => {
   if (!value) return null;
