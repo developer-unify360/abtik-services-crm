@@ -342,6 +342,11 @@ const BookingFormPage: React.FC = () => {
     event.preventDefault();
 
     try {
+      if (formState.service_ids.length === 0) {
+        setPageError('Select at least one service before submitting the booking.');
+        return;
+      }
+
       setSubmitting(true);
       setPageError('');
 
@@ -434,13 +439,41 @@ const BookingFormPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-0">
-
-      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm flex flex-col">
-        <div className="bg-slate-900 px-3 py-2 text-white flex-shrink-0">
-          <h2 className="text-sm font-bold">Abtik Booking Form</h2>
-          <p className="mt-0.5 text-[10px] text-slate-400 font-medium">Capture service request and payment details.</p>
+    <div className="flex min-h-0 flex-col space-y-3">
+      {isAuthenticated ? (
+        <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span>{isEditMode ? 'Update booking, client, service, and payment details.' : 'Create a booking and capture the handoff details in one place.'}</span>
+              {existingServiceRequest ? (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                  Service request linked
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                form="booking-form"
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Save size={14} />
+                {submitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/bookings')}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
+      ) : null}
+
+      <div className="flex flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
 
         <div className="flex-1 overflow-y-auto p-3">
           {pageError ? (
@@ -455,7 +488,7 @@ const BookingFormPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <form className="space-y-1" onSubmit={handleSubmit}>
+              <form id="booking-form" className="space-y-1" onSubmit={handleSubmit}>
                 {/* Main layout: Left column (Booking + Service + Additional) and Right column (Client + Payment) */}
                 <div className="flex flex-col lg:flex-row gap-2">
                 {/* Left column: Booking Details + Service Details + Additional Info */}
@@ -533,7 +566,7 @@ const BookingFormPage: React.FC = () => {
 
                   <SectionCard title="Service Details" icon={<Wrench size={14} />}>
                     <div className="grid gap-2 grid-cols-1">
-                      <Field label="Services">
+                      <Field label="Services" required>
                         <MultiSelect
                           options={serviceOptions}
                           value={formState.service_ids}

@@ -1,4 +1,5 @@
 import apiClient from '../api/apiClient';
+import { toBrowserAssetUrl } from '../api/assetUrl';
 
 export interface Payment {
   id: string;
@@ -100,6 +101,11 @@ const buildRequestConfig = (data: PaymentCreateData) => {
   };
 };
 
+const normalizePayment = <T extends Payment>(payment: T): T => ({
+  ...payment,
+  attachment_url: payment.attachment_url ? toBrowserAssetUrl(payment.attachment_url) : payment.attachment_url,
+});
+
 export const PaymentService = {
   list: async (params?: Record<string, string>) => {
     const response = await apiClient.get('/payments/', { params });
@@ -108,7 +114,7 @@ export const PaymentService = {
 
   get: async (id: string) => {
     const response = await apiClient.get(`/payments/${id}/`);
-    return response.data.data || response.data;
+    return normalizePayment(response.data.data || response.data);
   },
 
   create: async (data: PaymentCreateData) => {

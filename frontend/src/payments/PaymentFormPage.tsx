@@ -312,23 +312,15 @@ const PaymentFormPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="shrink-0 w-full">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-700">Finance View</p>
-              <div className="mt-1 flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {isEditMode ? 'Edit Payment' : 'New Payment'}
-                </h1>
-              </div>
-            <p className="mt-1 text-xs text-slate-600 max-w-2xl">
-              Create manual payment records with client and payment details.
-            </p>
-          </div>
-
+      <div className="shrink-0 w-full space-y-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-xs text-slate-600">
+            Create manual payment records with client and payment details.
+          </p>
           <div className="flex items-center gap-2">
             <button
               type="submit"
+              form="payment-form"
               disabled={submitting}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -361,7 +353,7 @@ const PaymentFormPage: React.FC = () => {
           Loading payment form...
         </div>
       ) : (
-        <form className="flex-1 min-h-0 flex flex-col" onSubmit={handleSubmit}>
+        <form id="payment-form" className="flex-1 min-h-0 flex flex-col" onSubmit={handleSubmit}>
           <div className="flex-1 min-h-0 overflow-auto pr-1">
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <CompactSection title="Client Details" icon={<UserRound size={14} />}>

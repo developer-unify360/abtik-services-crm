@@ -68,7 +68,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         except (TypeError, json.JSONDecodeError):
             raise ValidationError({payload_name: f"Invalid JSON for '{payload_name}'."})
 
-    def _validate_full_form_payload(self, partial=False):
+    def _validate_full_form_payload(self, partial=False, require_service_request=False):
         client_payload = self._parse_nested_payload('client')
         booking_payload = self._parse_nested_payload('booking')
         service_payload = self._parse_nested_payload('service_request', default={})
@@ -88,6 +88,8 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         service_serializer = None
         normalized_service_payloads = self._normalize_service_payloads(service_payload)
+        if require_service_request and not normalized_service_payloads and (not partial or service_payload_provided):
+            raise ValidationError({'service_request': 'At least one service must be selected.'})
         if normalized_service_payloads:
             service_serializer = ServiceRequestCreateUpdateSerializer(
                 data=normalized_service_payloads,
@@ -170,7 +172,9 @@ class BookingViewSet(viewsets.ModelViewSet):
     def bde_form_create(self, request):
         """Authenticated full-form booking creation (admin creating on behalf of BDE)."""
         try:
-            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload()
+            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload(
+                require_service_request=True,
+            )
             if not client_serializer:
                 return Response(
                     {"success": False, "error": {"code": "INVALID_INPUT", "message": "Client information is required."}},
@@ -210,7 +214,9 @@ class BookingViewSet(viewsets.ModelViewSet):
     def public_form_create(self, request):
         """Public booking form — no authentication required."""
         try:
-            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload()
+            client_serializer, booking_serializer, service_serializer, _ = self._validate_full_form_payload(
+                require_service_request=True,
+            )
             if not client_serializer:
                 return Response(
                     {"success": False, "error": {"code": "INVALID_INPUT", "message": "Client information is required."}},
@@ -251,7 +257,10 @@ class BookingViewSet(viewsets.ModelViewSet):
         """Full-form booking update (admin edits client + booking in one request)."""
         booking = self.get_object()
         try:
-            client_serializer, booking_serializer, service_serializer, service_payload_provided = self._validate_full_form_payload(partial=True)
+            client_serializer, booking_serializer, service_serializer, service_payload_provided = self._validate_full_form_payload(
+                partial=True,
+                require_service_request=True,
+            )
             service_request_data_list = [dict(item) for item in service_serializer.validated_data] if service_serializer else []
 
             with transaction.atomic():

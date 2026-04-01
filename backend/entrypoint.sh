@@ -3,8 +3,8 @@
 set -e
 
 echo "Running migrations..."
-python manage.py makemigrations
-python manage.py migrate
+python manage.py makemigrations --noinput
+python manage.py migrate --noinput
 
 echo "Creating superuser if not exists..."
 python manage.py create_superuser \

@@ -19,12 +19,16 @@ export const getRoleName = (user: any | null | undefined): string => {
       return 'HR';
     case 'service_ops':
       return 'Service Ops';
+    case 'bde':
+      return 'BDE';
     default:
       return normalizedRole || '';
   }
 };
 
 export const isAdminUser = (user: any | null | undefined): boolean => Boolean(normalizeAuthUser(user)?.is_admin);
+
+export const isBdeUser = (user: any | null | undefined): boolean => normalizeRole(user?.role) === 'bde';
 
 export const isHrUser = (user: any | null | undefined): boolean => normalizeRole(user?.role) === 'hr';
 

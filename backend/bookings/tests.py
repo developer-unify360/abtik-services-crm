@@ -155,6 +155,28 @@ class BookingAPITest(TestCase):
         self.assertEqual(lead.service, primary_service)
         self.assertEqual(len(response.data['data']['service_requests']), 2)
 
+    def test_bde_form_create_requires_at_least_one_service(self):
+        self.api_client.force_authenticate(user=self.admin_user)
+        response = self.api_client.post(
+            '/api/v1/bookings/bde-form/',
+            data={
+                'client': json.dumps({
+                    'client_name': 'No Service Client',
+                    'company_name': 'No Service Corp',
+                    'email': 'noservice@test.com',
+                    'mobile': '6655443322',
+                }),
+                'booking': json.dumps({
+                    'bde_name': self.admin_user.name,
+                    'booking_date': str(date.today()),
+                }),
+                'service_request': json.dumps({}),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('At least one service must be selected', response.data['error']['message'])
+
     def test_bde_form_create_updates_existing_lead_service_on_conversion(self):
         existing_lead = Lead.objects.create(
             client=None,

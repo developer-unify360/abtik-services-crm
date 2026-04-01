@@ -193,7 +193,7 @@ const PayrollAttendanceRulesPage: React.FC = () => {
                   </thead>
                   <tbody className="text-xs">
                     {formState.leave_types.map((leaveType, index) => (
-                      <tr key={`${leaveType.name}-${index}`} className="border-t border-slate-100">
+                      <tr key={index} className="border-t border-slate-100">
                         <td className="px-2 py-1.5">
                           <input
                             className="input-field py-1.5 text-xs"

@@ -81,6 +81,11 @@ const PublicLeadFormPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [bdes, setBdes] = useState<Attribute[]>([]);
+  const [bdeSearchTerm, setBdeSearchTerm] = useState('');
+  const [showBdeDropdown, setShowBdeDropdown] = useState(false);
+  const bdeDropdownTriggerRef = React.useRef<HTMLDivElement>(null);
+  const [bdeDropdownPos, setBdeDropdownPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
   const dropdownTriggerRef = React.useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -95,20 +100,33 @@ const PublicLeadFormPage: React.FC = () => {
     setShowUserDropdown(v => !v);
   };
 
+  const openBdeDropdown = () => {
+    if (bdeDropdownTriggerRef.current) {
+      const rect = bdeDropdownTriggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 180;
+      const top = spaceBelow >= dropdownHeight ? rect.bottom + window.scrollY : rect.top + window.scrollY - dropdownHeight;
+      setBdeDropdownPos({ top, left: rect.left + window.scrollX, width: rect.width });
+    }
+    setShowBdeDropdown(v => !v);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, industriesData, sourcesData, servicesData] = await Promise.all([
+        const [usersData, industriesData, sourcesData, servicesData, bdesData] = await Promise.all([
           UserService.publicList(),
           AttributeService.listIndustries(),
           AttributeService.listLeadSources(),
-          ServiceApi.list()
+          ServiceApi.list(),
+          AttributeService.listBDEs()
         ]);
         // Filter only active attributes
         setUsers((usersData.results || usersData).filter((u: any) => u.is_active !== false));
         setIndustries(industriesData.filter((ind: Attribute) => ind.is_active));
         setLeadSources(sourcesData.filter((src: Attribute) => src.is_active));
         setServices(servicesData);
+        setBdes(bdesData.filter((b: Attribute) => b.is_active));
       } catch (err) {
         console.error('Failed to load form data:', err);
       }
@@ -125,7 +143,14 @@ const PublicLeadFormPage: React.FC = () => {
     (user?.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
-  const selectedUser = (users || []).find(u => u.id === formState.assigned_to);
+  const filteredBdes = (bdes || []).filter(bde =>
+    (bde?.name || '').toLowerCase().includes(bdeSearchTerm.toLowerCase())
+  );
+
+  const selectedUser = (users || []).find(u => {
+    if (!u.id || !formState.assigned_to) return false;
+    return String(u.id) === String(formState.assigned_to);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,14 +220,59 @@ const PublicLeadFormPage: React.FC = () => {
             {/* Agent & Source */}
             <Field label="BDE Name" required>
               <div className="relative">
-                <User className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <input
-                  required
-                  className="input-field pl-8 py-1.5 text-sm"
-                  placeholder="Your name"
-                  value={formState.bde_name}
-                  onChange={(e) => handleFieldChange('bde_name', e.target.value)}
-                />
+                <div
+                  ref={bdeDropdownTriggerRef}
+                  className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm min-h-[38px]"
+                  onClick={openBdeDropdown}
+                >
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-slate-400" />
+                    <span className={formState.bde_name ? 'text-slate-900' : 'text-slate-400'}>
+                      {formState.bde_name || 'Select BDE'}
+                    </span>
+                  </div>
+                  <Search size={14} className="text-slate-400" />
+                </div>
+
+                {showBdeDropdown && bdeDropdownPos && (
+                  <div
+                    className="fixed z-[9999] rounded-lg border border-slate-200 bg-white shadow-xl animate-in fade-in zoom-in duration-200"
+                    style={{ top: bdeDropdownPos.top, left: bdeDropdownPos.left, width: Math.min(bdeDropdownPos.width, window.innerWidth - 16) }}
+                  >
+                    <div className="p-2 border-b border-slate-100">
+                      <input
+                        autoFocus
+                        className="w-full rounded-lg bg-slate-50 border-none px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="Search BDE..."
+                        value={bdeSearchTerm}
+                        onChange={(e) => setBdeSearchTerm(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <div className="max-h-[140px] overflow-y-auto p-1">
+                      {filteredBdes.length > 0 ? (
+                        filteredBdes.map(bde => (
+                          <div
+                            key={bde.id}
+                            className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${formState.bde_name === bde.name ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                            onClick={() => {
+                              handleFieldChange('bde_name', bde.name);
+                              setShowBdeDropdown(false);
+                              setBdeDropdownPos(null);
+                              setBdeSearchTerm('');
+                            }}
+                          >
+                            <span className="font-bold text-xs">{bde.name}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-4 text-center text-slate-400 text-xs">
+                          No BDE found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </Field>
             <Field label="Lead Source" required>
@@ -222,12 +292,15 @@ const PublicLeadFormPage: React.FC = () => {
               <div className="relative">
                 <div
                   ref={dropdownTriggerRef}
-                  className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm"
+                  className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm min-h-[38px]"
                   onClick={openDropdown}
                 >
-                  <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
-                    {selectedUser ? selectedUser.name : 'Select user'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-slate-400" />
+                    <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
+                      {selectedUser ? (selectedUser.name || selectedUser.email) : 'Select user'}
+                    </span>
+                  </div>
                   <Search size={14} className="text-slate-400" />
                 </div>
 
@@ -251,9 +324,9 @@ const PublicLeadFormPage: React.FC = () => {
                         filteredUsers.map(user => (
                           <div
                             key={user.id}
-                            className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${formState.assigned_to === user.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                            className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${String(formState.assigned_to) === String(user.id) ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
                             onClick={() => {
-                              handleFieldChange('assigned_to', user.id);
+                              handleFieldChange('assigned_to', String(user.id));
                               setShowUserDropdown(false);
                               setDropdownPos(null);
                               setUserSearchTerm('');

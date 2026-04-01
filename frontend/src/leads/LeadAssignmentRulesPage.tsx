@@ -6,7 +6,6 @@ import {
   Pause,
   Settings,
   UserPlus,
-  Layers,
   Check,
   X,
   ChevronRight
@@ -44,6 +43,7 @@ const LeadAssignmentRulesPage: React.FC = () => {
   const [sources, setSources] = useState<Attribute[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const activeRulesCount = rules.filter((rule) => rule.is_active).length;
 
   const fetchRules = async () => {
     try {
@@ -112,26 +112,29 @@ const LeadAssignmentRulesPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-w-0 flex-col h-full overflow-hidden bg-white no-select">
-      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50/50 px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <Layers size={14} className="text-indigo-600" />
-          <h1 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Assignment Engine</h1>
-          <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold uppercase">Admin Only</span>
+    <div className="flex min-w-0 flex-col h-full overflow-hidden space-y-3 no-select">
+      <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex justify-end items-center gap-2">
+          <div className="flex justify-end items-center gap-2">
+            <button
+              onClick={() => {
+                setFormError('');
+                setEditingRule({ strategy: 'round_robin', priority: 0, is_active: true, eligible_users: [] });
+                setShowModal(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              <Plus size={14} />
+              New Rule
+            </button>
+            <span className="text-xs text-slate-500">
+              {rules.length === 0 ? '0 rules' : `${rules.length} total | ${activeRulesCount} active`}
+            </span>
+          </div>
         </div>
-        <button
-          onClick={() => {
-            setFormError('');
-            setEditingRule({ strategy: 'round_robin', priority: 0, is_active: true, eligible_users: [] });
-            setShowModal(true);
-          }}
-          className="page-header-action bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus size={12} /> New Rule
-        </button>
       </div>
 
-      <div className="table-scroll flex-1 min-w-0 overflow-auto scroll-y">
+      <div className="table-scroll flex-1 min-w-0 overflow-auto scroll-y rounded-lg border border-slate-200 bg-white">
         <div className="min-w-[700px]">
           <table className="w-full text-left border-collapse">
             <thead>

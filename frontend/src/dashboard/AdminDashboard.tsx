@@ -73,15 +73,6 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 lg:space-y-8 px-2 lg:px-0">
-      {/* Header */}
-      <div className="px-2 lg:px-0">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600">Overview</p>
-        <h1 className="mt-2 text-2xl lg:text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500 hidden sm:block">
-          Real-time summary of all clients and bookings managed through the BDE form.
-        </p>
-      </div>
-
       {/* Stats Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">

@@ -191,7 +191,7 @@ const PayrollSalaryRulesPage: React.FC = () => {
                 </thead>
                 <tbody className="text-xs">
                   {formState.salary_components.map((rule, index) => (
-                    <tr key={`${rule.name}-${index}`} className="border-t border-slate-100">
+                    <tr key={index} className="border-t border-slate-100">
                       <td className="px-2 py-1.5"><input className="input-field py-1.5 text-xs" value={rule.name} onChange={(event) => handleRuleChange(index, 'name', event.target.value)} /></td>
                       <td className="px-2 py-1.5">
                         <select className="input-field py-1.5 text-xs" value={rule.category} onChange={(event) => handleRuleChange(index, 'category', event.target.value)}>

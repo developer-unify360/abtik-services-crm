@@ -30,6 +30,18 @@ class LeadViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'lead_score', 'priority']
     ordering = ['-priority', '-lead_score', '-created_at']
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_authenticated:
+            return Lead.objects.none()
+        
+        # BDEs only see leads they created
+        if user.role == 'bde':
+            return queryset.filter(created_by=user)
+        
+        return queryset
+
     def get_serializer_class(self):
         if self.action == 'list':
             return LeadListSerializer
@@ -48,13 +60,14 @@ class LeadViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        lead = serializer.save()
+        user = self.request.user if self.request.user.is_authenticated else None
+        lead = serializer.save(created_by=user)
         # Log lead creation as an activity
         LeadActivity.objects.create(
             lead=lead,
             activity_type='note',
             description='Lead created in system.',
-            performed_by=self.request.user
+            performed_by=user
         )
 
     @action(detail=True, methods=['post'], url_path='update-status')
@@ -82,6 +95,9 @@ class LeadViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='log-activity')
     def log_activity(self, request, pk=None):
         """Log an interaction with the lead."""
+        if request.user.role == 'bde':
+            return Response({"detail": "BDEs cannot log outreach."}, status=status.HTTP_403_FORBIDDEN)
+        
         lead = self.get_object()
         print("lead Data===========", lead)
         serializer = LeadActivitySerializer(data=request.data)
@@ -102,6 +118,9 @@ class LeadViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def convert(self, request, pk=None):
         """Prepare lead for conversion to booking - status will be updated when booking is created."""
+        if request.user.role == 'bde':
+            return Response({"detail": "BDEs cannot convert leads."}, status=status.HTTP_403_FORBIDDEN)
+        
         lead = self.get_object()
         
         LeadActivity.objects.create(

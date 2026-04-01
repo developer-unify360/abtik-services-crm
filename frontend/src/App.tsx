@@ -22,6 +22,11 @@ import PayrollEmployeeFormPage from './payroll/PayrollEmployeeFormPage';
 import PayrollEmployeesPage from './payroll/PayrollEmployeesPage';
 import PayrollPayslipGeneratorPage from './payroll/PayrollPayslipGeneratorPage';
 import PayrollSalaryRulesPage from './payroll/PayrollSalaryRulesPage';
+import ITDeliveryPage from './delivery/ITDeliveryPage';
+import ITDeliveryDetailPage from './delivery/ITDeliveryDetailPage';
+import ClientDocumentsPage from './delivery/ClientDocumentsPage';
+import DocumentPortalsPage from './delivery/DocumentPortalsPage';
+import PublicDocumentUploadPage from './delivery/PublicDocumentUploadPage';
 
 function DefaultRouteRedirect() {
   const user = useAuthStore((state) => state.user);
@@ -74,6 +79,22 @@ function AdminRedirect() {
   return null;
 }
 
+function BookingFormRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const stored = JSON.parse(localStorage.getItem('user') || 'null');
+  const hasToken = !!(stored?.access || stored?.refresh || stored?.token || stored?.user?.access);
+
+  if (isAuthenticated || hasToken) {
+    return (
+      <Layout>
+        <BookingFormPage />
+      </Layout>
+    );
+  }
+
+  return <BookingFormPage />;
+}
+
 function App() {
   return (
     <>
@@ -83,14 +104,16 @@ function App() {
           <Route path="/admin" element={<AdminRedirect />} />
           <Route path="/admin/*" element={<AdminRedirect />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/bookings/new" element={<BookingFormPage />} />
+          <Route path="/bookings/new" element={<BookingFormRoute />} />
           <Route path="/leads/new" element={<PublicLeadFormPage />} />
+          <Route path="/documents/upload/:token" element={<PublicDocumentUploadPage />} />
 
-          {/* Admin-only private routes */}
+          {/* Private routes */}
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DefaultRouteRedirect />} />
 
+              {/* General Staff / BDE Access */}
               <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
                 <Route path="/dashboard" element={<AdminDashboard />} />
                 <Route path="/clients" element={<ClientListPage />} />
@@ -100,13 +123,19 @@ function App() {
                 <Route path="/payments/new" element={<PaymentFormPage />} />
                 <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
                 <Route path="/leads" element={<LeadListPage />} />
+                <Route path="/it-delivery" element={<ITDeliveryPage />} />
+                <Route path="/it-delivery/:requestId" element={<ITDeliveryDetailPage />} />
+                <Route path="/client-documents" element={<ClientDocumentsPage />} />
+                <Route path="/document-portals" element={<DocumentPortalsPage />} />
               </Route>
 
+              {/* Admin-only sections */}
               <Route element={<RouteAccessGuard allow={isAdminUser} />}>
                 <Route path="/attributes" element={<AttributesPage />} />
                 <Route path="/leads/assignment-rules" element={<LeadAssignmentRulesPage />} />
               </Route>
 
+              {/* Payroll sections */}
               <Route element={<RouteAccessGuard allow={hasPayrollAccess} />}>
                 <Route path="/payroll" element={<Navigate to="/payroll/company-setup" replace />} />
                 <Route path="/payroll/company-setup" element={<PayrollCompanySetupPage />} />
@@ -126,8 +155,8 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
-      <Toaster 
-        position="bottom-right" 
+      <Toaster
+        position="bottom-right"
         reverseOrder={false}
         toastOptions={{
           className: 'text-sm font-medium',

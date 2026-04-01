@@ -63,6 +63,23 @@ const AttributeService = {
     const response = await apiClient.delete(`/attributes/payment-types/${id}/`);
     return response.data;
   },
+
+  listBDEs: async (signal?: AbortSignal) => {
+    const response = await apiClient.get('/attributes/bdes/', { signal });
+    return response.data.results ?? response.data;
+  },
+  createBDE: async (data: Partial<Attribute>) => {
+    const response = await apiClient.post('/attributes/bdes/', data);
+    return response.data;
+  },
+  updateBDE: async (id: string, data: Partial<Attribute>) => {
+    const response = await apiClient.put(`/attributes/bdes/${id}/`, data);
+    return response.data;
+  },
+  deleteBDE: async (id: string) => {
+    const response = await apiClient.delete(`/attributes/bdes/${id}/`);
+    return response.data;
+  },
 };
 
 export default AttributeService;

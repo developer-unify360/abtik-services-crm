@@ -49,7 +49,7 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
   const [rowStateByKey, setRowStateByKey] = useState<Record<string, GeneratorRowState>>({});
   const [existingPayslipIdsByKey, setExistingPayslipIdsByKey] = useState<Record<string, string>>({});
   const [previewMap, setPreviewMap] = useState<Record<string, { preview?: PayslipPreview; error?: string }>>({});
-  const [pageError, setPageError] = useState('');
+
   const [pdfDownloadingKey, setPdfDownloadingKey] = useState('');
   const [batchDownloading, setBatchDownloading] = useState(false);
   const [deletingPayslipId, setDeletingPayslipId] = useState('');
@@ -99,7 +99,6 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      setPageError('');
       const [configurationResponse, employeeResponse, payslipResponse] = await Promise.all([
         PayrollService.getConfiguration(),
         PayrollService.listEmployees({ page_size: '200' }),
@@ -111,7 +110,7 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
       setPayslips(payslipResponse.results || payslipResponse);
     } catch (error) {
       console.error('Failed to load payslip generator:', error);
-      setPageError('Unable to load the payslip generator right now.');
+      toastError('Unable to load the payslip generator right now.');
     } finally {
       setLoading(false);
     }
@@ -266,7 +265,6 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
     setExpandedRowKeys(new Set());
     setExistingPayslipIdsByKey({});
     setPreviewMap({});
-    setPageError('');
   };
 
   const downloadRowPdf = async (rowKey: string) => {
@@ -291,9 +289,8 @@ const PayrollPayslipGeneratorPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      setPageError('');
 
-      const results = await Promise.all(
+      await Promise.all(
         generatedRows.map(async (row) => {
           const payload = buildRowPayload(row.key, row.employee.id, row.month);
           const rowLabel = `${row.employee.full_name} - ${formatMonthLabel(row.month)}`;

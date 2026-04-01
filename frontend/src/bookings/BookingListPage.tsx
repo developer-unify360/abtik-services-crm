@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, Filter, PencilLine } from 'lucide-react';
+import { Plus, Search, Filter, PencilLine } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { BookingService, type Booking } from './BookingService';
+import { useAuthStore } from '../auth/authStore';
+import { isBdeUser } from '../auth/roleUtils';
 
 const statusColors: Record<string, { bg: string; color: string; label: string }> = {
   pending: { bg: 'bg-yellow-100', color: 'text-yellow-700', label: 'Pending' },
@@ -17,6 +19,9 @@ const BookingListPage: React.FC = () => {
   const location = useLocation();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const user = useAuthStore((state) => state.user);
+  const isBde = isBdeUser(user);
+  const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -40,6 +45,10 @@ const BookingListPage: React.FC = () => {
         params.status = statusFilter;
       }
 
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
       const data = await BookingService.list(params);
       const resultItems = data.results || data;
       setBookings(resultItems);
@@ -54,7 +63,7 @@ const BookingListPage: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, searchTerm]);
 
   useEffect(() => {
     if (location.state?.toast) {
@@ -78,50 +87,50 @@ const BookingListPage: React.FC = () => {
 
   return (
     <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
-      <div className="shrink-0 w-full">
-        <div className="min-w-0">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-700">Admin View</p>
-          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
-            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Bookings</h1>
-            <a
-              href="/bookings/new"
-              target="_blank"
-              rel="noreferrer"
-              className="page-header-action bg-blue-700 hover:bg-blue-800"
-            >
-              <ExternalLink size={12} />
-              Open Form
-            </a>
-          </div>
-          <p className="mt-1 text-xs text-slate-600">
-            All bookings submitted through the BDE form. You can view and edit any booking.
-          </p>
-        </div>
-      </div>
-
       <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
-            <select
-              className="input-field py-1.5 text-sm w-32"
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <Filter size={14} className="text-slate-400" />
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setPage(0);
+                }}
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
           </div>
-          <span className="text-xs text-slate-500">
-            {totalCount === 0 ? '0 records' : `${totalCount} total`}
-          </span>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search bookings..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={searchTerm}
+                onChange={e => {
+                  setSearchTerm(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </div>
+            <button
+              onClick={() => navigate('/bookings/new')}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <Plus size={14} />
+              New Booking
+            </button>
+          </div>
         </div>
       </div>
 
@@ -136,7 +145,7 @@ const BookingListPage: React.FC = () => {
                 <th className="px-3 py-2 text-left whitespace-nowrap">Booking Date</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Status</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
-                <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>
+                {!isBde && <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>}
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -161,15 +170,17 @@ const BookingListPage: React.FC = () => {
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(booking.booking_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
                     <td className="px-3 py-2">{getStatusChip(booking.status, booking.status_display)}</td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(booking.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        onClick={() => navigate(`/bookings/${booking.id}/edit`)}
-                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                      >
-                        <PencilLine size={12} />
-                        Edit
-                      </button>
-                    </td>
+                    {!isBde && (
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          onClick={() => navigate(`/bookings/${booking.id}/edit`)}
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        >
+                          <PencilLine size={12} />
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

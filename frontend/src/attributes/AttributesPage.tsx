@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Building2, UserPlus2, CreditCard, Wrench } from 'lucide-react';
+import { Building2, UserPlus2, CreditCard, Wrench } from 'lucide-react';
 import AttributeTable from './AttributeTable';
 import BanksPage from '../bookings/BanksPage';
 import ServiceManagement from '../services/pages/ServiceManagement';
@@ -42,20 +42,6 @@ const AttributesPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-20 -mt-20 blur-3xl -z-1" />
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-12 h-12 bg-indigo-600 rounded-2xl rotate-3 flex items-center justify-center text-white shadow-lg shadow-indigo-100 shrink-0">
-            <Layers size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">System Attributes</h1>
-            <p className="text-slate-500 text-sm mt-1">Manage core configuration and master data</p>
-          </div>
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="flex p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm w-fit overflow-x-auto max-w-full">
         {tabs.map((tab) => (

@@ -6,6 +6,7 @@ import AttributeService, { type Attribute } from '../attributes/AttributeService
 const ClientListPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
+  const [industryFilter, setIndustryFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -26,6 +27,7 @@ const ClientListPage: React.FC = () => {
     try {
       const params: Record<string, string> = {};
       if (search) params.search = search;
+      if (industryFilter) params.industry = industryFilter;
       params.page = String(page + 1);
       const data = await ClientService.list(params);
       setClients(data.results || data);
@@ -45,7 +47,7 @@ const ClientListPage: React.FC = () => {
   };
 
   useEffect(() => { fetchClients(); fetchIndustries(); }, []);
-  useEffect(() => { fetchClients(); }, [page, search]);
+  useEffect(() => { fetchClients(); }, [page, search, industryFilter]);
 
   const handleOpenCreate = () => {
     setEditingClient(null);
@@ -82,38 +84,42 @@ const ClientListPage: React.FC = () => {
 
   return (
     <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
-      <div className="shrink-0 w-full">
-        <div className="min-w-0">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-purple-700">Client Directory</p>
-          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
-            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Clients</h1>
-            <button onClick={handleOpenCreate} className="page-header-action bg-purple-600 hover:bg-purple-700">
-              <Plus size={12} />
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Industry</span>
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={industryFilter}
+                onChange={(e) => { setIndustryFilter(e.target.value); setPage(0); }}
+              >
+                <option value="">All Industries</option>
+                {industries.map((ind) => (
+                  <option key={ind.id} value={ind.id}>{ind.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search clients..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              />
+            </div>
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <Plus size={14} />
               New Client
             </button>
           </div>
-          <p className="mt-1 text-xs text-slate-600">
-            Manage your client relationships and contact information.
-          </p>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:w-56">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="input-field pl-8 py-1.5 text-sm"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            />
-          </div>
-          <span className="text-xs text-slate-500">
-            {totalCount === 0 ? '0 records' : `${totalCount} total`}
-          </span>
         </div>
       </div>
 

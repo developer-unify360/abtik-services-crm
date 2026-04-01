@@ -17,6 +17,8 @@ import { useAuthStore } from '../auth/authStore';
 import { downloadLeadInteractionHistoryPdf } from './leadHistoryPdf';
 import { toastSuccess } from '../services/toastNotify';
 
+import { isBdeUser } from '../auth/roleUtils';
+
 const PAGE_SIZE = 10;
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -29,6 +31,25 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; b
   'closed_lost': { label: 'Closed Lost', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
 };
 
+const statusAdvanceOrder = ['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation', 'closed_won'] as const;
+
+const getNextPipelineStatus = (currentStatus?: string) => {
+  if (!currentStatus) {
+    return 'contacted';
+  }
+
+  if (currentStatus === 'closed_lost') {
+    return 'closed_lost';
+  }
+
+  const currentIndex = statusAdvanceOrder.indexOf(currentStatus as (typeof statusAdvanceOrder)[number]);
+  if (currentIndex === -1) {
+    return currentStatus in statusConfig ? currentStatus : 'contacted';
+  }
+
+  return statusAdvanceOrder[Math.min(currentIndex + 1, statusAdvanceOrder.length - 1)];
+};
+
 const priorityConfig: Record<string, { label: string; color: string }> = {
   'low': { label: 'Low', color: 'text-slate-500' },
   'medium': { label: 'Medium', color: 'text-blue-600' },
@@ -39,6 +60,7 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
 const LeadListPage: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
+  const isBde = isBdeUser(currentUser);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -199,26 +221,6 @@ const LeadListPage: React.FC = () => {
 
   return (
     <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
-      {/* Page Header */}
-      <div className="shrink-0 w-full">
-        <div className="min-w-0">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-700">Sales Pipeline</p>
-          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
-            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Leads</h1>
-            <button
-              onClick={() => navigate('/leads/new')}
-              className="page-header-action bg-slate-900 hover:bg-slate-800"
-            >
-              <Plus size={12} /> New Lead
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-slate-600">
-            Nurture and convert your high-potential opportunities.
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs and Search */}
       <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
@@ -235,15 +237,24 @@ const LeadListPage: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="relative w-full md:w-56 shrink-0">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search leads..."
-              className="input-field pl-8 py-1.5 text-sm"
-              value={searchTerm}
-              onChange={e => handleSearchChange(e.target.value)}
-            />
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search leads..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={searchTerm}
+                onChange={e => handleSearchChange(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => navigate('/leads/new')}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <Plus size={14} />
+              New Lead
+            </button>
           </div>
         </div>
       </div>
@@ -376,37 +387,45 @@ const LeadListPage: React.FC = () => {
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-slate-900 border-l-4 border-indigo-600 pl-3">Lead Workflow</p>
                 <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setCallStatus('contacted'); setShowCallModal(true); }}
-                    className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
-                  >
-                    <div className="p-2 bg-indigo-100 rounded-xl"><Phone size={14} /></div>
-                    <span className="font-semibold">Log Outreach</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      LeadService.convert(selectedLead.id).then(() => {
-                        navigate('/bookings/new', {
-                          state: {
-                            prefill: {
-                              client_name: selectedLead.client_name,
-                              company_name: selectedLead.company_name,
-                              email: selectedLead.email,
-                              mobile: selectedLead.mobile,
-                              bde_name: selectedLead.bde_name,
-                              lead_source: selectedLead.source,
-                              services: selectedLead.service ? [selectedLead.service] : [],
-                              lead_id: selectedLead.id,
+                  {!isBde && (
+                    <button
+                      onClick={() => {
+                        setCallNotes('');
+                        setCallStatus(getNextPipelineStatus(selectedLead.status));
+                        setShowCallModal(true);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
+                    >
+                      <div className="p-2 bg-indigo-100 rounded-xl"><Phone size={14} /></div>
+                      <span className="font-semibold">Log Outreach</span>
+                    </button>
+                  )}
+                  {!isBde && (
+                    <button
+                      onClick={() => {
+                        LeadService.convert(selectedLead.id).then(() => {
+                          navigate('/bookings/new', {
+                            state: {
+                              prefill: {
+                                client_name: selectedLead.client_name,
+                                company_name: selectedLead.company_name,
+                                email: selectedLead.email,
+                                mobile: selectedLead.mobile,
+                                bde_name: selectedLead.bde_name,
+                                lead_source: selectedLead.source,
+                                services: selectedLead.service ? [selectedLead.service] : [],
+                                lead_id: selectedLead.id,
+                              }
                             }
-                          }
+                          });
                         });
-                      });
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
-                  >
-                    <div className="p-2 bg-emerald-100 rounded-xl"><ArrowUpRight size={14} /></div>
-                    <span className="font-semibold">Convert Lead</span>
-                  </button>
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-xs bg-white text-indigo-700 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-all"
+                    >
+                      <div className="p-2 bg-emerald-100 rounded-xl"><ArrowUpRight size={14} /></div>
+                      <span className="font-semibold">Convert Lead</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -456,16 +475,18 @@ const LeadListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="shrink-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
-              <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
-              <textarea
-                key={selectedLead.id}
-                className="w-full p-3 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[80px] shadow-inner"
-                placeholder="Strategic notes about this client's requirements..."
-                defaultValue={selectedLead.notes || ''}
-                onBlur={(e) => void handleNotesBlur(e.target.value)}
-              />
-            </div>
+            {!isBde && (
+              <div className="shrink-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_0_rgba(0,0,0,0.03)]">
+                <label className="text-xs font-medium text-slate-500 mb-2 block">Manager Intelligence / Notes</label>
+                <textarea
+                  key={selectedLead.id}
+                  className="w-full p-3 text-sm border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[80px] shadow-inner"
+                  placeholder="Strategic notes about this client's requirements..."
+                  defaultValue={selectedLead.notes || ''}
+                  onBlur={(e) => void handleNotesBlur(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </>
       )}

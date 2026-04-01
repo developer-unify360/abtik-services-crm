@@ -8,6 +8,7 @@ export interface User {
   role?: string;
   role_display?: string;
   status: boolean;
+  is_superuser?: boolean;
   created_at: string;
 }
 

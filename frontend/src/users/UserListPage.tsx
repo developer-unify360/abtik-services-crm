@@ -13,6 +13,7 @@ const UserListPage: React.FC = () => {
     { value: 'service_ops', label: 'Service Ops' },
   ];
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -30,6 +31,7 @@ const UserListPage: React.FC = () => {
     try {
       const params: Record<string, string> = { page: String(page + 1) };
       if (search) params.search = search;
+      if (roleFilter) params.role = roleFilter;
       const data = await UserService.list(params);
       setUsers(data.results || data);
       setTotalCount(data.count || (data.results || data).length);
@@ -41,7 +43,7 @@ const UserListPage: React.FC = () => {
 
   useEffect(() => { 
     fetchUsers(); 
-  }, [page, search]);
+  }, [page, search, roleFilter]);
 
   const handleOpenCreate = () => {
     setEditingUser(null);
@@ -99,109 +101,125 @@ const UserListPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden">
-      {/* Header */}
-      <div className="mb-6 flex min-w-0 items-start justify-between gap-3">
-        <h1 className="min-w-0 text-2xl font-bold text-slate-800">Users</h1>
-        <button onClick={handleOpenCreate} className="page-header-action bg-indigo-600 hover:bg-indigo-700">
-          <Plus size={12} />
-          Add User
-        </button>
-      </div>
-
-      {/* Toolbar */}
-      <div className="card mb-6 min-w-0">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search users..."
-            className="input-field pl-10"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="table-container flex min-w-0 flex-col overflow-hidden">
-        <div className="table-scroll min-w-0 overflow-x-auto">
-        <table className="w-full min-w-[920px]">
-          <thead>
-            <tr className="table-header">
-              <th className="text-left px-6 py-3 font-semibold">Name</th>
-              <th className="text-left px-6 py-3 font-semibold">Email</th>
-              <th className="text-left px-6 py-3 font-semibold">Phone</th>
-              <th className="text-left px-6 py-3 font-semibold">Role</th>
-              <th className="text-left px-6 py-3 font-semibold">Status</th>
-              <th className="text-left px-6 py-3 font-semibold">Created</th>
-              <th className="text-right px-6 py-3 font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="table-row">
-                <td className="px-6 py-4 font-medium text-slate-800">{user.name || '—'}</td>
-                <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 text-gray-600">{user.phone || '—'}</td>
-                <td className="px-6 py-4">
-                  <span className="badge badge-info">{user.role_display || 'No Role'}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`badge ${user.status ? 'badge-success' : 'badge-error'}`}>
-                    {user.status ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-gray-600">{new Date(user.created_at).toLocaleDateString()}</td>
-                <td className="px-6 py-4 text-right">
-                  <button 
-                    onClick={() => handleOpenEdit(user)}
-                    className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
-                  >
-                    <Edit size={18} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(user)}
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block ml-1"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                  No users found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-        
-        {/* Pagination */}
-        <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm text-gray-500">
-            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
-          </span>
-          <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Role</span>
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={roleFilter}
+                onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
+              >
+                <option value="">All Roles</option>
+                {ROLE_CHOICES.map((rc) => (
+                  <option key={rc.value} value={rc.value}>{rc.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search users..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              />
+            </div>
             <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleOpenCreate}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
             >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
-              disabled={(page + 1) * rowsPerPage >= totalCount}
-              className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
+              <Plus size={14} />
+              New User
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="flex min-w-0 flex-1 min-h-0 w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="table-scroll min-w-0 flex-1 min-h-0 overflow-auto">
+          <table className="w-full min-w-[920px]">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="text-xs font-semibold text-slate-600">
+                <th className="px-3 py-2 text-left whitespace-nowrap">Name</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Email</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Phone</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Role</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Status</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
+                <th className="px-3 py-2 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {users.map((user) => (
+                <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{user.name || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{user.email}</td>
+                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{user.phone || '—'}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className="badge badge-info">{user.role_display || 'No Role'}</span>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className={`badge ${user.status ? 'badge-success' : 'badge-error'}`}>
+                      {user.status ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button 
+                      onClick={() => handleOpenEdit(user)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(user)}
+                      className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block ml-1"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-12 text-center text-slate-500">
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {totalCount > rowsPerPage && (
+          <div className="flex min-w-0 flex-col gap-2 border-t border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-slate-500">
+              Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => (page + 1) * rowsPerPage < totalCount ? p + 1 : p)}
+                disabled={(page + 1) * rowsPerPage >= totalCount}
+                className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create / Edit Modal */}

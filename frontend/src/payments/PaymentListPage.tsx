@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowUpRight, CreditCard, PencilLine, Search } from 'lucide-react';
+import { ArrowUpRight, Plus, PencilLine, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { PaymentService, type Payment } from './PaymentService';
@@ -87,56 +87,47 @@ const PaymentListPage: React.FC = () => {
 
   return (
     <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
-      <div className="shrink-0 w-full">
-        <div className="min-w-0">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-700">Finance View</p>
-          <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
-            <h1 className="min-w-0 text-2xl font-bold text-slate-900">Payments</h1>
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Source</span>
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={sourceFilter}
+                onChange={(event) => {
+                  setSourceFilter(event.target.value);
+                  setPage(0);
+                }}
+              >
+                <option value="">All Sources</option>
+                <option value="booking">Booking</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search payments..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </div>
             <button
               onClick={() => navigate('/payments/new')}
-              className="page-header-action bg-emerald-600 hover:bg-emerald-700"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
             >
-              <CreditCard size={12} />
+              <Plus size={14} />
               New Payment
             </button>
           </div>
-          <p className="mt-1 text-xs text-slate-600">
-            Booking-linked payments recorded automatically. Manual payments can be added here.
-          </p>
-        </div>
-      </div>
-
-      <div className="table-scroll shrink-0 min-w-0 overflow-x-auto rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex gap-2 items-center min-w-[600px]">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative w-56 shrink-0">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="input-field pl-8 py-1.5 text-sm w-56 shrink-0"
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(0);
-                }}
-                placeholder="Search..."
-              />
-            </div>
-            <select
-              className="input-field py-1.5 text-sm w-28 shrink-0"
-              value={sourceFilter}
-              onChange={(event) => {
-                setSourceFilter(event.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="">All</option>
-              <option value="booking">Booking</option>
-              <option value="manual">Manual</option>
-            </select>
-          </div>
-          <span className="text-xs text-slate-500">
-            {totalCount === 0 ? '0 records' : `${totalCount} total`}
-          </span>
         </div>
       </div>
 

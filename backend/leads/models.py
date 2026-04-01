@@ -52,7 +52,15 @@ class Lead(BaseModel):
         related_name='leads'
     )
     
-    bde_name = models.CharField(max_length=255, null=True, blank=True)
+    bde_name = models.CharField(max_length=255, null=True, blank=True, help_text="Deprecated: use created_by for system users")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_leads',
+        help_text="The BDE or Admin who recorded this lead"
+    )
     source = models.ForeignKey(
         'attributes.LeadSource',
         on_delete=models.SET_NULL,

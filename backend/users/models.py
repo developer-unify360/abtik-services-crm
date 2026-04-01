@@ -11,6 +11,7 @@ class User(AbstractUser, BaseModel):
         ('finance', 'Finance'),
         ('hr', 'HR'),
         ('service_ops', 'Service Ops'),
+        ('bde', 'Business Development Executive'),
     ]
 
     name = models.CharField(max_length=255, null=True, blank=True)
@@ -21,7 +22,7 @@ class User(AbstractUser, BaseModel):
         choices=ROLE_CHOICES,
         null=True,
         blank=True,
-        help_text="System role for access control. BDEs use public forms and do not have system roles.",
+        help_text="System role for access control.",
     )
 
     # Email as username

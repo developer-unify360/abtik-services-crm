@@ -97,37 +97,55 @@ const BanksPage: React.FC = () => {
     }
   };
 
-  const filteredBanks = (banks || []).filter(bank => 
-    (bank.bank_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (bank.account_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (bank.branch_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const [statusFilter, setStatusFilter] = useState('active');
+
+  const filteredBanks = (banks || []).filter(bank => {
+    const matchesSearch = (bank.bank_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (bank.account_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (bank.branch_name || '').toLowerCase().includes(search.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' ? true : statusFilter === 'active' ? bank.is_active : !bank.is_active;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
-    <div className="space-y-6 px-1 py-1">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Bank Accounts</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage bank accounts for booking transactions</p>
-        </div>
-        <button onClick={handleOpenCreate} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm active:scale-95">
-          <Plus size={18} />
-          Add Bank
-        </button>
-      </div>
-
-      {/* Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search banks by name, account number or branch..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    <div className="flex min-w-0 flex-col h-full min-h-0 space-y-3 overflow-x-hidden">
+      <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</span>
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-64 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search banks..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <Plus size={14} />
+              New Bank
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import apiClient from '../api/apiClient';
+import { toBrowserAssetUrl } from '../api/assetUrl';
 import type { ClientCreateData } from '../clients/ClientService';
 
 export interface Booking {
@@ -80,6 +81,11 @@ const toMultipartPayload = (data: BookingFullFormData) => {
   return formData;
 };
 
+const normalizeBooking = <T extends Booking>(booking: T): T => ({
+  ...booking,
+  attachment: booking.attachment ? toBrowserAssetUrl(booking.attachment) : booking.attachment,
+});
+
 export const BookingService = {
   list: async (params?: Record<string, string>) => {
     const response = await apiClient.get('/bookings/', { params });
@@ -88,7 +94,7 @@ export const BookingService = {
 
   get: async (id: string) => {
     const response = await apiClient.get(`/bookings/${id}/`);
-    return response.data.data || response.data;
+    return normalizeBooking(response.data.data || response.data);
   },
 
   create: async (data: BookingCreateData) => {

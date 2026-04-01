@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PencilLine, Plus, RefreshCcw, Trash2, Users } from 'lucide-react';
+import { PencilLine, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { PayrollService, type PayrollConfiguration, type PayrollEmployee } from './PayrollService';
@@ -9,6 +9,8 @@ const PayrollEmployeesPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<PayrollEmployee[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [configuration, setConfiguration] = useState<PayrollConfiguration | null>(null);
   const [pageError, setPageError] = useState('');
 
@@ -16,9 +18,14 @@ const PayrollEmployeesPage: React.FC = () => {
     try {
       setLoading(true);
       setPageError('');
+      const params: Record<string, string> = { page_size: '200' };
+      if (search) params.search = search;
+      if (statusFilter) params.is_active = statusFilter === 'active' ? 'true' : 'false';
+      if (statusFilter === 'all') delete params.is_active;
+
       const [configurationResponse, employeeResponse] = await Promise.all([
         PayrollService.getConfiguration(),
-        PayrollService.listEmployees({ page_size: '200' }),
+        PayrollService.listEmployees(params),
       ]);
 
       setConfiguration(configurationResponse);
@@ -33,7 +40,7 @@ const PayrollEmployeesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [search, statusFilter]);
 
   const deleteEmployee = async (employee: PayrollEmployee) => {
     if (!window.confirm(`Delete ${employee.full_name}?`)) {
@@ -52,28 +59,47 @@ const PayrollEmployeesPage: React.FC = () => {
   return (
     <PayrollWorkspace
       title="Employees"
-      actions={(
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={loadData}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            <RefreshCcw size={14} />
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/payroll/employees/new')}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            <Plus size={14} />
-            Add Employee
-          </button>
-        </div>
-      )}
+      actions={null}
     >
       {pageError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div> : null}
+
+      <div className="mb-3 shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</span>
+              <select
+                className="bg-transparent py-1.5 text-xs font-medium text-slate-600 outline-none transition-all hover:text-slate-900"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-56 shrink-0">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search employees..."
+                className="input-field pl-8 py-1.5 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => navigate('/payroll/employees/new')}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <Plus size={14} />
+              New Employee
+            </button>
+          </div>
+        </div>
+      </div>
 
       <Panel
         title="Employee List"
