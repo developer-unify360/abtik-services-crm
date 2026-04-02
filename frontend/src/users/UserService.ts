@@ -26,8 +26,13 @@ export const UserService = {
     return response.data;
   },
 
-  publicList: async () => {
-    const response = await apiClient.get('/users/public/');
+  publicList: async (params?: Record<string, string>) => {
+    const response = await apiClient.get('/users/public/', { params });
+    return response.data;
+  },
+
+  salesManagersList: async () => {
+    const response = await apiClient.get('/users/public/', { params: { role: 'sales_manager' } });
     return response.data;
   },
 

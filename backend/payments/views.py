@@ -14,6 +14,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return PaymentService.list_payments(filters={'id__in': []}) # Return empty
+
+        # BDE cannot see payments module
+        if user.role == 'bde':
+             return PaymentService.list_payments(filters={'id__in': []}) # Return empty
+
         filters = {
             'source': self.request.query_params.get('source'),
             'client_id': self.request.query_params.get('client_id'),

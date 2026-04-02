@@ -19,7 +19,10 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def public(self, request):
         """Public list of users for dropdowns."""
-        users = User.objects.filter(is_active=True)
+        role = request.query_params.get('role', 'sales_manager')
+        users = User.objects.filter(is_active=True, status=True)
+        if role:
+            users = users.filter(role=role)
         serializer = UserPublicSerializer(users, many=True)
         return Response(serializer.data)
 

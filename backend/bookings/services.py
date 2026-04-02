@@ -25,23 +25,31 @@ class BookingService:
 
     @staticmethod
     def _resolve_payment_type(data):
-        payment_type_id = data.get('payment_type')
-        if payment_type_id:
-            try:
-                return PaymentType.objects.get(id=payment_type_id)
-            except PaymentType.DoesNotExist:
-                return None
-        return None
+        payment_type_ref = data.get('payment_type')
+        if not payment_type_ref:
+            return None
+
+        if isinstance(payment_type_ref, PaymentType):
+            return payment_type_ref
+
+        try:
+            return PaymentType.objects.get(id=payment_type_ref)
+        except (PaymentType.DoesNotExist, ValidationError, ValueError, TypeError):
+            return None
 
     @staticmethod
     def _resolve_bank(data):
-        bank_id = data.get('bank')
-        if bank_id:
-            try:
-                return Bank.objects.get(id=bank_id)
-            except Bank.DoesNotExist:
-                return None
-        return None
+        bank_ref = data.get('bank')
+        if not bank_ref:
+            return None
+
+        if isinstance(bank_ref, Bank):
+            return bank_ref
+
+        try:
+            return Bank.objects.get(id=bank_ref)
+        except (Bank.DoesNotExist, ValidationError, ValueError, TypeError):
+            return None
 
     @staticmethod
     def _resolve_remaining_amount(data, booking=None):
@@ -99,13 +107,15 @@ class BookingService:
             bde_name=bde_name,
             industry=client.industry,
             service=service,
-            status='closed_won'
+            status='closed_won',
+            booking=booking
         )
         
-        lead_id = data.get('lead_id')
+        lead_id = data.get('lead_id') or data.get('lead')
         if lead_id:
             try:
                 lead = Lead.objects.get(id=lead_id)
+                lead.converted_booking = booking
                 if lead.status != 'closed_won':
                     old_status = lead.get_status_display()
                     lead.status = 'closed_won'
@@ -116,6 +126,8 @@ class BookingService:
                         description=f'Status changed from "{old_status}" to "Closed Won" (booking created)',
                         performed_by=user
                     )
+                else:
+                    lead.save()
             except Lead.DoesNotExist:
                 pass
 
@@ -187,7 +199,8 @@ class BookingService:
             bde_name=booking.bde_name,
             industry=booking.client.industry,
             service=service,
-            status='closed_won'
+            status='closed_won',
+            booking=booking
         )
 
         AuditLog.objects.create(

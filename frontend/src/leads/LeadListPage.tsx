@@ -224,7 +224,14 @@ const LeadListPage: React.FC = () => {
       <div className="shrink-0 min-w-0 rounded-lg border border-slate-200 bg-white p-3">
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="table-scroll flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
-            {(['all', 'unassigned', 'my', 'overdue'] as const).map(tab => (
+            {(['all', 'unassigned', 'my', 'overdue'] as const)
+              .filter(tab => {
+                const isSalesManagerRole = currentUser?.role === 'sales_manager';
+                // Sales Managers (BDMs) only see assigned leads, so 'unassigned' is useless
+                if (isSalesManagerRole && tab === 'unassigned') return false;
+                return true;
+              })
+              .map(tab => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}

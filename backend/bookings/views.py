@@ -43,6 +43,10 @@ class BookingViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Booking.objects.none()
+
         filters = {
             'client_id': self.request.query_params.get('client_id'),
             'status': self.request.query_params.get('status'),
@@ -50,7 +54,16 @@ class BookingViewSet(viewsets.ModelViewSet):
             'date_to': self.request.query_params.get('date_to'),
         }
         filters = {k: v for k, v in filters.items() if v}
-        return BookingService.list_bookings(filters=filters or None)
+        queryset = BookingService.list_bookings(filters=filters or None)
+        
+        if user.role == 'bde':
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(source_lead__created_by=user) | 
+                Q(source_lead__assigned_to=user)
+            ).distinct()
+            
+        return queryset
 
     def get_serializer_class(self):
         if self.action == 'list':

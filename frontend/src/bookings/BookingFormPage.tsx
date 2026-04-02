@@ -392,15 +392,9 @@ const BookingFormPage: React.FC = () => {
         toastSuccess('Booking updated successfully.');
         navigate('/bookings');
       } else {
-        if (isAuthenticated) {
-          await BookingService.createFull(payload);
-          toastSuccess('Booking created successfully.');
-          navigate('/bookings');
-        } else {
-          await BookingService.createPublicFull(payload);
-          setSubmitSuccess(true);
-          toastSuccess('Booking submitted successfully.');
-        }
+      await BookingService.createFull(payload);
+      toastSuccess('Booking created successfully.');
+      navigate('/bookings');
       }
     } catch (error: any) {
       console.error('Booking form submission failed:', error);
@@ -510,6 +504,7 @@ const BookingFormPage: React.FC = () => {
                           value={formState.payment_type}
                           onChange={(event) => handleFieldChange('payment_type', event.target.value)}
                         >
+                          <option value="">Select</option>
                           {paymentTypes.map((pt) => (
                             <option key={pt.id} value={pt.id}>
                               {pt.name}

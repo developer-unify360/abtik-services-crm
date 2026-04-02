@@ -1,77 +1,103 @@
-import React, { useEffect, useState } from 'react';
-import AttributeService, { type Attribute } from '../attributes/AttributeService';
-import { ServiceApi, type Service } from '../services/api/ServiceApi';
+import React, { useState, useEffect } from 'react';
 import {
-  UserPlus,
-  CheckCircle,
   User,
   Building2,
-  Phone,
   Mail,
-  Send,
+  Phone,
   Search,
+  UserPlus,
+  CheckCircle,
   Briefcase,
   BarChart3,
   Flag,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from 'lucide-react';
 
 import apiClient from '../api/apiClient';
+import { useAuthStore } from '../auth/authStore';
+import { useNavigate } from 'react-router-dom';
 import { UserService, type User as SystemUser } from '../users/UserService';
 
 interface LeadFormState {
-  bde_name: string;
   client_name: string;
   company_name: string;
   email: string;
   mobile: string;
-  industry: string;
-  assigned_to: string;
+  bde_name: string;
   source: string;
-  service: string;
-  notes: string;
   status: string;
   priority: string;
-  lead_score: string;
+  lead_score: number;
+  assigned_to: string;
+  service: string;
+  notes: string;
+  industry: string;
   next_follow_up_date: string;
 }
 
+interface Attribute {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+}
+
 const emptyFormState = (): LeadFormState => ({
-  bde_name: '',
   client_name: '',
   company_name: '',
   email: '',
   mobile: '',
-  industry: '',
-  assigned_to: '',
+  bde_name: '',
   source: '',
-  service: '',
-  notes: '',
   status: 'new',
   priority: 'medium',
-  lead_score: '0',
+  lead_score: 0,
+  assigned_to: '',
+  service: '',
+  notes: '',
+  industry: '',
   next_follow_up_date: '',
 });
 
 const Field = ({
   label,
   required,
+  error,
   children,
 }: {
   label: string;
   required?: boolean;
+  error?: string | string[];
   children: React.ReactNode;
-}) => (
-  <label className="block">
-    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-      {label} {required ? <span className="text-red-500">*</span> : null}
-    </div>
-    {children}
-  </label>
-);
+}) => {
+  const errorText = Array.isArray(error) ? error[0] : error;
+  return (
+    <label className="block">
+      <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        {label} {required ? <span className="text-red-500">*</span> : null}
+      </div>
+      {children}
+      {errorText && (
+        <div className="mt-1 text-[10px] font-medium text-red-600 animate-in fade-in slide-in-from-top-1">
+          {errorText}
+        </div>
+      )}
+    </label>
+  );
+};
 
 const PublicLeadFormPage: React.FC = () => {
-  const [formState, setFormState] = useState<LeadFormState>(emptyFormState);
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const [formState, setFormState] = useState<LeadFormState>(() => ({
+    ...emptyFormState(),
+    bde_name: user?.name || '',
+  }));
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [industries, setIndustries] = useState<Attribute[]>([]);
   const [leadSources, setLeadSources] = useState<Attribute[]>([]);
@@ -80,12 +106,8 @@ const PublicLeadFormPage: React.FC = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [success, setSuccess] = useState(false);
-  const [bdes, setBdes] = useState<Attribute[]>([]);
-  const [bdeSearchTerm, setBdeSearchTerm] = useState('');
-  const [showBdeDropdown, setShowBdeDropdown] = useState(false);
-  const bdeDropdownTriggerRef = React.useRef<HTMLDivElement>(null);
-  const [bdeDropdownPos, setBdeDropdownPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
   const dropdownTriggerRef = React.useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -100,60 +122,46 @@ const PublicLeadFormPage: React.FC = () => {
     setShowUserDropdown(v => !v);
   };
 
-  const openBdeDropdown = () => {
-    if (bdeDropdownTriggerRef.current) {
-      const rect = bdeDropdownTriggerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const dropdownHeight = 180;
-      const top = spaceBelow >= dropdownHeight ? rect.bottom + window.scrollY : rect.top + window.scrollY - dropdownHeight;
-      setBdeDropdownPos({ top, left: rect.left + window.scrollX, width: rect.width });
-    }
-    setShowBdeDropdown(v => !v);
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [usersData, industriesData, sourcesData, servicesData] = await Promise.all([
-          UserService.publicList(),
-          AttributeService.listIndustries(),
-          AttributeService.listLeadSources(),
-          ServiceApi.list(),
+          UserService.salesManagersList(),
+          apiClient.get('/attributes/industries/').then(res => res.data),
+          apiClient.get('/attributes/lead-sources/').then(res => res.data),
+          apiClient.get('/services/').then(res => res.data)
         ]);
-        
-        const allUsers = usersData.results || usersData;
-        const activeUsers = allUsers.filter((u: any) => u.is_active !== false);
-        
-        setUsers(activeUsers);
-        setIndustries(industriesData.filter((ind: Attribute) => ind.is_active));
-        setLeadSources(sourcesData.filter((src: Attribute) => src.is_active));
-        setServices(servicesData);
-        
-        // BDEs are now just users with the 'bde' role
-        const filteredBdes = activeUsers.filter((u: any) => u.role === 'bde');
-        setBdes(filteredBdes.map((u: any) => ({
-          id: u.id,
-          name: u.name || u.email,
-          is_active: true
-        })));
+
+        const salesManagers = usersData.results || usersData || [];
+        setUsers(Array.isArray(salesManagers) ? salesManagers : []);
+
+        const industries = industriesData.results || industriesData || [];
+        setIndustries(Array.isArray(industries) ? industries.filter((ind: Attribute) => ind.is_active) : []);
+
+        const sources = sourcesData.results || sourcesData || [];
+        setLeadSources(Array.isArray(sources) ? sources.filter((src: Attribute) => src.is_active) : []);
+
+        const servicesRaw = servicesData.data || servicesData.results || servicesData || [];
+        setServices(Array.isArray(servicesRaw) ? servicesRaw : []);
       } catch (err) {
         console.error('Failed to load form data:', err);
       }
     };
+
     fetchData();
   }, []);
 
   const handleFieldChange = (field: keyof LeadFormState, value: string) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
+    setFormState(prev => ({
+      ...prev,
+      [field]: field === 'lead_score' ? parseInt(value) || 0 : value
+    }));
   };
 
   const filteredUsers = (users || []).filter(user =>
     (user?.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
     (user?.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-  );
-
-  const filteredBdes = (bdes || []).filter(bde =>
-    (bde?.name || '').toLowerCase().includes(bdeSearchTerm.toLowerCase())
   );
 
   const selectedUser = (users || []).find(u => {
@@ -165,13 +173,25 @@ const PublicLeadFormPage: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
+    setFieldErrors({});
+
+    const payload = {
+      ...formState,
+      next_follow_up_date: formState.next_follow_up_date || null,
+    };
 
     try {
-      await apiClient.post('/leads/public/', formState);
+      await apiClient.post('/leads/', payload);
       setSuccess(true);
     } catch (err: any) {
       console.error('Lead submission failed:', err);
-      setError(err.response?.data?.detail || 'Failed to submit lead. Please check all fields.');
+      const resData = err.response?.data;
+      if (resData && typeof resData === 'object' && !resData.detail) {
+        setFieldErrors(resData);
+        setError('Please correct the highlighted errors.');
+      } else {
+        setError(resData?.detail || 'Failed to submit lead. Please check all fields.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -191,7 +211,13 @@ const PublicLeadFormPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => { setSuccess(false); setFormState(emptyFormState()); }}
+            onClick={() => {
+              setSuccess(false);
+              setFormState({
+                ...emptyFormState(),
+                bde_name: user?.name || '',
+              });
+            }}
             className="w-full rounded-2xl bg-blue-700 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-800 transition-all hover:-translate-y-0.5"
           >
             Submit Another Lead
@@ -202,89 +228,45 @@ const PublicLeadFormPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-3 sm:p-4">
+    <div className="min-h-screen bg-slate-50 py-4 sm:py-8 px-2 sm:px-4 lg:px-8 font-sans selection:bg-blue-100 selection:text-blue-900">
       <div className="mx-auto max-w-4xl flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 pb-2">
+          <button
+            onClick={() => navigate('/leads')}
+            className="group flex h-10 w-10 items-center justify-center rounded-[16px] bg-white text-slate-600 shadow-sm border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
+            title="Back to Leads"
+          >
+            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+          </button>
           <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-600 text-white shadow-lg shadow-blue-200 shrink-0">
             <UserPlus size={20} />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Lead Generation Form</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Lead Generation</h1>
             <p className="text-xs text-slate-500 hidden sm:block">
               Fill in the potential client's details
             </p>
           </div>
         </div>
 
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 font-medium">
-            {error}
-          </div>
-        )}
-
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="mt-2">
           {/* Combined compact form layout */}
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-            {/* Agent & Source */}
-            <Field label="BDE Name" required>
+            {/* Required Fields Section */}
+            <Field label="BDE Name" required error={fieldErrors.bde_name}>
               <div className="relative">
-                <div
-                  ref={bdeDropdownTriggerRef}
-                  className="input-field flex items-center justify-between cursor-pointer py-1.5 text-sm min-h-[38px]"
-                  onClick={openBdeDropdown}
-                >
-                  <div className="flex items-center gap-2">
-                    <User size={14} className="text-slate-400" />
-                    <span className={formState.bde_name ? 'text-slate-900' : 'text-slate-400'}>
-                      {formState.bde_name || 'Select BDE'}
-                    </span>
-                  </div>
-                  <Search size={14} className="text-slate-400" />
-                </div>
-
-                {showBdeDropdown && bdeDropdownPos && (
-                  <div
-                    className="fixed z-[9999] rounded-lg border border-slate-200 bg-white shadow-xl animate-in fade-in zoom-in duration-200"
-                    style={{ top: bdeDropdownPos.top, left: bdeDropdownPos.left, width: Math.min(bdeDropdownPos.width, window.innerWidth - 16) }}
-                  >
-                    <div className="p-2 border-b border-slate-100">
-                      <input
-                        autoFocus
-                        className="w-full rounded-lg bg-slate-50 border-none px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500/20"
-                        placeholder="Search BDE..."
-                        value={bdeSearchTerm}
-                        onChange={(e) => setBdeSearchTerm(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="max-h-[140px] overflow-y-auto p-1">
-                      {filteredBdes.length > 0 ? (
-                        filteredBdes.map(bde => (
-                          <div
-                            key={bde.id}
-                            className={`flex flex-col px-3 py-2 rounded-lg cursor-pointer transition-colors ${formState.bde_name === bde.name ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
-                            onClick={() => {
-                              handleFieldChange('bde_name', bde.name);
-                              setShowBdeDropdown(false);
-                              setBdeDropdownPos(null);
-                              setBdeSearchTerm('');
-                            }}
-                          >
-                            <span className="font-bold text-xs">{bde.name}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-3 py-4 text-center text-slate-400 text-xs">
-                          No BDE found
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <User size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  disabled
+                  className="input-field pl-8 py-1.5 text-sm bg-slate-50 cursor-not-allowed border-dashed"
+                  value={formState.bde_name}
+                />
               </div>
             </Field>
-            <Field label="Lead Source" required>
+
+            <Field label="Lead Source" required error={fieldErrors.source}>
               <select
                 required
                 className="input-field py-1.5 text-sm"
@@ -297,7 +279,8 @@ const PublicLeadFormPage: React.FC = () => {
                 ))}
               </select>
             </Field>
-            <Field label="Assign To">
+
+            <Field label="Assign To" required error={fieldErrors.assigned_to}>
               <div className="relative">
                 <div
                   ref={dropdownTriggerRef}
@@ -356,45 +339,7 @@ const PublicLeadFormPage: React.FC = () => {
               </div>
             </Field>
 
-            {/* Client Details */}
-            <Field label="Client Name" required>
-              <div className="relative">
-                <User size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  required
-                  className="input-field pl-8 py-1.5 text-sm"
-                  placeholder="Client name"
-                  value={formState.client_name}
-                  onChange={(e) => handleFieldChange('client_name', e.target.value)}
-                />
-              </div>
-            </Field>
-            <Field label="Company Name" required>
-              <div className="relative">
-                <Building2 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  required
-                  className="input-field pl-8 py-1.5 text-sm"
-                  placeholder="Company"
-                  value={formState.company_name}
-                  onChange={(e) => handleFieldChange('company_name', e.target.value)}
-                />
-              </div>
-            </Field>
-            <Field label="Industry" required>
-              <select
-                required
-                className="input-field py-1.5 text-sm"
-                value={formState.industry}
-                onChange={(e) => handleFieldChange('industry', e.target.value)}
-              >
-                <option value="">Select</option>
-                {industries.map(i => (
-                  <option key={i.id} value={i.id}>{i.name}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Mobile" required>
+            <Field label="Client Mobile" required error={fieldErrors.mobile}>
               <div className="relative">
                 <Phone size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -406,11 +351,49 @@ const PublicLeadFormPage: React.FC = () => {
                 />
               </div>
             </Field>
-            <Field label="Email" required>
+
+            {/* Non-Required Fields Section */}
+            <Field label="Client Name" error={fieldErrors.client_name}>
+              <div className="relative">
+                <User size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Client name"
+                  value={formState.client_name}
+                  onChange={(e) => handleFieldChange('client_name', e.target.value)}
+                />
+              </div>
+            </Field>
+
+            <Field label="Company Name" error={fieldErrors.company_name}>
+              <div className="relative">
+                <Building2 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input-field pl-8 py-1.5 text-sm"
+                  placeholder="Company"
+                  value={formState.company_name}
+                  onChange={(e) => handleFieldChange('company_name', e.target.value)}
+                />
+              </div>
+            </Field>
+
+            <Field label="Industry" error={fieldErrors.industry}>
+              <select
+                className="input-field py-1.5 text-sm"
+                value={formState.industry}
+                onChange={(e) => handleFieldChange('industry', e.target.value)}
+              >
+                <option value="">Select</option>
+                {industries.map(i => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Email" error={fieldErrors.email}>
               <div className="relative">
                 <Mail size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  required
                   type="email"
                   className="input-field pl-8 py-1.5 text-sm"
                   placeholder="Email"
@@ -419,7 +402,8 @@ const PublicLeadFormPage: React.FC = () => {
                 />
               </div>
             </Field>
-            <Field label="Service Required">
+
+            <Field label="Service Required" error={fieldErrors.service}>
               <div className="relative">
                 <Briefcase size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
@@ -435,8 +419,7 @@ const PublicLeadFormPage: React.FC = () => {
               </div>
             </Field>
 
-            {/* Additional Fields - Status, Priority, Score, Follow-up */}
-            <Field label="Status">
+            <Field label="Status" error={fieldErrors.status}>
               <div className="relative">
                 <BarChart3 size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
@@ -454,7 +437,8 @@ const PublicLeadFormPage: React.FC = () => {
                 </select>
               </div>
             </Field>
-            <Field label="Priority">
+
+            <Field label="Priority" error={fieldErrors.priority}>
               <div className="relative">
                 <Flag size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
@@ -469,16 +453,20 @@ const PublicLeadFormPage: React.FC = () => {
                 </select>
               </div>
             </Field>
-            <Field label="Lead Score">
+
+            <Field label="Lead Score" error={fieldErrors.lead_score}>
               <input
                 type="number"
+                min="0"
+                max="10"
                 className="input-field py-1.5 text-sm"
                 placeholder="0"
                 value={formState.lead_score}
                 onChange={(e) => handleFieldChange('lead_score', e.target.value)}
               />
             </Field>
-            <Field label="Follow-up Date">
+
+            <Field label="Follow-up Date" error={fieldErrors.next_follow_up_date}>
               <div className="relative">
                 <Calendar size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -492,7 +480,7 @@ const PublicLeadFormPage: React.FC = () => {
 
             {/* Notes - spans full width */}
             <div className="col-span-full">
-              <Field label="Notes">
+              <Field label="Notes" error={fieldErrors.notes}>
                 <textarea
                   className="input-field min-h-[50px] py-1.5 text-sm pt-2"
                   placeholder="Additional notes..."
@@ -503,19 +491,32 @@ const PublicLeadFormPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+            {error && (
+              <div className="mr-auto text-sm text-red-600 font-medium flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse" />
+                {error}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/leads')}
+              className="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+              className="rounded-xl bg-blue-600 px-8 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
             >
               {submitting ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
                 <>
-                  <Send size={16} />
-                  <span>Submit Lead</span>
+                  <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Saving...
                 </>
+              ) : (
+                'Create Lead'
               )}
             </button>
           </div>

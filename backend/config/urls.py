@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/v1/leads/', include('leads.urls')),
     path('api/v1/attributes/', include('attributes.urls')),
     path('api/v1/users/', include('users.urls')),
+    path('api/v1/dashboard/', include('dashboard.urls')),
     path('api/v1/', include('services.urls')),
     path('api/external/leads/', external_lead_create, name='external-lead-create'),
 ]

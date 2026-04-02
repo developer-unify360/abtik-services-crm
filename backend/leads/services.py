@@ -5,7 +5,7 @@ from leads.models import Lead, LeadActivity
 class LeadService:
     @staticmethod
     @transaction.atomic
-    def ensure_lead_exists(client, user=None, source=None, bde_name=None, industry=None, service=None, status=None):
+    def ensure_lead_exists(client, user=None, source=None, bde_name=None, industry=None, service=None, status=None, booking=None):
         """
         Ensure a lead record exists for a client.
         If lead already exists, updates status if it was closed/lost (optional).
@@ -19,6 +19,7 @@ class LeadService:
             'source': source if source else None,
             'status': lead_status,
             'assigned_to': user if (user and not user.is_anonymous) else None,
+            'converted_booking': booking,
         }
         
         if client:
@@ -52,6 +53,10 @@ class LeadService:
             )
         else:
             update_fields = []
+            if booking and lead.converted_booking != booking:
+                lead.converted_booking = booking
+                update_fields.append('converted_booking')
+                
             if source and lead.source != source:
                 lead.source = source
                 update_fields.append('source')
@@ -82,14 +87,20 @@ class LeadService:
             if status and lead.status != status:
                 old_status = lead.get_status_display()
                 lead.status = status
-                lead.save()
-                LeadActivity.objects.create(
-                    lead=lead,
-                    activity_type='status_change',
-                    description=f'Status changed from "{old_status}" to "{lead.get_status_display()}" (booking created)',
-                    performed_by=user if (user and not user.is_anonymous) else None
-                )
-            elif update_fields:
+                # If status is updated, we must save the whole object or add to update_fields
+                if 'status' not in update_fields:
+                    update_fields.append('status')
+            
+            if update_fields:
                 lead.save(update_fields=update_fields)
+                
+                # Log status change if status was in update_fields
+                if 'status' in update_fields and status:
+                    LeadActivity.objects.create(
+                        lead=lead,
+                        activity_type='status_change',
+                        description=f'Status changed from "{old_status}" to "{lead.get_status_display()}" (booking created)',
+                        performed_by=user if (user and not user.is_anonymous) else None
+                    )
             
         return lead

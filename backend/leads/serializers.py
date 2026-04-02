@@ -62,34 +62,53 @@ class LeadSerializer(serializers.ModelSerializer):
 class LeadCreateSerializer(serializers.Serializer):
     """Serializer for creating both Client and Lead from the public form."""
     bde_name = serializers.CharField(max_length=255)
-    client_name = serializers.CharField(max_length=255)
-    company_name = serializers.CharField(max_length=255)
-    email = serializers.EmailField()
+    client_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    company_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_null=True)
     mobile = serializers.CharField(max_length=20)
     industry = serializers.PrimaryKeyRelatedField(queryset=Industry.objects.all(), required=False, allow_null=True)
-    assigned_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
-    source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
+    assigned_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all())
     service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
     status = serializers.ChoiceField(choices=Lead.LEAD_STATUS_CHOICES, required=False, default='new')
     priority = serializers.ChoiceField(choices=Lead.PRIORITY_CHOICES, required=False, default='medium')
     lead_score = serializers.IntegerField(required=False, default=0)
-    next_follow_up_date = serializers.DateField(required=False, allow_null=True)
+    next_follow_up_date = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d'])
+
+    def validate_mobile(self, value):
+        # Normalize: strip all non-digit characters
+        digits = ''.join(filter(str.isdigit, str(value)))
+        
+        # Handle cases like 0 or +91 prefixes
+        if digits.startswith('91') and len(digits) == 12:
+            digits = digits[2:]
+        elif digits.startswith('0') and len(digits) == 11:
+            digits = digits[1:]
+            
+        # Ensure it is exactly 10 digits now
+        if len(digits) != 10:
+            raise serializers.ValidationError("Mobile number must be exactly 10 digits without country code or leading zero.")
+            
+        return digits
 
     def validate(self, data):
         email = data.get('email')
-        mobile = data.get('mobile')
+        mobile = data.get('mobile') # This is already normalized by validate_mobile now
         
-        # Check for existing leads with same email/mobile that aren't closed/converted
-        existing_leads = Lead.objects.filter(
-            models.Q(email=email) | models.Q(mobile=mobile),
+        # Check for existing leads with same mobile number
+        if Lead.objects.filter(
+            mobile=mobile,
             status__in=['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation']
-        )
-        
-        if existing_leads.exists():
-            raise serializers.ValidationError(
-                "A lead with this email or mobile number already exists in the pipeline."
-            )
+        ).exists():
+            raise serializers.ValidationError({"mobile": "A lead with this mobile number already exists in your active pipeline."})
+
+        # Check for existing leads with same email
+        if email and Lead.objects.filter(
+            email__iexact=email.strip(),
+            status__in=['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation']
+        ).exists():
+            raise serializers.ValidationError({"email": "A lead with this email address already exists in your active pipeline."})
             
         return data
 

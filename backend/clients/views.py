@@ -12,6 +12,14 @@ class ClientViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Client.objects.none()
+
+        # BDE cannot see client records list
+        if user.role == 'bde':
+            return Client.objects.none()
+
         filters = {
             'company': self.request.query_params.get('company'),
             'industry': self.request.query_params.get('industry'),

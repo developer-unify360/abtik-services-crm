@@ -108,8 +108,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     .map((item) => {
       if (item.children) {
         const children = item.children.filter((child) => {
-          if ((isBde || isSalesManagerUser) && item.label === 'Sales') {
+          // BDE sees restricted Sales items
+          if (isBde && item.label === 'Sales') {
             return child.label === 'Lead Inbox' || child.label === 'Bookings';
+          }
+          // Sales Manager sees ALL Sales items
+          if (isSalesManagerUser && item.label === 'Sales') {
+            return true;
           }
           return !child.adminOnly || canAccessAdminNav;
         });

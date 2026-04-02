@@ -36,9 +36,13 @@ class LeadViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Lead.objects.none()
         
-        # BDEs only see leads they created
+        # BDEs only see leads they created or are assigned to
         if user.role == 'bde':
-            return queryset.filter(created_by=user)
+            from django.db.models import Q
+            return queryset.filter(Q(created_by=user) | Q(assigned_to=user)).distinct()
+        
+        if user.role == 'sales_manager':
+            return queryset.filter(assigned_to=user)
         
         return queryset
 

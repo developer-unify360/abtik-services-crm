@@ -79,21 +79,6 @@ function AdminRedirect() {
   return null;
 }
 
-function BookingFormRoute() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const stored = JSON.parse(localStorage.getItem('user') || 'null');
-  const hasToken = !!(stored?.access || stored?.refresh || stored?.token || stored?.user?.access);
-
-  if (isAuthenticated || hasToken) {
-    return (
-      <Layout>
-        <BookingFormPage />
-      </Layout>
-    );
-  }
-
-  return <BookingFormPage />;
-}
 
 function App() {
   return (
@@ -104,8 +89,6 @@ function App() {
           <Route path="/admin" element={<AdminRedirect />} />
           <Route path="/admin/*" element={<AdminRedirect />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/bookings/new" element={<BookingFormRoute />} />
-          <Route path="/leads/new" element={<PublicLeadFormPage />} />
           <Route path="/documents/upload/:token" element={<PublicDocumentUploadPage />} />
 
           {/* Private routes */}
@@ -120,11 +103,13 @@ function App() {
               <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
                 <Route path="/clients" element={<ClientListPage />} />
                 <Route path="/bookings" element={<BookingListPage />} />
+                <Route path="/bookings/new" element={<BookingFormPage />} />
                 <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
                 <Route path="/payments" element={<PaymentListPage />} />
                 <Route path="/payments/new" element={<PaymentFormPage />} />
                 <Route path="/payments/:paymentId/edit" element={<PaymentFormPage />} />
                 <Route path="/leads" element={<LeadListPage />} />
+                <Route path="/leads/new" element={<PublicLeadFormPage />} />
                 <Route path="/it-delivery" element={<ITDeliveryPage />} />
                 <Route path="/it-delivery/:requestId" element={<ITDeliveryDetailPage />} />
                 <Route path="/client-documents" element={<ClientDocumentsPage />} />
