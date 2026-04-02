@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import LoginPage from './auth/LoginPage';
 import PrivateRoute from './auth/PrivateRoute';
 import { useAuthStore } from './auth/authStore';
-import { getDefaultRouteForUser, hasPayrollAccess, isAdminUser, isHrUser } from './auth/roleUtils';
+import { getDefaultRouteForUser, hasPayrollAccess, isAdminUser, isHrUser, isBdeUser, isSalesManager } from './auth/roleUtils';
 import Layout from './components/Layout';
 import AdminDashboard from './dashboard/AdminDashboard';
 import ClientListPage from './clients/ClientListPage';
@@ -114,8 +114,10 @@ function App() {
               <Route path="/" element={<DefaultRouteRedirect />} />
 
               {/* General Staff / BDE Access */}
-              <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
+              <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user) && !isBdeUser(user) && !isSalesManager(user)} />}>
                 <Route path="/dashboard" element={<AdminDashboard />} />
+              </Route>
+              <Route element={<RouteAccessGuard allow={(user) => !isHrUser(user)} />}>
                 <Route path="/clients" element={<ClientListPage />} />
                 <Route path="/bookings" element={<BookingListPage />} />
                 <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />

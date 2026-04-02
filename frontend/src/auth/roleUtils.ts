@@ -10,7 +10,7 @@ export const getRoleName = (user: any | null | undefined): string => {
 
   switch (normalizedRole) {
     case 'sales_manager':
-      return 'Sales Manager';
+      return 'Business Development Manager';
     case 'booking_ops':
       return 'Booking Ops';
     case 'finance':
@@ -32,6 +32,8 @@ export const isBdeUser = (user: any | null | undefined): boolean => normalizeRol
 
 export const isHrUser = (user: any | null | undefined): boolean => normalizeRole(user?.role) === 'hr';
 
+export const isSalesManager = (user: any | null | undefined): boolean => normalizeRole(user?.role) === 'sales_manager';
+
 export const hasPayrollAccess = (user: any | null | undefined): boolean => {
   const normalizedUser = normalizeAuthUser(user);
   const normalizedRole = normalizedUser?.role;
@@ -43,7 +45,9 @@ export const hasPayrollAccess = (user: any | null | undefined): boolean => {
   );
 };
 
-export const getDefaultRouteForUser = (user?: any): string => (
-  isHrUser(user) ? '/payroll/company-setup' : '/dashboard'
-);
+export const getDefaultRouteForUser = (user?: any): string => {
+  if (isHrUser(user)) return '/payroll/company-setup';
+  if (isBdeUser(user) || isSalesManager(user)) return '/leads';
+  return '/dashboard';
+};
 

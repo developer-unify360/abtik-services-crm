@@ -6,11 +6,12 @@ const UserListPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const ROLE_CHOICES = [
     { value: 'admin', label: 'Admin' },
-    { value: 'sales_manager', label: 'Sales Manager' },
+    { value: 'sales_manager', label: 'Business Development Manager' },
     { value: 'booking_ops', label: 'Booking Ops' },
     { value: 'finance', label: 'Finance' },
     { value: 'hr', label: 'HR' },
     { value: 'service_ops', label: 'Service Ops' },
+    { value: 'bde', label: 'Business Development Executive' },
   ];
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');

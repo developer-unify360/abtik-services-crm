@@ -6,7 +6,7 @@ from core.models import BaseModel
 class User(AbstractUser, BaseModel):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
-        ('sales_manager', 'Sales Manager'),
+        ('sales_manager', 'Business Development Manager'),
         ('booking_ops', 'Booking Ops'),
         ('finance', 'Finance'),
         ('hr', 'HR'),

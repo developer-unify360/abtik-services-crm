@@ -20,7 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { hasAdminAccess, useAuthStore } from '../auth/authStore';
-import { getRoleName, isHrUser, isBdeUser } from '../auth/roleUtils';
+import { getRoleName, isHrUser, isBdeUser, isSalesManager } from '../auth/roleUtils';
 
 const DRAWER_WIDTH = 240;
 
@@ -57,6 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
   const canAccessAdminNav = hasAdminAccess(user);
   const isHr = isHrUser(user);
   const isBde = isBdeUser(user);
+  const isSalesManagerUser = isSalesManager(user);
 
   const navItems: NavItem[] = useMemo(() => ([
     { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
@@ -99,15 +100,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
       if (isHr) {
         return item.label === 'Payroll';
       }
-      if (isBde) {
-        return item.label === 'Dashboard' || item.label === 'Sales';
+      if (isBde || isSalesManagerUser) {
+        return item.label === 'Sales';
       }
       return !item.adminOnly || canAccessAdminNav;
     })
     .map((item) => {
       if (item.children) {
         const children = item.children.filter((child) => {
-          if (isBde && item.label === 'Sales') {
+          if ((isBde || isSalesManagerUser) && item.label === 'Sales') {
             return child.label === 'Lead Inbox' || child.label === 'Bookings';
           }
           return !child.adminOnly || canAccessAdminNav;
