@@ -154,15 +154,19 @@ const AdminDashboard: React.FC = () => {
          </div>
 
          <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-            {/* Performance Panel Sub-section */}
-            <div className="lg:col-span-3 overflow-y-auto custom-scrollbar bg-slate-50/10 rounded-2xl border border-slate-100/50 p-1">
+            {/* Performance Panel Sub-section - Expansive Layout */}
+            <div className="lg:col-span-3 overflow-y-auto custom-scrollbar bg-white/40 backdrop-blur-sm rounded-3xl border border-slate-200/50 shadow-inner">
                 {performanceData ? (
-                    <PerformancePanel data={performanceData} />
+                    <div className="min-h-full">
+                        <PerformancePanel data={performanceData} />
+                    </div>
                 ) : (
-                    <div className="h-full bg-white rounded-2xl border border-dotted border-slate-200 flex flex-col items-center justify-center p-12 group transition-all">
-                        <Users className="text-slate-200 mb-6 group-hover:scale-110 transition-transform" size={48} />
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2 text-center">Executive Intelligence Matrix</p>
-                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter text-center">Search above to load real-time personnel analytics</p>
+                    <div className="h-full flex flex-col items-center justify-center p-12 group transition-all">
+                        <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm border border-slate-100">
+                            <Users className="text-slate-300" size={40} />
+                        </div>
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-3 text-center">Operational Intelligence</h3>
+                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter text-center max-w-[200px] leading-relaxed">Select a personnel from the search matrix to deploy real-time performance analytics</p>
                     </div>
                 )}
             </div>

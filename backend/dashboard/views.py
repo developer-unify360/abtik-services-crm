@@ -1,4 +1,4 @@
-from django.db.models import F, Q, Count, CharField
+from django.db.models import F, Q, Count, CharField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import views, response, permissions
@@ -67,17 +67,13 @@ class UserPerformanceView(views.APIView):
         end_date = request.query_params.get('end_date')
         
         if not query:
-            # If no query, maybe return current admin or first user as placeholder
             target_user = User.objects.filter(role__in=['bde', 'sales_manager']).first()
             if not target_user:
                 return response.Response({"detail": "User required"}, status=400)
         else:
-            # Try UUID match first
             try:
                 target_user = User.objects.get(id=query)
             except:
-                # Search by name/email
-                # Try exact match first to ensure 'bde2' finds 'bde2' and not 'bde20'
                 exact_match = User.objects.filter(
                     Q(name__iexact=query) | Q(email__iexact=query)
                 ).first()
@@ -85,8 +81,6 @@ class UserPerformanceView(views.APIView):
                 if exact_match:
                     target_user = exact_match
                 else:
-                    # Fallback to case-insensitive partial match with alphabetical ordering
-                    # Alphabetical order ensures 'bde1' comes before 'bde10' if both match.
                     matching_users = User.objects.filter(
                         Q(name__icontains=query) | Q(email__icontains=query)
                     ).order_by('name', 'email')
@@ -95,7 +89,9 @@ class UserPerformanceView(views.APIView):
                         return response.Response({"detail": "User not found"}, status=404)
                     target_user = matching_users.first()
         
-        # Base filters for stats
+        is_bde = target_user.role == 'bde'
+        is_bdm = target_user.role in ['sales_manager', 'admin']
+
         lead_qs = Lead.objects.filter(created_by=target_user)
         booking_qs = Booking.objects.filter(
             Q(source_lead__assigned_to=target_user) | Q(source_lead__created_by=target_user)
@@ -113,30 +109,35 @@ class UserPerformanceView(views.APIView):
         bookings_count = booking_qs.count()
         conversion_rate = (leads_converted / leads_created * 100) if leads_created > 0 else 0
         
-        # Recent activities
-        recent_leads = lead_qs.select_related('client').order_by('-created_at')[:5]
-        recent_bookings = booking_qs.select_related('client').order_by('-created_at')[:5]
+        total_payments = 0
+        if is_bdm:
+            total_payments = booking_qs.aggregate(total=Sum('received_amount'))['total'] or 0
+        
+        recent_leads = lead_qs.select_related('client').order_by('-created_at')[:10]
+        recent_bookings = booking_qs.select_related('client').order_by('-created_at')[:10]
         
         activities = []
-        for l in recent_leads:
-            activities.append({
-                'type': 'lead',
-                'id': l.id,
-                'title': f"Lead: {l.client_name or (l.client.client_name if l.client else 'Unknown')}",
-                'created_at': l.created_at,
-                'status': l.status
-            })
-        for b in recent_bookings:
-            activities.append({
-                'type': 'booking',
-                'id': b.id,
-                'title': f"Booking: {b.client.client_name}",
-                'created_at': b.created_at,
-                'status': b.status
-            })
+        if is_bde:
+            for l in recent_leads:
+                activities.append({
+                    'type': 'lead',
+                    'id': l.id,
+                    'title': f"Lead: {l.client_name or (l.client.client_name if l.client else 'Unknown')}",
+                    'created_at': l.created_at,
+                    'status': l.status or 'New'
+                })
+        else:
+            for b in recent_bookings:
+                activities.append({
+                    'type': 'booking',
+                    'id': b.id,
+                    'title': f"Booking: {b.client.client_name}",
+                    'created_at': b.created_at,
+                    'status': b.status,
+                    'amount': float(b.received_amount or 0)
+                })
         activities.sort(key=lambda x: x['created_at'], reverse=True)
         
-        # User Performance History (Last 7 days)
         history = []
         for i in range(6, -1, -1):
             day_date = timezone.localtime(timezone.now()).date() - timezone.timedelta(days=i)
@@ -162,6 +163,7 @@ class UserPerformanceView(views.APIView):
             'leads_converted': leads_converted,
             'bookings_created': bookings_count,
             'conversion_rate': round(conversion_rate, 2),
+            'total_payments': float(total_payments),
             'recent_activity': activities[:10],
             'performance_history': history
         }
