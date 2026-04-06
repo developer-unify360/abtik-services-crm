@@ -20,11 +20,16 @@ def create_sales_manager(name, email, phone, password):
             'is_active': True,
         }
     )
-    
-    # Set password for newly created or update it for existing if needed
+
+    user.username = username
+    user.name = name
+    user.phone = phone
+    user.role = 'sales_manager'
+    user.status = True
+    user.is_active = True
     user.set_password(password)
     user.save()
-    
+
     if created:
         print(f"Successfully created Sales Manager: {email}")
     else:

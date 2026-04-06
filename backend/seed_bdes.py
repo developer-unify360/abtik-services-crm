@@ -7,7 +7,8 @@ django.setup()
 
 from users.models import User
 
-def create_bde(name, email, phone):
+
+def create_bde(name, email, phone, password):
     username = email.split('@')[0]
     user, created = User.objects.get_or_create(
         email=email,
@@ -20,41 +21,59 @@ def create_bde(name, email, phone):
             'is_active': True,
         }
     )
+
+    user.username = username
+    user.name = name
+    user.phone = phone
+    user.role = 'bde'
+    user.status = True
+    user.is_active = True
+    user.set_password(password)
+    user.save()
+
     if created:
-        user.set_password('password123')
-        user.save()
         print(f"Successfully created BDE: {email}")
     else:
-        print(f"BDE already exists: {email}")
+        print(f"BDE already exists, password updated: {email}")
 
 def seed_bdes():
     print("Starting seeding process for BDEs...")
 
     # Individual user entries for easy production modification
-    create_bde(name="Vidit", email="vidit.agrawal@abtikservices.co.in", phone="6358169595")
-    create_bde(name="Nisha", email="nisha.rathore@abtikservices.co.in", phone="9213014003")
-    # create_bde(name="bde3", email="bde3@gmail.com", phone="9000000003")
-    # create_bde(name="bde4", email="bde4@gmail.com", phone="9000000004")
-    # create_bde(name="bde5", email="bde5@gmail.com", phone="9000000005")
-    # create_bde(name="bde6", email="bde6@gmail.com", phone="9000000006")
-    # create_bde(name="bde7", email="bde7@gmail.com", phone="9000000007")
-    # create_bde(name="bde8", email="bde8@gmail.com", phone="9000000008")
-    # create_bde(name="bde9", email="bde9@gmail.com", phone="9000000009")
-    # create_bde(name="bde10", email="bde10@gmail.com", phone="9000000010")
-    # create_bde(name="bde11", email="bde11@gmail.com", phone="9000000011")
-    # create_bde(name="bde12", email="bde12@gmail.com", phone="9000000012")
-    # create_bde(name="bde13", email="bde13@gmail.com", phone="9000000013")
-    # create_bde(name="bde14", email="bde14@gmail.com", phone="9000000014")
-    # create_bde(name="bde15", email="bde15@gmail.com", phone="9000000015")
-    # create_bde(name="bde16", email="bde16@gmail.com", phone="9000000016")
-    # create_bde(name="bde17", email="bde17@gmail.com", phone="9000000017")
-    # create_bde(name="bde18", email="bde18@gmail.com", phone="9000000018")
-    # create_bde(name="bde19", email="bde19@gmail.com", phone="9000000019")
-    # create_bde(name="bde20", email="bde20@gmail.com", phone="9000000020")
-    # create_bde(name="bde21", email="bde21@gmail.com", phone="9000000021")
-    # create_bde(name="bde22", email="bde22@gmail.com", phone="9000000022")
-    # create_bde(name="bde23", email="bde23@gmail.com", phone="9000000023")
-    # create_bde(name="bde24", email="bde24@gmail.com", phone="9000000024")
+    create_bde(
+        name="Vidit",
+        email="vidit.agrawal@abtikservices.co.in",
+        phone="6358169595",
+        password="Vidit@@123",
+    )
+    create_bde(
+        name="Nisha",
+        email="nisha.rathore@abtikservices.co.in",
+        phone="9213014003",
+        password="Nisha@@123",
+    )
+    # create_bde(name="bde3", email="bde3@gmail.com", phone="9000000003", password="your-password")
+    # create_bde(name="bde4", email="bde4@gmail.com", phone="9000000004", password="your-password")
+    # create_bde(name="bde5", email="bde5@gmail.com", phone="9000000005", password="your-password")
+    # create_bde(name="bde6", email="bde6@gmail.com", phone="9000000006", password="your-password")
+    # create_bde(name="bde7", email="bde7@gmail.com", phone="9000000007", password="your-password")
+    # create_bde(name="bde8", email="bde8@gmail.com", phone="9000000008", password="your-password")
+    # create_bde(name="bde9", email="bde9@gmail.com", phone="9000000009", password="your-password")
+    # create_bde(name="bde10", email="bde10@gmail.com", phone="9000000010", password="your-password")
+    # create_bde(name="bde11", email="bde11@gmail.com", phone="9000000011", password="your-password")
+    # create_bde(name="bde12", email="bde12@gmail.com", phone="9000000012", password="your-password")
+    # create_bde(name="bde13", email="bde13@gmail.com", phone="9000000013", password="your-password")
+    # create_bde(name="bde14", email="bde14@gmail.com", phone="9000000014", password="your-password")
+    # create_bde(name="bde15", email="bde15@gmail.com", phone="9000000015", password="your-password")
+    # create_bde(name="bde16", email="bde16@gmail.com", phone="9000000016", password="your-password")
+    # create_bde(name="bde17", email="bde17@gmail.com", phone="9000000017", password="your-password")
+    # create_bde(name="bde18", email="bde18@gmail.com", phone="9000000018", password="your-password")
+    # create_bde(name="bde19", email="bde19@gmail.com", phone="9000000019", password="your-password")
+    # create_bde(name="bde20", email="bde20@gmail.com", phone="9000000020", password="your-password")
+    # create_bde(name="bde21", email="bde21@gmail.com", phone="9000000021", password="your-password")
+    # create_bde(name="bde22", email="bde22@gmail.com", phone="9000000022", password="your-password")
+    # create_bde(name="bde23", email="bde23@gmail.com", phone="9000000023", password="your-password")
+    # create_bde(name="bde24", email="bde24@gmail.com", phone="9000000024", password="your-password")
 
     print("Seeding process completed!")
 
