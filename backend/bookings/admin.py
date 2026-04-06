@@ -32,12 +32,12 @@ class BookingAdmin(admin.ModelAdmin):
     """
     list_display = ('id', 'client', 'bde_name', 'lead_source', 'payment_type', 'bank', 'booking_date', 'status', 'created_at')
     list_filter = ('status', 'payment_type', 'lead_source', 'booking_date', 'created_at')
-    search_fields = ('client__client_name', 'client__company_name', 'remarks', 'id')
+    search_fields = ('client__client_name', 'client__company_name', 'id')
     ordering = ('-booking_date', '-created_at')
     
     fieldsets = (
         ('Booking Details', {
-            'fields': ('client', 'bde_name', 'lead_source', 'payment_type', 'bank', 'booking_date', 'payment_date', 'status', 'remarks')
+            'fields': ('client', 'bde_name', 'lead_source', 'payment_type', 'bank', 'booking_date', 'payment_date', 'status')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')

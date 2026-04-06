@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
 
   const useProxy = mode === 'development'
 
-  const apiTarget = env.VITE_API_TARGET || process.env.VITE_API_TARGET || 'http://crm.abtikservices.in'
+  const apiTarget = env.VITE_API_TARGET || process.env.VITE_API_TARGET || 'http://localhost:8000'
 
   console.log(`[vite] Mode: ${mode}, Using proxy: ${useProxy}`)
 
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 5173,
-      allowedHosts: ['crm.abtikservices.in'],
+      allowedHosts: ['localhost', '127.0.0.1', 'crm.abtikservices.in'],
       hmr: {
         host: env.VITE_HMR_HOST || 'localhost',
         protocol: env.VITE_HMR_PROTOCOL || 'ws',

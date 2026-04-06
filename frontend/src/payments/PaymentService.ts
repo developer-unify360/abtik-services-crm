@@ -29,6 +29,7 @@ export interface Payment {
   after_fund_disbursement_percentage?: string | null;
   after_fund_disbursement_remarks?: string;
   attachment_url?: string | null;
+  services?: string[];
   remarks?: string;
   is_editable: boolean;
   created_at: string;
@@ -36,6 +37,7 @@ export interface Payment {
 }
 
 export interface PaymentCreateData {
+  booking_id?: string | null;
   client_id?: string | null;
   client_name: string;
   company_name: string;
@@ -57,6 +59,7 @@ export interface PaymentCreateData {
   remarks?: string;
   attachment?: File | null;
   remove_attachment?: boolean;
+  services?: string[];
 }
 
 const toMultipartPayload = (data: PaymentCreateData) => {
@@ -64,6 +67,11 @@ const toMultipartPayload = (data: PaymentCreateData) => {
 
   Object.entries(data).forEach(([key, value]) => {
     if (value === undefined) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => formData.append(key, String(item)));
       return;
     }
 

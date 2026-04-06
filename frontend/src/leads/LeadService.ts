@@ -58,8 +58,15 @@ export interface LeadSummary {
   stats_by_source: Record<string, number>;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export const LeadService = {
-  list: async (params?: Record<string, string>) => {
+  list: async (params?: Record<string, string>): Promise<PaginatedResponse<Lead>> => {
     const response = await apiClient.get('/leads/', { params });
     return response.data;
   },
@@ -69,8 +76,8 @@ export const LeadService = {
     if (search) {
       params.search = search;
     }
-    // Get all leads, limit to 100 for dropdown performance
-    params.limit = '100';
+    // Load a larger page for the dropdown while keeping the main list paginated.
+    params.page_size = '100';
     const response = await publicApiClient.get('/leads/', { params });
     return response.data;
   },

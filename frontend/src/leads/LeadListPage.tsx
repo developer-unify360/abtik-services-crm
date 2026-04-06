@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -20,6 +20,49 @@ import { toastSuccess } from '../services/toastNotify';
 import { isBdeUser } from '../auth/roleUtils';
 
 const PAGE_SIZE = 10;
+type LeadTab = 'all' | 'unassigned' | 'my' | 'overdue';
+
+type LeadPageFetchOptions = {
+  page: number;
+  tab: LeadTab;
+  search: string;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
+  setTotalLeadsCount: React.Dispatch<React.SetStateAction<number>>;
+};
+
+const fetchLeadPage = async ({
+  page,
+  tab,
+  search,
+  setLoading,
+  setLeads,
+  setTotalLeadsCount,
+}: LeadPageFetchOptions) => {
+  try {
+    setLoading(true);
+    const params: Record<string, string> = {
+      page: String(page),
+      page_size: String(PAGE_SIZE),
+    };
+
+    if (search) {
+      params.search = search;
+    }
+
+    if (tab !== 'all') {
+      params.tab = tab;
+    }
+
+    const leadsData = await LeadService.list(params);
+    setLeads(leadsData.results);
+    setTotalLeadsCount(leadsData.count);
+  } catch (error) {
+    console.error('Failed to fetch:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
   'new': { label: 'New', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
@@ -62,9 +105,10 @@ const LeadListPage: React.FC = () => {
   const currentUser = useAuthStore((state) => state.user);
   const isBde = isBdeUser(currentUser);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'unassigned' | 'my' | 'overdue'>('all');
+  const [activeTab, setActiveTab] = useState<LeadTab>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -115,41 +159,21 @@ const LeadListPage: React.FC = () => {
     void loadLeadDetails(lead.id, lead);
   };
 
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const leadsData = await LeadService.list();
-      setLeads(leadsData.results || leadsData);
-    } catch (error) {
-      console.error('Failed to fetch:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchLeads();
-  }, []);
-
-  const filteredLeads = useMemo(() => {
-    let result = leads.filter(lead => {
-      const nameMatch = lead.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const companyMatch = lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      return nameMatch || companyMatch;
+    void fetchLeadPage({
+      page: currentPage,
+      tab: activeTab,
+      search: searchTerm.trim(),
+      setLoading,
+      setLeads,
+      setTotalLeadsCount,
     });
-    if (activeTab === 'unassigned') result = result.filter(l => !l.assigned_to);
-    if (activeTab === 'my') result = result.filter(l => l.assigned_to === currentUser?.id);
-    if (activeTab === 'overdue') {
-      const today = new Date().toISOString().split('T')[0];
-      result = result.filter(l => l.next_follow_up_date && l.next_follow_up_date < today && l.status !== 'closed_won' && l.status !== 'closed_lost');
-    }
-    return result;
-  }, [leads, searchTerm, activeTab, currentUser]);
+  }, [currentPage, activeTab, searchTerm]);
 
-  // Reset to page 1 whenever filter changes
-  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalLeadsCount / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedLeads = filteredLeads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const visibleRangeStart = totalLeadsCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const visibleRangeEnd = Math.min(safePage * PAGE_SIZE, totalLeadsCount);
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
@@ -177,6 +201,14 @@ const LeadListPage: React.FC = () => {
       setCallNotes('');
       toastSuccess('Interaction logged successfully.');
       await loadLeadDetails(leadId);
+      await fetchLeadPage({
+        page: currentPage,
+        tab: activeTab,
+        search: searchTerm.trim(),
+        setLoading,
+        setLeads,
+        setTotalLeadsCount,
+      });
     } catch (error) {
       console.error('Call log fail:', error);
     } finally {
@@ -283,9 +315,9 @@ const LeadListPage: React.FC = () => {
             <tbody className="text-sm">
               {loading ? (
                 <tr><td colSpan={6} className="text-center py-8 text-slate-500">Loading...</td></tr>
-              ) : paginatedLeads.length === 0 ? (
+              ) : leads.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-8 text-slate-500">No leads found.</td></tr>
-              ) : paginatedLeads.map(lead => (
+              ) : leads.map(lead => (
                 <tr
                   key={lead.id}
                   onClick={() => openLeadWorkspace(lead)}
@@ -330,15 +362,15 @@ const LeadListPage: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {filteredLeads.length > PAGE_SIZE && (
+        {totalLeadsCount > PAGE_SIZE && (
           <div className="shrink-0 flex min-w-0 flex-col gap-2 border-t border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs text-slate-500">
-              {`${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filteredLeads.length)} of ${filteredLeads.length}`}
+              {`${visibleRangeStart}-${visibleRangeEnd} of ${totalLeadsCount}`}
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={safePage === 1}
+                disabled={loading || safePage === 1}
                 className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft size={14} /> Prev
@@ -346,7 +378,7 @@ const LeadListPage: React.FC = () => {
               <span className="text-xs text-slate-500 px-1">{safePage} / {totalPages}</span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
+                disabled={loading || safePage >= totalPages}
                 className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next <ChevronRight size={14} />

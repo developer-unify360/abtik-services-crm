@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowUpRight, Plus, PencilLine, Search } from 'lucide-react';
+import { Plus, PencilLine, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { PaymentService, type Payment } from './PaymentService';
@@ -196,8 +196,8 @@ const PaymentListPage: React.FC = () => {
                               onClick={() => payment.booking_id && navigate(`/bookings/${payment.booking_id}/edit`)}
                               className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
                             >
-                              <ArrowUpRight size={12} />
-                              Open
+                              <PencilLine size={12} />
+                              Edit Booking
                             </button>
                           )}
                         </td>

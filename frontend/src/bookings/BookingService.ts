@@ -40,17 +40,30 @@ export interface BookingCreateData {
   bank?: string | null;
   booking_date: string;
   payment_date?: string | null;
-  total_payment_amount?: string | null;
+  total_payment_amount?: string | number | null;
   total_payment_remarks?: string;
-  received_amount?: string | null;
+  received_amount?: string | number | null;
   received_amount_remarks?: string;
-  remaining_amount?: string | null;
+  remaining_amount?: string | number | null;
   remaining_amount_remarks?: string;
   after_fund_disbursement_percentage?: string | null;
   after_fund_disbursement_remarks?: string;
   remarks?: string;
   status?: string;
   remove_attachment?: boolean;
+  lead_id?: string | null;
+  bde_name?: string;
+  payments?: Array<{
+    id?: string;
+    payment_type?: string | null;
+    bank?: string | null;
+    payment_date?: string | null;
+    total_payment_amount?: string | number | null;
+    received_amount?: string | number | null;
+    remaining_amount?: string | number | null;
+    after_fund_disbursement_percentage?: string | null;
+    services?: string[];
+  }>;
 }
 
 export interface BookingFullFormData {

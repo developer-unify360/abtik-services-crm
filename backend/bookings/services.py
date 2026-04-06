@@ -7,9 +7,20 @@ from services.models import Service
 from attributes.models import PaymentType
 from leads.services import LeadService
 from leads.models import Lead, LeadActivity
+from payments.services import PaymentService
 
 
 class BookingService:
+    PAYMENT_SUMMARY_FIELDS = (
+        'payment_type',
+        'bank',
+        'payment_date',
+        'total_payment_amount',
+        'received_amount',
+        'remaining_amount',
+        'after_fund_disbursement_percentage',
+    )
+
     @staticmethod
     def _resolve_service(service_reference):
         if not service_reference:
@@ -65,8 +76,23 @@ class BookingService:
         return getattr(booking, 'remaining_amount', None) if booking else None
 
     @staticmethod
+    def _has_payment_summary_data(booking):
+        return any(getattr(booking, field_name, None) is not None for field_name in BookingService.PAYMENT_SUMMARY_FIELDS)
+
+    @staticmethod
+    def _sync_booking_payments(booking, payments_data, user):
+        normalized_payments = [item for item in (payments_data or []) if item]
+
+        if normalized_payments:
+            PaymentService.sync_payments(booking, normalized_payments, user)
+            return
+
+        if BookingService._has_payment_summary_data(booking):
+            PaymentService.sync_booking_payment(booking, user)
+
+    @staticmethod
     @transaction.atomic
-    def create_booking(data, user, service_id=None):
+    def create_booking(data, user, service_id=None, payments_data=None):
         """Create a new booking record."""
         try:
             client = Client.objects.get(id=data['client_id'])
@@ -85,15 +111,10 @@ class BookingService:
             booking_date=data['booking_date'],
             payment_date=data.get('payment_date'),
             total_payment_amount=data.get('total_payment_amount'),
-            total_payment_remarks=data.get('total_payment_remarks', ''),
             received_amount=data.get('received_amount'),
-            received_amount_remarks=data.get('received_amount_remarks', ''),
             remaining_amount=BookingService._resolve_remaining_amount(data),
-            remaining_amount_remarks=data.get('remaining_amount_remarks', ''),
             after_fund_disbursement_percentage=data.get('after_fund_disbursement_percentage'),
-            after_fund_disbursement_remarks=data.get('after_fund_disbursement_remarks', ''),
             attachment=data.get('attachment'),
-            remarks=data.get('remarks', ''),
             status=data.get('status', 'pending'),
             lead_source=data.get('lead_source', None),
         )
@@ -142,18 +163,19 @@ class BookingService:
             },
         )
 
+        BookingService._sync_booking_payments(booking, payments_data, user)
+
         return booking
 
     @staticmethod
-    def update_booking(booking, data, user, service_id=None):
+    def update_booking(booking, data, user, service_id=None, payments_data=None):
         """Update an existing booking record."""
         updatable_fields = [
             'booking_date', 'payment_date',
-            'total_payment_amount', 'total_payment_remarks',
-            'received_amount', 'received_amount_remarks',
-            'remaining_amount', 'remaining_amount_remarks',
-            'after_fund_disbursement_percentage', 'after_fund_disbursement_remarks',
-            'remarks', 'status', 'lead_source', 'bde_name',
+            'total_payment_amount',
+            'received_amount', 'remaining_amount',
+            'after_fund_disbursement_percentage',
+            'status', 'lead_source', 'bde_name',
         ]
         updated_fields = []
 
@@ -209,6 +231,9 @@ class BookingService:
             module='bookings',
             details={'booking_id': str(booking.id), 'updated_fields': updated_fields},
         )
+
+        if payments_data is not None:
+            BookingService._sync_booking_payments(booking, payments_data, user)
 
         return booking
 

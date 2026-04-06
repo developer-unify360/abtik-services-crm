@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from bookings.models import Booking, Bank
+from payments.serializers import PaymentCreateUpdateSerializer, PaymentSerializer
 from attributes.models import LeadSource, PaymentType
 
 
@@ -25,6 +26,7 @@ class BookingSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     bank_name = serializers.CharField(source='bank.bank_name', read_only=True)
     lead_source_name = serializers.CharField(source='lead_source.name', read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -40,12 +42,12 @@ class BookingSerializer(serializers.ModelSerializer):
             'payment_type', 'payment_type_name',
             'bank', 'bank_name',
             'booking_date', 'payment_date',
-            'total_payment_amount', 'total_payment_remarks',
-            'received_amount', 'received_amount_remarks',
-            'remaining_amount', 'remaining_amount_remarks',
-            'after_fund_disbursement_percentage', 'after_fund_disbursement_remarks',
+            'total_payment_amount',
+            'received_amount', 'remaining_amount',
+            'after_fund_disbursement_percentage',
             'attachment',
-            'remarks', 'status', 'status_display',
+            'status', 'status_display',
+            'payments',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -83,25 +85,21 @@ class BookingCreateUpdateSerializer(serializers.Serializer):
     booking_date = serializers.DateField()
     payment_date = serializers.DateField(required=False, allow_null=True)
     total_payment_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    total_payment_remarks = serializers.CharField(required=False, allow_blank=True)
     received_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    received_amount_remarks = serializers.CharField(required=False, allow_blank=True)
     remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    remaining_amount_remarks = serializers.CharField(required=False, allow_blank=True)
     after_fund_disbursement_percentage = serializers.DecimalField(
         max_digits=5,
         decimal_places=2,
         required=False,
         allow_null=True,
     )
-    after_fund_disbursement_remarks = serializers.CharField(required=False, allow_blank=True)
     attachment = serializers.FileField(required=False, allow_null=True)
     remove_attachment = serializers.BooleanField(required=False, default=False)
-    remarks = serializers.CharField(required=False, allow_blank=True)
     bde_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     lead_source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.all(), required=False, allow_null=True)
     status = serializers.ChoiceField(choices=Booking.STATUS_CHOICES, required=False, default='pending')
     service_request = serializers.DictField(required=False, allow_null=True)
+    payments = PaymentCreateUpdateSerializer(many=True, required=False, default=list)
 
     def validate_booking_date(self, value):
         from django.utils import timezone

@@ -152,7 +152,11 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            booking = BookingService.create_booking(data=serializer.validated_data, user=request.user)
+            booking = BookingService.create_booking(
+                data=serializer.validated_data,
+                user=request.user,
+                payments_data=serializer.validated_data.get('payments'),
+            )
             return Response(
                 {"success": True, "data": BookingSerializer(booking, context={'request': request}).data},
                 status=status.HTTP_201_CREATED,
@@ -168,7 +172,12 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer = BookingCreateUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         try:
-            updated = BookingService.update_booking(booking, serializer.validated_data, user=request.user)
+            updated = BookingService.update_booking(
+                booking,
+                serializer.validated_data,
+                user=request.user,
+                payments_data=serializer.validated_data.get('payments'),
+            )
             return Response({"success": True, "data": BookingSerializer(updated, context={'request': request}).data})
         except ValidationError as e:
             return Response(
@@ -201,7 +210,8 @@ class BookingViewSet(viewsets.ModelViewSet):
                 booking_data=dict(booking_serializer.validated_data),
                 request_data_list=service_request_data_list,
                 user=request.user,
-                service_id=service_id
+                service_id=service_id,
+                payments_data=booking_serializer.validated_data.get('payments')
             )
             serialized_service_requests = ServiceRequestSerializer(result['service_requests'], many=True).data
             return Response(
@@ -243,7 +253,8 @@ class BookingViewSet(viewsets.ModelViewSet):
                 booking_data=dict(booking_serializer.validated_data),
                 request_data_list=service_request_data_list,
                 user=None,
-                service_id=service_id
+                service_id=service_id,
+                payments_data=booking_serializer.validated_data.get('payments')
             )
             serialized_service_requests = ServiceRequestSerializer(result['service_requests'], many=True).data
             return Response(
@@ -282,7 +293,11 @@ class BookingViewSet(viewsets.ModelViewSet):
 
                 service_id = service_request_data_list[0].get('service') if service_request_data_list else None
                 updated_booking = BookingService.update_booking(
-                    booking, booking_serializer.validated_data, user=request.user, service_id=service_id
+                    booking, 
+                    booking_serializer.validated_data, 
+                    user=request.user, 
+                    service_id=service_id,
+                    payments_data=booking_serializer.validated_data.get('payments')
                 )
 
                 if service_payload_provided:

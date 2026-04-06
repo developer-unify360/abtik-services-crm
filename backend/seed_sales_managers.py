@@ -35,15 +35,11 @@ def seed_sales_managers():
 
     # Individual user entries for easy production modification
     # Format: name, email, phone, password
-    create_sales_manager("bdm1", "bdm1@gmail.com", "9100000001", "password123")
-    create_sales_manager("bdm2", "bdm2@gmail.com", "9100000002", "password123")
-    create_sales_manager("bdm3", "bdm3@gmail.com", "9100000003", "password123")
-    create_sales_manager("bdm4", "bdm4@gmail.com", "9100000004", "password123")
-    create_sales_manager("bdm5", "bdm5@gmail.com", "9100000005", "password123")
-    create_sales_manager("bdm6", "bdm6@gmail.com", "9100000006", "password123")
-    create_sales_manager("bdm7", "bdm7@gmail.com", "9100000007", "password123")
-    create_sales_manager("bdm8", "bdm8@gmail.com", "9100000008", "password123")
-
+    create_sales_manager("Dhaval", "dhavalchauhan@abtikservices.co.in", "8160783299", "J7W3otCb7BhQek0ceH2e")
+    create_sales_manager("Vaishali", "vaishali@abtikservices.co.in", "6358193522", "moL7QZQcBws7ZXC2UALY")
+    # create_sales_manager("Saurabh", "bdm3@gmail.com", "7486062028", "pXR5a612FmPp3iyNgY8B")
+    # create_sales_manager("Jayveer", "bdm4@gmail.com", "9213013926", "AHMPqnXrcEUFJKuXVB0K")
+    # create_sales_manager("Shruti", "bdm5@gmail.com", "6358169602", "NxE2Yrv4UcE4j0hUWPwp")
     print("Seeding process completed!")
 
 if __name__ == "__main__":

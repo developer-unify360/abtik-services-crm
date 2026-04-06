@@ -34,15 +34,11 @@ class PaymentSerializer(serializers.ModelSerializer):
             'reference_number',
             'payment_date',
             'total_payment_amount',
-            'total_payment_remarks',
             'received_amount',
-            'received_amount_remarks',
             'remaining_amount',
-            'remaining_amount_remarks',
             'after_fund_disbursement_percentage',
-            'after_fund_disbursement_remarks',
             'attachment_url',
-            'remarks',
+            'services',
             'is_editable',
             'created_at',
             'updated_at',
@@ -110,6 +106,8 @@ class PaymentListSerializer(serializers.ModelSerializer):
 
 
 class PaymentCreateUpdateSerializer(serializers.Serializer):
+    id = serializers.UUIDField(required=False, allow_null=True)
+    booking_id = serializers.UUIDField(required=False, allow_null=True)
     client_id = serializers.UUIDField(required=False, allow_null=True)
     client_name = serializers.CharField(required=False, allow_blank=True)
     company_name = serializers.CharField(required=False, allow_blank=True)
@@ -121,21 +119,20 @@ class PaymentCreateUpdateSerializer(serializers.Serializer):
     reference_number = serializers.CharField(required=False, allow_blank=True)
     payment_date = serializers.DateField(required=False, allow_null=True)
     total_payment_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    total_payment_remarks = serializers.CharField(required=False, allow_blank=True)
     received_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    received_amount_remarks = serializers.CharField(required=False, allow_blank=True)
     remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    remaining_amount_remarks = serializers.CharField(required=False, allow_blank=True)
     after_fund_disbursement_percentage = serializers.DecimalField(
         max_digits=5,
         decimal_places=2,
         required=False,
         allow_null=True,
     )
-    after_fund_disbursement_remarks = serializers.CharField(required=False, allow_blank=True)
     attachment = serializers.FileField(required=False, allow_null=True)
     remove_attachment = serializers.BooleanField(required=False, default=False)
-    remarks = serializers.CharField(required=False, allow_blank=True)
+    services = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+    )
 
     def validate_payment_date(self, value):
         from django.utils import timezone
@@ -167,5 +164,9 @@ class PaymentCreateUpdateSerializer(serializers.Serializer):
         remaining_amount = attrs.get('remaining_amount')
         if remaining_amount is None and total_payment is not None and received_amount is not None:
             attrs['remaining_amount'] = total_payment - received_amount
+
+        services = attrs.get('services')
+        if services is not None and len(services) > 1:
+            raise serializers.ValidationError({'services': "Select only one service for each payment."})
 
         return attrs

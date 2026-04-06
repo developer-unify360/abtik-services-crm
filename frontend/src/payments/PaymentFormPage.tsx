@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CreditCard, FileText, IndianRupee, Save, Upload, UserRound } from 'lucide-react';
+import { CreditCard, IndianRupee, Save, Upload, UserRound } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import AttributeService, { type Attribute } from '../attributes/AttributeService';
+import { BookingService, type Booking } from '../bookings/BookingService';
 import { BankApi, type Bank } from '../bookings/api/BankApi';
 import { ClientService, type Client } from '../clients/ClientService';
-import { PaymentService } from './PaymentService';
+import SearchableSelect, { type SearchableSelectOption } from '../components/SearchableSelect';
+import { ServiceApi, ServiceRequestApi, type Service, type ServiceRequest } from '../services/api/ServiceApi';
+import { PaymentService, type Payment } from './PaymentService';
 
 interface PaymentFormState {
+  booking_id: string;
+  service_id: string;
   client_id: string;
   client_name: string;
   company_name: string;
@@ -19,20 +24,30 @@ interface PaymentFormState {
   reference_number: string;
   payment_date: string;
   total_payment_amount: string;
-  total_payment_remarks: string;
   received_amount: string;
-  received_amount_remarks: string;
   remaining_amount: string;
-  remaining_amount_remarks: string;
   after_fund_disbursement_percentage: string;
-  after_fund_disbursement_remarks: string;
-  remarks: string;
   attachment: File | null;
   existingAttachmentUrl: string;
   remove_attachment: boolean;
 }
 
+interface ClientBookingServiceOption {
+  value: string;
+  bookingId: string;
+  serviceId: string;
+  label: string;
+  searchText?: string;
+  badge?: string;
+  badgeTone?: 'amber' | 'slate' | 'emerald' | 'blue';
+  disabled?: boolean;
+}
+
+type BookingWithPayments = Booking & { payments?: Payment[] };
+
 const emptyFormState = (): PaymentFormState => ({
+  booking_id: '',
+  service_id: '',
   client_id: '',
   client_name: '',
   company_name: '',
@@ -44,14 +59,9 @@ const emptyFormState = (): PaymentFormState => ({
   reference_number: '',
   payment_date: new Date().toISOString().split('T')[0],
   total_payment_amount: '',
-  total_payment_remarks: '',
   received_amount: '',
-  received_amount_remarks: '',
   remaining_amount: '',
-  remaining_amount_remarks: '',
   after_fund_disbursement_percentage: '',
-  after_fund_disbursement_remarks: '',
-  remarks: '',
   attachment: null,
   existingAttachmentUrl: '',
   remove_attachment: false,
@@ -72,6 +82,27 @@ const calculateRemainingAmount = (totalAmount: string, receivedAmount: string) =
 
   return (total - received).toFixed(2);
 };
+
+const formatBookingServiceDate = (value?: string | null) => {
+  if (!value) {
+    return 'No date';
+  }
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const serializeLinkedService = (bookingId?: string | null, serviceId?: string | null) => (
+  bookingId && serviceId ? `${bookingId}::${serviceId}` : ''
+);
 
 const CompactSection = ({
   title,
@@ -118,7 +149,10 @@ const PaymentFormPage: React.FC = () => {
   const [formState, setFormState] = useState<PaymentFormState>(emptyFormState);
   const [clients, setClients] = useState<Client[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<Attribute[]>([]);
+  const [linkedServiceOptions, setLinkedServiceOptions] = useState<ClientBookingServiceOption[]>([]);
+  const [loadingLinkedServices, setLoadingLinkedServices] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
@@ -129,21 +163,48 @@ const PaymentFormPage: React.FC = () => {
     return leftLabel.localeCompare(rightLabel);
   }), [clients]);
 
+  const linkedClientOptions = useMemo<SearchableSelectOption[]>(() => (
+    clientOptions.map((client) => ({
+      value: client.id,
+      label: [client.client_name, client.company_name].filter(Boolean).join(' - ') || 'Unnamed client',
+      searchText: [
+        client.client_name,
+        client.company_name,
+        client.email,
+        client.mobile,
+        client.gst_pan,
+      ].filter(Boolean).join(' '),
+    }))
+  ), [clientOptions]);
+
+  const bookingServiceSelectOptions = useMemo<SearchableSelectOption[]>(() => (
+    linkedServiceOptions.map((option) => ({
+      value: option.value,
+      label: option.label,
+      searchText: option.searchText,
+      badge: option.badge,
+      badgeTone: option.badgeTone,
+      disabled: option.disabled,
+    }))
+  ), [linkedServiceOptions]);
+
   useEffect(() => {
     const loadPage = async () => {
       try {
         setLoading(true);
         setPageError('');
 
-        const [clientData, bankData, paymentTypeData] = await Promise.all([
+        const [clientData, bankData, paymentTypeData, serviceData] = await Promise.all([
           ClientService.list({ page_size: '100' }),
           BankApi.list(),
           AttributeService.listPaymentTypes(),
+          ServiceApi.list(),
         ]);
 
         const loadedClients = clientData.results || clientData;
         setClients(loadedClients);
         setBanks(bankData.filter((bank: Bank) => bank.is_active));
+        setServices(serviceData);
         setPaymentTypes(paymentTypeData.filter((paymentType: Attribute) => paymentType.is_active));
 
         if (!isEditMode || !paymentId) {
@@ -167,6 +228,8 @@ const PaymentFormPage: React.FC = () => {
         }
 
         setFormState({
+          booking_id: '',
+          service_id: '',
           client_id: payment.client || '',
           client_name: payment.client_name || '',
           company_name: payment.company_name || '',
@@ -178,14 +241,9 @@ const PaymentFormPage: React.FC = () => {
           reference_number: payment.reference_number || '',
           payment_date: payment.payment_date || '',
           total_payment_amount: toInputValue(payment.total_payment_amount),
-          total_payment_remarks: payment.total_payment_remarks || '',
           received_amount: toInputValue(payment.received_amount),
-          received_amount_remarks: payment.received_amount_remarks || '',
           remaining_amount: toInputValue(payment.remaining_amount),
-          remaining_amount_remarks: payment.remaining_amount_remarks || '',
           after_fund_disbursement_percentage: toInputValue(payment.after_fund_disbursement_percentage),
-          after_fund_disbursement_remarks: payment.after_fund_disbursement_remarks || '',
-          remarks: payment.remarks || '',
           attachment: null,
           existingAttachmentUrl: payment.attachment_url || '',
           remove_attachment: false,
@@ -200,6 +258,113 @@ const PaymentFormPage: React.FC = () => {
 
     loadPage();
   }, [isEditMode, paymentId]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setLinkedServiceOptions([]);
+      setLoadingLinkedServices(false);
+      return;
+    }
+
+    if (!formState.client_id) {
+      setLinkedServiceOptions([]);
+      setLoadingLinkedServices(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadLinkedServices = async () => {
+      try {
+        setLoadingLinkedServices(true);
+
+        const bookingListResponse = await BookingService.list({
+          client_id: formState.client_id,
+          page_size: '100',
+        });
+        const clientBookings = (bookingListResponse.results || bookingListResponse || []) as Booking[];
+
+        if (!clientBookings.length) {
+          if (!cancelled) {
+            setLinkedServiceOptions([]);
+          }
+          return;
+        }
+
+        const linkedServiceGroups = await Promise.all(
+          clientBookings.map(async (bookingSummary) => {
+            const [bookingDetail, serviceRequestsResponse] = await Promise.all([
+              BookingService.get(bookingSummary.id) as Promise<BookingWithPayments>,
+              ServiceRequestApi.list({ booking_id: bookingSummary.id }),
+            ]);
+
+            const serviceRequests = Array.isArray(serviceRequestsResponse) ? serviceRequestsResponse : [];
+            const bookingServiceIds = new Set(serviceRequests.map((serviceRequest: ServiceRequest) => String(serviceRequest.service)));
+
+            return services
+              .map((service: Service): ClientBookingServiceOption => {
+                const linkedPayments = (bookingDetail.payments || []).filter((payment) =>
+                  (payment.services || []).some((serviceId) => String(serviceId) === String(service.id)),
+                );
+                const hasLockedPayment = linkedPayments.some((payment) => (
+                  payment.total_payment_amount !== null
+                  && payment.total_payment_amount !== undefined
+                  && String(payment.total_payment_amount).trim() !== ''
+                ));
+                const hasPendingBookingService = bookingServiceIds.has(String(service.id));
+
+                return {
+                  value: serializeLinkedService(bookingDetail.id, service.id),
+                  bookingId: bookingDetail.id,
+                  serviceId: service.id,
+                  label: `${service.name} - Booking ${formatBookingServiceDate(bookingDetail.booking_date)} - ${bookingDetail.id.slice(0, 8)}`,
+                  searchText: `${service.name} ${bookingDetail.booking_date || ''} ${bookingDetail.id}`,
+                  badge: hasLockedPayment ? 'Saved' : hasPendingBookingService ? 'Payment Pending' : undefined,
+                  badgeTone: hasLockedPayment ? 'slate' : hasPendingBookingService ? 'amber' : undefined,
+                  disabled: hasLockedPayment,
+                };
+              });
+          }),
+        );
+
+        const nextOptions = linkedServiceGroups
+          .flat()
+          .sort((left, right) => left.label.localeCompare(right.label));
+
+        if (!cancelled) {
+          setLinkedServiceOptions(nextOptions);
+          setFormState((previous) => {
+            if (!previous.booking_id || !previous.service_id) {
+              return previous;
+            }
+
+            const isExistingSelection = nextOptions.some(
+              (option) => option.bookingId === previous.booking_id && option.serviceId === previous.service_id,
+            );
+
+            return isExistingSelection
+              ? previous
+              : { ...previous, booking_id: '', service_id: '' };
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load linked booking services:', error);
+        if (!cancelled) {
+          setLinkedServiceOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingLinkedServices(false);
+        }
+      }
+    };
+
+    loadLinkedServices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formState.client_id, isEditMode, services]);
 
   const handleFieldChange = (field: keyof PaymentFormState, value: string | boolean | File | null) => {
     setFormState((previous) => {
@@ -222,18 +387,30 @@ const PaymentFormPage: React.FC = () => {
 
   const handleClientSelect = (clientId: string) => {
     if (!clientId) {
-      setFormState((previous) => ({ ...previous, client_id: '' }));
+      setFormState((previous) => ({
+        ...previous,
+        client_id: '',
+        booking_id: '',
+        service_id: '',
+      }));
       return;
     }
 
     const selectedClient = clientOptions.find((client) => client.id === clientId);
     if (!selectedClient) {
-      setFormState((previous) => ({ ...previous, client_id: clientId }));
+      setFormState((previous) => ({
+        ...previous,
+        client_id: clientId,
+        booking_id: '',
+        service_id: '',
+      }));
       return;
     }
 
     setFormState((previous) => ({
       ...previous,
+      booking_id: '',
+      service_id: '',
       client_id: selectedClient.id,
       client_name: selectedClient.client_name || '',
       company_name: selectedClient.company_name || '',
@@ -243,10 +420,25 @@ const PaymentFormPage: React.FC = () => {
     }));
   };
 
+  const handleLinkedServiceSelect = (value: string) => {
+    const selectedOption = linkedServiceOptions.find((option) => option.value === value);
+
+    setFormState((previous) => ({
+      ...previous,
+      booking_id: selectedOption?.bookingId || '',
+      service_id: selectedOption?.serviceId || '',
+    }));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     try {
+      if (!isEditMode && Boolean(formState.booking_id) !== Boolean(formState.service_id)) {
+        setPageError('Select a valid booking service before saving this linked payment.');
+        return;
+      }
+
       setSubmitting(true);
       setPageError('');
 
@@ -262,16 +454,17 @@ const PaymentFormPage: React.FC = () => {
         reference_number: formState.reference_number,
         payment_date: formState.payment_date || null,
         total_payment_amount: formState.total_payment_amount || null,
-        total_payment_remarks: formState.total_payment_remarks,
         received_amount: formState.received_amount || null,
-        received_amount_remarks: formState.received_amount_remarks,
         remaining_amount: formState.remaining_amount || null,
-        remaining_amount_remarks: formState.remaining_amount_remarks,
         after_fund_disbursement_percentage: formState.after_fund_disbursement_percentage || null,
-        after_fund_disbursement_remarks: formState.after_fund_disbursement_remarks,
-        remarks: formState.remarks,
         attachment: formState.attachment,
         remove_attachment: formState.remove_attachment,
+        ...(!isEditMode && formState.booking_id && formState.service_id
+          ? {
+              booking_id: formState.booking_id,
+              services: [formState.service_id],
+            }
+          : {}),
       };
 
       if (isEditMode && paymentId) {
@@ -309,14 +502,12 @@ const PaymentFormPage: React.FC = () => {
 
   const attachmentName = formState.attachment?.name
     || (formState.existingAttachmentUrl ? decodeURIComponent(formState.existingAttachmentUrl.split('/').pop() || 'Current attachment') : '');
+  const selectedLinkedServiceValue = serializeLinkedService(formState.booking_id, formState.service_id);
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       <div className="shrink-0 w-full space-y-2">
-        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-xs text-slate-600">
-            Create manual payment records with client and payment details.
-          </p>
+        <div className="flex justify-end rounded-lg border border-slate-200 bg-white p-3">
           <div className="flex items-center gap-2">
             <button
               type="submit"
@@ -337,9 +528,6 @@ const PaymentFormPage: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          Link an existing client for reporting continuity, or leave on manual entry and type details directly.
-        </div>
       </div>
 
       {pageError ? (
@@ -359,20 +547,52 @@ const PaymentFormPage: React.FC = () => {
               <CompactSection title="Client Details" icon={<UserRound size={14} />}>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Field label="Linked Client">
-                    <select
-                      className="input-field py-1.5 text-sm"
+                    <SearchableSelect
+                      options={linkedClientOptions}
                       value={formState.client_id}
-                      onChange={(event) => handleClientSelect(event.target.value)}
-                    >
-                      <option value="">Manual Entry</option>
-                      {clientOptions.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.client_name} - {client.company_name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleClientSelect}
+                      placeholder="Manual Entry"
+                      searchPlaceholder="Search clients..."
+                      emptyMessage="No clients available."
+                      emptySearchMessage="No clients match your search."
+                      clearable
+                      clearLabel="Clear"
+                      compact
+                    />
                   </Field>
-                  <div className="hidden sm:block" />
+                  {!isEditMode ? (
+                    <Field label="Select Service">
+                      <div>
+                        <SearchableSelect
+                          options={bookingServiceSelectOptions}
+                          value={selectedLinkedServiceValue}
+                          onChange={handleLinkedServiceSelect}
+                          disabled={!formState.client_id || loadingLinkedServices}
+                          placeholder={
+                            !formState.client_id
+                              ? 'Link a client first'
+                              : loadingLinkedServices
+                                ? 'Loading services...'
+                                : linkedServiceOptions.length === 0
+                                  ? 'No booking services'
+                                  : 'Select one service'
+                          }
+                          searchPlaceholder="Search booking services..."
+                          emptyMessage={
+                            !formState.client_id
+                              ? 'Link a client first to view booking services.'
+                              : 'No booking services available.'
+                          }
+                          emptySearchMessage="No booking services match your search."
+                          clearable
+                          clearLabel="Clear"
+                          compact
+                        />
+                      </div>
+                    </Field>
+                  ) : (
+                    <div className="hidden sm:block" />
+                  )}
                   <Field label="Client Name" required>
                     <input
                       className="input-field py-1.5 text-sm"
@@ -508,53 +728,6 @@ const PaymentFormPage: React.FC = () => {
                       placeholder="0.00"
                     />
                   </Field>
-                </div>
-              </CompactSection>
-
-              <CompactSection title="Remarks" icon={<FileText size={14} />}>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Field label="Total Remarks">
-                    <textarea
-                      className="input-field min-h-[60px] py-1.5 text-sm resize-none"
-                      value={formState.total_payment_remarks}
-                      onChange={(event) => handleFieldChange('total_payment_remarks', event.target.value)}
-                      placeholder="Notes"
-                    />
-                  </Field>
-                  <Field label="Received Remarks">
-                    <textarea
-                      className="input-field min-h-[60px] py-1.5 text-sm resize-none"
-                      value={formState.received_amount_remarks}
-                      onChange={(event) => handleFieldChange('received_amount_remarks', event.target.value)}
-                      placeholder="Notes"
-                    />
-                  </Field>
-                  <Field label="Remaining Remarks">
-                    <textarea
-                      className="input-field min-h-[60px] py-1.5 text-sm resize-none"
-                      value={formState.remaining_amount_remarks}
-                      onChange={(event) => handleFieldChange('remaining_amount_remarks', event.target.value)}
-                      placeholder="Notes"
-                    />
-                  </Field>
-                  <Field label="Fund Disb. Remarks">
-                    <textarea
-                      className="input-field min-h-[60px] py-1.5 text-sm resize-none"
-                      value={formState.after_fund_disbursement_remarks}
-                      onChange={(event) => handleFieldChange('after_fund_disbursement_remarks', event.target.value)}
-                      placeholder="Notes"
-                    />
-                  </Field>
-                  <div className="sm:col-span-2">
-                    <Field label="General Remarks">
-                      <textarea
-                        className="input-field min-h-[60px] py-1.5 text-sm resize-none"
-                        value={formState.remarks}
-                        onChange={(event) => handleFieldChange('remarks', event.target.value)}
-                        placeholder="Additional remarks"
-                      />
-                    </Field>
-                  </div>
                 </div>
               </CompactSection>
 

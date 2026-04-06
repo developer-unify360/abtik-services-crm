@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "until curl -fsS http://crm.abtikservices.in/api/v1/health/; do echo 'Waiting for backend...'; sleep 2; done; npm run dev -- --host"]
+CMD ["sh", "-c", "API_TARGET=\"${VITE_API_TARGET:-http://backend:8000}\"; until curl -fsS \"${API_TARGET%/}/api/v1/health/\"; do echo 'Waiting for backend...'; sleep 2; done; npm run dev -- --host"]

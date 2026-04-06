@@ -40,7 +40,7 @@ class ClientService:
 
     @staticmethod
     @transaction.atomic
-    def create_client_with_booking_and_request(client_data, booking_data, request_data_list, user, service_id=None):
+    def create_client_with_booking_and_request(client_data, booking_data, request_data_list, user, service_id=None, payments_data=None):
         """Create or update client, then create booking and optional service requests."""
         email = client_data.get('email')
         mobile = client_data.get('mobile')
@@ -100,7 +100,7 @@ class ClientService:
             except Lead.DoesNotExist:
                 pass
         
-        booking = BookingService.create_booking(data=booking_payload, user=user, service_id=service_id)
+        booking = BookingService.create_booking(data=booking_payload, user=user, service_id=service_id, payments_data=payments_data)
 
         service_requests = []
         for request_data in request_data_list or []:

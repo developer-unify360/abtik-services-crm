@@ -143,7 +143,7 @@ const BookingListPage: React.FC = () => {
                 <th className="px-3 py-2 text-left whitespace-nowrap">Company</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Payment Type</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Booking Date</th>
-                <th className="px-3 py-2 text-left whitespace-nowrap">Status</th>
+                <th className="px-3 py-2 text-left whitespace-nowrap">Service Status</th>
                 <th className="px-3 py-2 text-left whitespace-nowrap">Created</th>
                 {!isBde && <th className="px-3 py-2 text-center whitespace-nowrap">Actions</th>}
               </tr>

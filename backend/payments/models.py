@@ -17,12 +17,17 @@ class Payment(BaseModel):
         (SOURCE_MANUAL, 'Manual'),
     ]
 
-    booking = models.OneToOneField(
+    booking = models.ForeignKey(
         'bookings.Booking',
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='payment_record',
+        related_name='payments',
+    )
+    services = models.ManyToManyField(
+        'services.Service',
+        related_name='payments',
+        blank=True,
     )
     client = models.ForeignKey(
         'clients.Client',
@@ -54,15 +59,10 @@ class Payment(BaseModel):
     reference_number = models.CharField(max_length=100, blank=True)
     payment_date = models.DateField(null=True, blank=True)
     total_payment_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    total_payment_remarks = models.TextField(blank=True)
     received_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    received_amount_remarks = models.TextField(blank=True)
     remaining_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    remaining_amount_remarks = models.TextField(blank=True)
     after_fund_disbursement_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    after_fund_disbursement_remarks = models.TextField(blank=True)
     attachment = models.FileField(upload_to=payment_attachment_upload_to, null=True, blank=True)
-    remarks = models.TextField(blank=True)
 
     class Meta:
         ordering = ['-payment_date', '-created_at']

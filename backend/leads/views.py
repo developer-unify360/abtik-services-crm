@@ -1,12 +1,14 @@
 from rest_framework import viewsets, filters, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.db.models import Q
 from rest_framework import permissions
 from rest_framework.permissions import AllowAny
 from leads.models import Lead, LeadActivity, LeadAssignmentRule
-from users.permissions import IsAdmin, IsManagerOrAdmin
+from users.permissions import IsAdmin
 from attributes.models import LeadSource
 from leads.serializers import (
     LeadSerializer, 
@@ -23,10 +25,32 @@ class LeadViewSet(viewsets.ModelViewSet):
     ViewSet for managing leads.
     Provides standard CRUD plus custom actions.
     """
-    queryset = Lead.objects.all()
+    class LeadPagination(PageNumberPagination):
+        page_size = 10
+        page_size_query_param = 'page_size'
+        max_page_size = 100
+
+    queryset = Lead.objects.select_related(
+        'client',
+        'industry',
+        'created_by',
+        'source',
+        'assigned_to',
+        'service',
+    ).all()
+    pagination_class = LeadPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'source', 'assigned_to']
-    search_fields = ['client_name', 'email', 'company_name', 'mobile']
+    search_fields = [
+        'client_name',
+        'email',
+        'company_name',
+        'mobile',
+        'client__client_name',
+        'client__email',
+        'client__company_name',
+        'client__mobile',
+    ]
     ordering_fields = ['created_at', 'updated_at', 'lead_score', 'priority']
     ordering = ['-priority', '-lead_score', '-created_at']
 
@@ -38,12 +62,20 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         # BDEs only see leads they created or are assigned to
         if user.role == 'bde':
-            from django.db.models import Q
-            return queryset.filter(Q(created_by=user) | Q(assigned_to=user)).distinct()
-        
-        if user.role == 'sales_manager':
-            return queryset.filter(assigned_to=user)
-        
+            queryset = queryset.filter(Q(created_by=user) | Q(assigned_to=user)).distinct()
+        elif user.role == 'sales_manager':
+            queryset = queryset.filter(assigned_to=user)
+
+        tab = self.request.query_params.get('tab')
+        if tab == 'unassigned':
+            queryset = queryset.filter(assigned_to__isnull=True)
+        elif tab == 'my':
+            queryset = queryset.filter(assigned_to=user)
+        elif tab == 'overdue':
+            queryset = queryset.filter(
+                next_follow_up_date__lt=timezone.localdate()
+            ).exclude(status__in=['closed_won', 'closed_lost'])
+
         return queryset
 
     def get_serializer_class(self):

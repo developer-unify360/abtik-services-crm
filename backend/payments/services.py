@@ -1,11 +1,12 @@
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 
 from attributes.models import PaymentType
 from audit.models import AuditLog
-from bookings.models import Bank
+from bookings.models import Bank, Booking
 from clients.models import Client
 from payments.models import Payment
+from services.models import Service
 
 
 class PaymentService:
@@ -37,6 +38,59 @@ class PaymentService:
             return Client.objects.get(id=client_id)
         except Client.DoesNotExist as exc:
             raise ValidationError({'client_id': 'Selected client was not found.'}) from exc
+
+    @staticmethod
+    def _resolve_booking(booking_id):
+        if booking_id in [None, '']:
+            return None
+        try:
+            return Booking.objects.select_related('client').prefetch_related('service_requests').get(id=booking_id)
+        except Booking.DoesNotExist as exc:
+            raise ValidationError({'booking_id': 'Selected booking was not found.'}) from exc
+
+    @staticmethod
+    def _resolve_service(service_id):
+        if service_id in [None, '']:
+            return None
+        try:
+            return Service.objects.get(id=service_id)
+        except Service.DoesNotExist as exc:
+            raise ValidationError({'services': 'Selected service was not found.'}) from exc
+
+    @staticmethod
+    def _validate_booking_service_selection(booking, service_ids):
+        normalized_service_ids = [
+            str(service_id)
+            for service_id in (service_ids or [])
+            if service_id not in [None, '']
+        ]
+
+        if len(normalized_service_ids) != 1:
+            raise ValidationError({'services': 'Select exactly one service for this payment.'})
+
+        service = PaymentService._resolve_service(normalized_service_ids[0])
+
+        if booking.payments.filter(services__id=service.id).exists():
+            raise ValidationError({'services': 'A payment already exists for the selected booking service.'})
+
+        return service
+
+    @staticmethod
+    def _ensure_booking_service_request(booking, service, user):
+        existing_request = booking.service_requests.filter(service=service).first()
+        if existing_request:
+            return existing_request
+
+        from services.services import ServiceRequestService
+
+        return ServiceRequestService.create_request(
+            data={
+                'booking': booking,
+                'service': service,
+                'priority': 'medium',
+            },
+            user=user,
+        )
 
     @staticmethod
     def _resolve_remaining_amount(data, payment=None):
@@ -82,6 +136,58 @@ class PaymentService:
                 setattr(payment, field_name, defaults[field_name])
 
     @staticmethod
+    def sync_payments(booking, payments_data, user):
+        """Sync multiple payments for a booking."""
+        existing_payments = {str(p.id): p for p in booking.payments.all()}
+        retained_ids = set()
+        synced_payments = []
+        snapshot = PaymentService._client_snapshot(booking.client)
+
+        for item in payments_data:
+            payment_id = str(item.get('id')) if item.get('id') else None
+            
+            # Resolve services
+            service_ids = item.get('services', [])
+            
+            payload = {
+                'source': Payment.SOURCE_BOOKING,
+                'booking': booking,
+                'client': booking.client,
+                **snapshot,
+                'payment_type': PaymentService._resolve_payment_type(item.get('payment_type')),
+                'bank': PaymentService._resolve_bank(item.get('bank')),
+                'reference_number': item.get('reference_number', ''),
+                'payment_date': item.get('payment_date'),
+                'total_payment_amount': item.get('total_payment_amount'),
+                'received_amount': item.get('received_amount'),
+                'remaining_amount': PaymentService._resolve_remaining_amount(item),
+                'after_fund_disbursement_percentage': item.get('after_fund_disbursement_percentage'),
+            }
+
+            if payment_id and payment_id in existing_payments:
+                payment = existing_payments[payment_id]
+                for key, value in payload.items():
+                    setattr(payment, key, value)
+                payment.full_clean()
+                payment.save()
+                retained_ids.add(payment_id)
+            else:
+                payment = Payment(**payload)
+                payment.full_clean()
+                payment.save()
+            
+            # Sync services
+            payment.services.set(service_ids or [])
+            
+            synced_payments.append(payment)
+
+        for pid, p in existing_payments.items():
+            if pid not in retained_ids and p.source == Payment.SOURCE_BOOKING:
+                p.delete()
+        
+        return synced_payments
+
+    @staticmethod
     def sync_booking_payment(booking, user=None):
         payment, created = Payment.objects.get_or_create(
             booking=booking,
@@ -102,14 +208,9 @@ class PaymentService:
         payment.bank = booking.bank
         payment.payment_date = booking.payment_date
         payment.total_payment_amount = booking.total_payment_amount
-        payment.total_payment_remarks = booking.total_payment_remarks or ''
         payment.received_amount = booking.received_amount
-        payment.received_amount_remarks = booking.received_amount_remarks or ''
         payment.remaining_amount = booking.remaining_amount
-        payment.remaining_amount_remarks = booking.remaining_amount_remarks or ''
         payment.after_fund_disbursement_percentage = booking.after_fund_disbursement_percentage
-        payment.after_fund_disbursement_remarks = booking.after_fund_disbursement_remarks or ''
-        payment.remarks = booking.remarks or ''
         payment.full_clean()
         payment.save()
 
@@ -128,6 +229,52 @@ class PaymentService:
 
     @staticmethod
     def create_payment(data, user):
+        booking = PaymentService._resolve_booking(data.get('booking_id'))
+        service_ids = data.get('services') or []
+
+        if booking:
+            if data.get('client_id') not in [None, ''] and str(data.get('client_id')) != str(booking.client_id):
+                raise ValidationError({'client_id': 'Selected client does not match the chosen booking service.'})
+
+            selected_service = PaymentService._validate_booking_service_selection(booking, service_ids)
+
+            with transaction.atomic():
+                payment = Payment(
+                    source=Payment.SOURCE_BOOKING,
+                    booking=booking,
+                    client=booking.client,
+                    payment_type=PaymentService._resolve_payment_type(data.get('payment_type')),
+                    bank=PaymentService._resolve_bank(data.get('bank')),
+                    reference_number=data.get('reference_number', ''),
+                    payment_date=data.get('payment_date'),
+                    total_payment_amount=data.get('total_payment_amount'),
+                    received_amount=data.get('received_amount'),
+                    remaining_amount=PaymentService._resolve_remaining_amount(data),
+                    after_fund_disbursement_percentage=data.get('after_fund_disbursement_percentage'),
+                    attachment=data.get('attachment'),
+                )
+                PaymentService._apply_snapshot(payment, {}, booking.client, reset_to_client_defaults=True)
+                payment.full_clean()
+                payment.save()
+                payment.services.set([selected_service.id])
+                PaymentService._ensure_booking_service_request(booking, selected_service, user)
+
+                AuditLog.objects.create(
+                    user=user,
+                    action='payment.created',
+                    module='payments',
+                    details={
+                        'payment_id': str(payment.id),
+                        'source': payment.source,
+                        'booking_id': str(payment.booking_id) if payment.booking_id else None,
+                    },
+                )
+
+            return payment
+
+        if service_ids:
+            raise ValidationError({'services': 'Select a booking service from the linked client before saving this payment.'})
+
         client = PaymentService._resolve_client(data.get('client_id'))
         payment = Payment(
             source=Payment.SOURCE_MANUAL,
@@ -137,15 +284,10 @@ class PaymentService:
             reference_number=data.get('reference_number', ''),
             payment_date=data.get('payment_date'),
             total_payment_amount=data.get('total_payment_amount'),
-            total_payment_remarks=data.get('total_payment_remarks', ''),
             received_amount=data.get('received_amount'),
-            received_amount_remarks=data.get('received_amount_remarks', ''),
             remaining_amount=PaymentService._resolve_remaining_amount(data),
-            remaining_amount_remarks=data.get('remaining_amount_remarks', ''),
             after_fund_disbursement_percentage=data.get('after_fund_disbursement_percentage'),
-            after_fund_disbursement_remarks=data.get('after_fund_disbursement_remarks', ''),
             attachment=data.get('attachment'),
-            remarks=data.get('remarks', ''),
         )
         PaymentService._apply_snapshot(payment, data, client, reset_to_client_defaults=True)
         payment.full_clean()
@@ -168,6 +310,9 @@ class PaymentService:
     def update_payment(payment, data, user):
         if payment.source != Payment.SOURCE_MANUAL:
             raise ValidationError({'payment': 'Booking-linked payments can only be changed from the booking form.'})
+
+        if data.get('booking_id') or data.get('services'):
+            raise ValidationError({'payment': 'Use the booking form to manage booking-linked service payments.'})
 
         updated_fields = []
 
@@ -194,14 +339,9 @@ class PaymentService:
             'reference_number',
             'payment_date',
             'total_payment_amount',
-            'total_payment_remarks',
             'received_amount',
-            'received_amount_remarks',
             'remaining_amount',
-            'remaining_amount_remarks',
             'after_fund_disbursement_percentage',
-            'after_fund_disbursement_remarks',
-            'remarks',
         ]
         for field_name in updatable_fields:
             if field_name in data:
@@ -239,7 +379,13 @@ class PaymentService:
 
     @staticmethod
     def list_payments(filters=None):
-        queryset = Payment.objects.select_related('booking', 'booking__client', 'client', 'payment_type', 'bank')
+        queryset = Payment.objects.select_related(
+            'booking',
+            'booking__client',
+            'client',
+            'payment_type',
+            'bank',
+        ).prefetch_related('services')
 
         if filters:
             if filters.get('source'):

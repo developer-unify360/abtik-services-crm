@@ -69,19 +69,14 @@ class Booking(BaseModel):
     booking_date = models.DateField()
     payment_date = models.DateField(null=True, blank=True)
     total_payment_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    total_payment_remarks = models.TextField(null=True, blank=True)
     received_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    received_amount_remarks = models.TextField(null=True, blank=True)
     remaining_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    remaining_amount_remarks = models.TextField(null=True, blank=True)
     after_fund_disbursement_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    after_fund_disbursement_remarks = models.TextField(null=True, blank=True)
     attachment = models.FileField(
         upload_to=booking_attachment_upload_to,
         null=True,
         blank=True,
     )
-    remarks = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     class Meta:

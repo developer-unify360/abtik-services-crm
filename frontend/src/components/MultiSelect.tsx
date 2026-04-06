@@ -18,6 +18,7 @@ interface MultiSelectProps {
   itemLabelPlural?: string;
   emptySelectionHint?: string;
   compact?: boolean;
+  disabled?: boolean;
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
@@ -32,6 +33,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   itemLabelPlural = 'services',
   emptySelectionHint = 'Search and select multiple services. Your selections will appear here as removable tags.',
   compact = false,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,15 +113,15 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     <div className="space-y-1" ref={containerRef}>
       <button
         type="button"
-        onClick={() => hasAvailableOptions && setIsOpen((open) => !open)}
+        onClick={() => !disabled && hasAvailableOptions && setIsOpen((open) => !open)}
         className={`w-full rounded-lg border px-3 text-left shadow-sm transition ${
           isOpen
             ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100'
             : 'border-slate-200 bg-white hover:border-slate-300'
-        } ${compact ? 'py-2' : 'py-2.5'} ${!hasAvailableOptions ? 'cursor-not-allowed opacity-60' : ''}`}
+        } ${compact ? 'py-2' : 'py-2.5'} ${(!hasAvailableOptions || disabled) ? 'cursor-not-allowed opacity-60' : ''}`}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        disabled={!hasAvailableOptions}
+        disabled={!hasAvailableOptions || disabled}
       >
         <div className={`flex items-start ${compact ? 'gap-2' : 'gap-3'}`}>
           <div className="min-w-0 flex-1">
@@ -146,7 +148,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         </div>
       </button>
 
-      {isOpen ? (
+      {isOpen && !disabled && (
         <div className="rounded-lg border border-slate-200 bg-white shadow-xl">
           <div className={`border-b border-slate-100 ${compact ? 'p-2.5' : 'p-3'}`}>
             <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100">
@@ -234,7 +236,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
       <div className={`rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 ${compact ? 'py-2' : 'py-2.5'}`}>
         {selectedOptions.length > 0 ? (
@@ -245,14 +247,16 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                 className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
               >
                 {option.label}
-                <button
-                  type="button"
-                  onClick={() => toggleValue(option.value)}
-                  className="rounded-full p-0.5 text-blue-600 transition hover:bg-blue-100 hover:text-blue-800"
-                  aria-label={`Remove ${option.label}`}
-                >
-                  <X size={12} />
-                </button>
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => toggleValue(option.value)}
+                    className="rounded-full p-0.5 text-blue-600 transition hover:bg-blue-100 hover:text-blue-800"
+                    aria-label={`Remove ${option.label}`}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </span>
             ))}
           </div>
