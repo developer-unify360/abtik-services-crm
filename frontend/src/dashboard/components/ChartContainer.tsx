@@ -7,35 +7,46 @@ interface ChartContainerProps {
   unit?: string;
   color?: string;
   compact?: boolean;
+  valueFormatter?: (value: number) => string;
 }
 
-const ChartContainer: React.FC<ChartContainerProps> = ({ 
-    title, data, labels, unit = 'Units', color = 'bg-indigo-500', compact = false 
+const ChartContainer: React.FC<ChartContainerProps> = ({
+  title,
+  data,
+  labels,
+  unit = 'Units',
+  color = 'bg-indigo-500',
+  compact = false,
+  valueFormatter,
 }) => {
   const max = Math.max(...data, 1);
+  const resolvedFormatter = valueFormatter || ((value: number) => `${value}`);
+
   return (
-    <div className={`bg-white rounded-xl border border-slate-100 shadow-sm ${compact ? 'p-3' : 'p-5'} flex flex-col h-full`}>
-      <div className={`flex items-center justify-between ${compact ? 'mb-2' : 'mb-4'}`}>
-        <h3 className={`${compact ? 'text-[8px]' : 'text-[10px]'} font-black text-slate-400 uppercase tracking-widest leading-none`}>{title}</h3>
-        <div className="flex items-center gap-1 opacity-40">
-            <div className={`w-1.5 h-1.5 rounded-full ${color}`} />
-            <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">{unit}</span>
+    <div className={`card ${compact ? 'p-3' : 'p-4'} h-full`}>
+      <div className={`mb-4 flex items-center justify-between ${compact ? 'mb-3' : ''}`}>
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+          <p className="text-xs text-slate-500">{unit}</p>
         </div>
       </div>
-      <div className={`flex items-end justify-between ${compact ? 'h-24' : 'h-40'} gap-1.5 group/chart mt-auto`}>
-        {data.map((val, idx) => (
-          <div key={idx} className="flex-1 flex flex-col items-center group relative h-full">
-            <div className={`flex-1 w-full flex flex-col justify-end translate-y-0 group-hover:-translate-y-0.5 transition-transform duration-300`}>
-               <div 
-                 style={{ height: `${(val/max)*100}%` }} 
-                 className={`w-full ${color} opacity-70 group-hover:opacity-100 rounded-sm transition-all duration-300 relative shadow-sm`}
-               >
-                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[7px] font-black px-1.5 py-0.5 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-10">
-                   {val}{unit}
-                 </div>
-               </div>
+
+      <div className={`mt-auto flex items-end gap-2 ${compact ? 'h-24' : 'h-44'}`}>
+        {data.map((value, index) => (
+          <div key={`${labels[index]}-${index}`} className="flex min-w-0 flex-1 flex-col items-center">
+            <div className="mb-2 text-[11px] font-medium text-slate-600">
+              {resolvedFormatter(value)}
             </div>
-            <span className={`text-[7px] text-slate-400 mt-1.5 font-black uppercase tracking-tighter truncate w-full text-center group-hover:text-slate-800 transition-colors`}>{labels[idx]}</span>
+            <div className="flex h-full w-full items-end rounded-md bg-slate-100 px-1">
+              <div
+                className={`w-full rounded-md ${color}`}
+                style={{ height: `${(value / max) * 100}%` }}
+                title={`${labels[index]}: ${resolvedFormatter(value)}`}
+              />
+            </div>
+            <div className="mt-2 w-full truncate text-center text-[11px] text-slate-500">
+              {labels[index]}
+            </div>
           </div>
         ))}
       </div>

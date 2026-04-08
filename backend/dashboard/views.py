@@ -1,12 +1,95 @@
-from django.db.models import F, Q, Count, CharField, Sum
+from django.db.models import F, Q, Count, CharField, Sum, DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import views, response, permissions
+from clients.models import Client
 from leads.models import Lead
 from bookings.models import Booking
+from payments.models import Payment
 from users.models import User
 from users.permissions import IsAdmin
-from .serializers import TodayStatsSerializer, UserPerformanceSerializer
+from .serializers import DashboardOverviewSerializer, TodayStatsSerializer, UserPerformanceSerializer
+
+
+class DashboardOverviewView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        today = timezone.localtime(timezone.now()).date()
+        money_field = DecimalField(max_digits=14, decimal_places=2)
+
+        summary = {
+            'total_clients': Client.objects.count(),
+            'total_bookings': Booking.objects.count(),
+            'pending_bookings': Booking.objects.filter(status='pending').count(),
+            'completed_bookings': Booking.objects.filter(status='completed').count(),
+            'today_leads': Lead.objects.filter(created_at__date=today).count(),
+            'today_bookings': Booking.objects.filter(created_at__date=today).count(),
+            'total_collections': Payment.objects.filter(source=Payment.SOURCE_BOOKING).aggregate(
+                total=Coalesce(Sum('received_amount'), 0, output_field=money_field)
+            )['total'] or 0,
+        }
+
+        service_revenue = list(
+            Payment.objects.filter(
+                source=Payment.SOURCE_BOOKING,
+                services__isnull=False,
+            )
+            .values('services')
+            .annotate(
+                service_id=F('services'),
+                name=F('services__name'),
+                revenue=Coalesce(Sum('received_amount'), 0, output_field=money_field),
+                payments_count=Count('id', distinct=True),
+            )
+            .values('service_id', 'name', 'revenue', 'payments_count')
+            .order_by('-revenue', 'name')
+        )
+
+        bde_performance = list(
+            Lead.objects.filter(created_by__role='bde')
+            .values('created_by_id')
+            .annotate(
+                user_id=F('created_by_id'),
+                name=Coalesce(F('created_by__name'), F('created_by__email'), output_field=CharField()),
+                lead_count=Count('id'),
+                won_count=Count('id', filter=Q(status='closed_won')),
+            )
+            .values('user_id', 'name', 'lead_count', 'won_count')
+            .order_by('-lead_count', 'name')
+        )
+
+        bdm_performance = list(
+            Payment.objects.filter(
+                source=Payment.SOURCE_BOOKING,
+                booking__source_lead__assigned_to__role='sales_manager',
+            )
+            .values('booking__source_lead__assigned_to_id')
+            .annotate(
+                user_id=F('booking__source_lead__assigned_to_id'),
+                name=Coalesce(
+                    F('booking__source_lead__assigned_to__name'),
+                    F('booking__source_lead__assigned_to__email'),
+                    output_field=CharField(),
+                ),
+                revenue=Coalesce(Sum('received_amount'), 0, output_field=money_field),
+                bookings_count=Count('booking_id', distinct=True),
+                payments_count=Count('id', distinct=True),
+            )
+            .values('user_id', 'name', 'revenue', 'bookings_count', 'payments_count')
+            .order_by('-revenue', 'name')
+        )
+
+        serializer = DashboardOverviewSerializer(
+            data={
+                'summary': summary,
+                'service_revenue': service_revenue,
+                'bde_performance': bde_performance,
+                'bdm_performance': bdm_performance,
+            }
+        )
+        serializer.is_valid(raise_exception=True)
+        return response.Response(serializer.data)
 
 class TodayStatsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
@@ -111,7 +194,10 @@ class UserPerformanceView(views.APIView):
         
         total_payments = 0
         if is_bdm:
-            total_payments = booking_qs.aggregate(total=Sum('received_amount'))['total'] or 0
+            total_payments = Payment.objects.filter(
+                source=Payment.SOURCE_BOOKING,
+                booking__in=booking_qs,
+            ).aggregate(total=Sum('received_amount'))['total'] or 0
         
         recent_leads = lead_qs.select_related('client').order_by('-created_at')[:10]
         recent_bookings = booking_qs.select_related('client').order_by('-created_at')[:10]

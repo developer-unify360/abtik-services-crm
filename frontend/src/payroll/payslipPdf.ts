@@ -443,7 +443,7 @@ const renderPayslipArtwork = async (
   const infoTableHeight = infoRowHeight * 6;
 
   const infoRows: [string, string, string, string][] = [
-    ['Employee Name', preview.employee.full_name || 'NA', 'Company', ''],
+    ['Employee Name', preview.employee.full_name || 'NA', 'Company', preview.company.company_name || 'NA'],
     ['Bank Account', preview.employee.bank_account_number || 'NA', 'Bank Name', preview.employee.bank_name || 'NA'],
     ['Date of Joining', formatDate(preview.employee.date_of_joining), 'ESIC No', 'NA'],
     ['Designation', preview.employee.designation || 'NA', 'Department', preview.employee.department || 'NA'],

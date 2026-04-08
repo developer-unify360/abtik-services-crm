@@ -3,6 +3,7 @@ import { Menu, LogOut } from 'lucide-react';
 import { useAuthStore } from '../auth/authStore';
 import { getRoleName } from '../auth/roleUtils';
 import { useNavigate, useLocation } from 'react-router-dom';
+import UserSearchBar from '../dashboard/components/UserSearchBar';
 
 const HeaderBar: React.FC = () => {
   const user = useAuthStore((state) => state.user);
@@ -17,6 +18,23 @@ const HeaderBar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const showDashboardSearch = location.pathname === '/dashboard';
+
+  const handleDashboardSearch = (userId: string, userName: string) => {
+    const params = new URLSearchParams(location.search);
+    params.set('userId', userId);
+    params.set('userName', userName);
+    navigate({ pathname: '/dashboard', search: `?${params.toString()}` });
+  };
+
+  const handleClearDashboardSearch = () => {
+    const params = new URLSearchParams(location.search);
+    params.delete('userId');
+    params.delete('userName');
+    const search = params.toString();
+    navigate({ pathname: '/dashboard', search: search ? `?${search}` : '' });
   };
 
   const getPageTitle = (pathname: string) => {
@@ -41,10 +59,9 @@ const HeaderBar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 bg-white/70 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4">
-      <div className="flex items-center justify-between h-full">
-        {/* Left Section */}
-        <div className="flex items-center gap-4">
+    <header className={`bg-white/70 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 ${showDashboardSearch ? 'h-16' : 'h-14'}`}>
+      <div className="flex items-center gap-3 h-full">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={handleToggleSidebar}
             className="p-2 -ml-2 hover:bg-slate-100 rounded-lg lg:hidden transition-colors"
@@ -52,15 +69,27 @@ const HeaderBar: React.FC = () => {
             <Menu size={20} className="text-slate-600" />
           </button>
           
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <h1 className="text-sm font-bold text-slate-800 tracking-tight">{getPageTitle(location.pathname)}</h1>
-            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{getPageSubtitle(location.pathname)}</p>
+            <p className="hidden sm:block text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+              {getPageSubtitle(location.pathname)}
+            </p>
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* User Display */}
+        {showDashboardSearch && (
+          <div className="min-w-0 flex-1 max-w-xl">
+            <UserSearchBar
+              onSearch={handleDashboardSearch}
+              onClear={handleClearDashboardSearch}
+              initialValue={new URLSearchParams(location.search).get('userName') || ''}
+              placeholder="Search BDE or BDM performance"
+              compact
+            />
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors group cursor-default">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-slate-900 leading-tight">

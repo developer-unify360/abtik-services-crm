@@ -1,202 +1,387 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Calendar, TrendingUp, ClipboardCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import {
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  IndianRupee,
+  Users,
+} from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient from '../api/apiClient';
-import StatsCard from './components/StatsCard';
-import UserSearchBar from './components/UserSearchBar';
-import PerformancePanel from './components/PerformancePanel';
+import PerformancePanel, { type PerformanceData } from './components/PerformancePanel';
 
-interface DashboardStats {
-  totalClients: number;
-  totalBookings: number;
-  pendingBookings: number;
-  completedBookings: number;
+interface DashboardSummary {
+  total_clients: number;
+  total_bookings: number;
+  pending_bookings: number;
+  completed_bookings: number;
+  today_leads: number;
+  today_bookings: number;
+  total_collections: number;
 }
 
-interface TodayStats {
-  total_leads_today: number;
-  leads_by_bde: Array<{ user_id: string; name: string; count: number }>;
-  total_bookings_today: number;
-  bookings_by_bdm: Array<{ user_id: string; name: string; count: number }>;
+interface ServiceRevenueItem {
+  service_id: string;
+  name: string;
+  revenue: number;
+  payments_count: number;
 }
 
-const TodayStatsTable = ({ data, title, type }: { data: any[], title: string, type: string }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm h-full flex flex-col">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h3>
-      <div className="flex items-center gap-1.5 opacity-50">
-           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-           <span className="text-[8px] font-bold uppercase tracking-tighter">Today</span>
-      </div>
-    </div>
-    <div className="space-y-2 overflow-y-auto max-h-[160px] pr-1 scroll-compact">
-      {data.map((item, i) => (
-        <div key={i} className="flex items-center justify-between p-2.5 bg-slate-50/50 rounded-xl border border-slate-100/50 group">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold text-xs shadow-inner">
-              {item.name[0]?.toUpperCase()}
-            </div>
-            <div>
-                <p className="text-[11px] font-bold text-slate-800 leading-none mb-1">{item.name}</p>
-                <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">{type}</p>
-            </div>
-          </div>
-          <p className="text-sm font-black text-slate-900">{item.count}</p>
-        </div>
-      ))}
-      {data.length === 0 && (
-        <p className="text-[10px] text-slate-300 font-black uppercase text-center py-4">No Entries</p>
-      )}
-    </div>
-  </div>
-);
+interface BDEPerformanceItem {
+  user_id: string;
+  name: string;
+  lead_count: number;
+  won_count: number;
+}
+
+interface BDMPerformanceItem {
+  user_id: string;
+  name: string;
+  revenue: number;
+  bookings_count: number;
+  payments_count: number;
+}
+
+interface DashboardOverview {
+  summary: DashboardSummary;
+  service_revenue: ServiceRevenueItem[];
+  bde_performance: BDEPerformanceItem[];
+  bdm_performance: BDMPerformanceItem[];
+}
+
+const emptyOverview: DashboardOverview = {
+  summary: {
+    total_clients: 0,
+    total_bookings: 0,
+    pending_bookings: 0,
+    completed_bookings: 0,
+    today_leads: 0,
+    today_bookings: 0,
+    total_collections: 0,
+  },
+  service_revenue: [],
+  bde_performance: [],
+  bdm_performance: [],
+};
+
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+const numberFormatter = new Intl.NumberFormat('en-IN');
+
+const formatCurrency = (value: number) => currencyFormatter.format(value || 0);
+const formatNumber = (value: number) => numberFormatter.format(value || 0);
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalClients: 0,
-    totalBookings: 0,
-    pendingBookings: 0,
-    completedBookings: 0,
-  });
-  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
-  const [performanceData, setPerformanceData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
+  const [searchParams] = useSearchParams();
+  const selectedUserId = searchParams.get('userId') || '';
+  const selectedUserName = searchParams.get('userName') || '';
+
+  const [overview, setOverview] = useState<DashboardOverview>(emptyOverview);
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
+  const [performanceError, setPerformanceError] = useState('');
 
   useEffect(() => {
-    const fetchData = async () => {
+    let isActive = true;
+
+    const fetchOverview = async () => {
+      setLoadingOverview(true);
       try {
-        const [clientsRes, bookingsRes, pendingRes, completedRes, todayRes] = await Promise.all([
-          apiClient.get('/clients/?page=1&page_size=1'),
-          apiClient.get('/bookings/?page=1&page_size=1'),
-          apiClient.get('/bookings/?status=pending&page=1&page_size=1'),
-          apiClient.get('/bookings/?status=completed&page=1&page_size=1'),
-          apiClient.get('/dashboard/today-stats/'),
-        ]);
-        
-        setStats({
-          totalClients: clientsRes.data.count ?? 0,
-          totalBookings: bookingsRes.data.count ?? 0,
-          pendingBookings: pendingRes.data.count ?? 0,
-          completedBookings: completedRes.data.count ?? 0,
-        });
-        setTodayStats(todayRes.data);
+        const res = await apiClient.get('/dashboard/overview/');
+        if (isActive) {
+          setOverview(res.data);
+        }
       } catch (err) {
-        console.error('Failed to load dashboard:', err);
+        console.error('Failed to load dashboard overview:', err);
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setLoadingOverview(false);
+        }
       }
     };
-    fetchData();
+
+    fetchOverview();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
-  const handleUserSearch = async (query: string) => {
-    setSearching(true);
-    try {
-      const res = await apiClient.get(`/dashboard/user-performance/?query=${encodeURIComponent(query)}`);
-      setPerformanceData(res.data);
-    } catch (err) {
-      console.error('Search failed:', err);
-    } finally {
-      setSearching(false);
-    }
-  };
+  useEffect(() => {
+    let isActive = true;
 
-  if (loading) {
+    const fetchPerformance = async () => {
+      if (!selectedUserId) {
+        setPerformanceData(null);
+        setPerformanceError('');
+        setLoadingPerformance(false);
+        return;
+      }
+
+      setLoadingPerformance(true);
+      setPerformanceError('');
+
+      try {
+        const res = await apiClient.get(`/dashboard/user-performance/?query=${encodeURIComponent(selectedUserId)}`);
+        if (isActive) {
+          setPerformanceData(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load user performance:', err);
+        if (isActive) {
+          setPerformanceData(null);
+          setPerformanceError('User performance could not be loaded.');
+        }
+      } finally {
+        if (isActive) {
+          setLoadingPerformance(false);
+        }
+      }
+    };
+
+    fetchPerformance();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedUserId]);
+
+  const summaryCards = [
+    {
+      label: 'Clients',
+      value: formatNumber(overview.summary.total_clients),
+      meta: 'Total client records',
+      icon: <Users size={16} />,
+      onClick: () => navigate('/clients'),
+    },
+    {
+      label: 'Bookings',
+      value: formatNumber(overview.summary.total_bookings),
+      meta: `Today: ${formatNumber(overview.summary.today_bookings)}`,
+      icon: <Calendar size={16} />,
+      onClick: () => navigate('/bookings'),
+    },
+    {
+      label: 'Pending',
+      value: formatNumber(overview.summary.pending_bookings),
+      meta: 'Needs follow-up',
+      icon: <Clock3 size={16} />,
+      onClick: () => navigate('/bookings?status=pending'),
+    },
+    {
+      label: 'Completed',
+      value: formatNumber(overview.summary.completed_bookings),
+      meta: `Today leads: ${formatNumber(overview.summary.today_leads)}`,
+      icon: <CheckCircle2 size={16} />,
+      onClick: () => navigate('/bookings?status=completed'),
+    },
+    {
+      label: 'Collections',
+      value: formatCurrency(overview.summary.total_collections),
+      meta: 'Booking-linked payments',
+      icon: <IndianRupee size={16} />,
+      onClick: () => navigate('/payments'),
+    },
+  ];
+
+  const topServices = overview.service_revenue.slice(0, 6);
+  const topBdes = overview.bde_performance.slice(0, 5);
+  const topBdms = overview.bdm_performance.slice(0, 5);
+
+  if (loadingOverview) {
     return (
-        <div className="space-y-4 px-2 lg:px-0 max-w-full mx-auto animate-pulse">
-            <div className="h-10 bg-slate-200 rounded-xl w-1/4 mb-4" />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-white border border-slate-100 rounded-2xl" />)}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                <div className="lg:col-span-3 h-[400px] bg-white border border-slate-100 rounded-2xl" />
-                <div className="space-y-4">
-                    <div className="h-[180px] bg-white border border-slate-100 rounded-2xl" />
-                    <div className="h-[180px] bg-white border border-slate-100 rounded-2xl" />
-                </div>
-            </div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="card h-24 animate-pulse bg-slate-100" />
+          ))}
         </div>
-    )
+        <div className="card h-80 animate-pulse bg-slate-100" />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="card h-80 animate-pulse bg-slate-100" />
+          <div className="card h-80 animate-pulse bg-slate-100" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4 px-2 lg:px-0 pb-2 max-w-full mx-auto overflow-hidden h-[calc(100vh-100px)] flex flex-col">
-      
-      {/* Top Search Matrix Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-        <div className="lg:col-span-3 flex items-center gap-4">
-             <div className="flex-1">
-                <UserSearchBar onSearch={handleUserSearch} isLoading={searching} />
-             </div>
-             <button 
-                onClick={() => navigate('/bookings/new')}
-                className="whitespace-nowrap px-6 py-2.5 bg-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"
-             >
-                 + Booking
-             </button>
-        </div>
-        <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-            <span className="text-[9px] font-black uppercase text-slate-400">Globe Total</span>
-            <span className="text-sm font-black text-indigo-600">{(todayStats?.total_leads_today || 0) + (todayStats?.total_bookings_today || 0)} Units</span>
-        </div>
-      </div>
-
-      {/* Analytics Main View */}
-      <div className="flex-1 flex flex-col min-h-0 gap-4">
-         {/* Global Metrics Row (Secondary) */}
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatsCard label="CLIENTS" value={stats.totalClients} icon={<Users size={16} />} color="bg-indigo-50 text-indigo-600" onClick={() => navigate('/clients')} />
-            <StatsCard label="BOOKINGS" value={stats.totalBookings} icon={<Calendar size={16} />} color="bg-indigo-50 text-indigo-600" onClick={() => navigate('/bookings')} />
-            <StatsCard label="PENDING" value={stats.pendingBookings} icon={<TrendingUp size={16} />} color="bg-amber-50 text-amber-600" onClick={() => navigate('/bookings?status=pending')} />
-            <StatsCard label="COMPLETED" value={stats.completedBookings} icon={<ClipboardCheck size={16} />} color="bg-emerald-50 text-emerald-600" onClick={() => navigate('/bookings?status=completed')} />
-         </div>
-
-         <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-            {/* Performance Panel Sub-section - Expansive Layout */}
-            <div className="lg:col-span-3 overflow-y-auto custom-scrollbar bg-white/40 backdrop-blur-sm rounded-3xl border border-slate-200/50 shadow-inner">
-                {performanceData ? (
-                    <div className="min-h-full">
-                        <PerformancePanel data={performanceData} />
-                    </div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center p-12 group transition-all">
-                        <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm border border-slate-100">
-                            <Users className="text-slate-300" size={40} />
-                        </div>
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-3 text-center">Operational Intelligence</h3>
-                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter text-center max-w-[200px] leading-relaxed">Select a personnel from the search matrix to deploy real-time performance analytics</p>
-                    </div>
-                )}
+    <div className="space-y-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {summaryCards.map((card) => (
+          <button
+            key={card.label}
+            type="button"
+            onClick={card.onClick}
+            className="card flex min-h-[96px] flex-col items-start justify-between p-4 text-left hover:border-slate-200 hover:shadow-md"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+              {card.icon}
             </div>
-
-            {/* Daily Operational Side View */}
-            <div className="flex flex-col gap-4 overflow-hidden">
-                <div className="flex-1 overflow-hidden">
-                    <TodayStatsTable title="Daily Leads" data={todayStats?.leads_by_bde || []} type="BDE" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                    <TodayStatsTable title="Daily Bookings" data={todayStats?.bookings_by_bdm || []} type="BDM" />
-                </div>
-                
-                <div className="bg-indigo-600 rounded-2xl p-4 text-white shadow-xl flex items-center justify-between shrink-0">
-                    <div>
-                        <p className="text-[8px] font-black uppercase text-indigo-200 tracking-widest leading-none mb-2">Live Leads</p>
-                        <p className="text-2xl font-black leading-none">{todayStats?.total_leads_today || 0}</p>
-                    </div>
-                    <div className="w-px h-8 bg-indigo-500 mx-4 opacity-50" />
-                    <div className="text-right">
-                        <p className="text-[8px] font-black uppercase text-indigo-200 tracking-widest leading-none mb-2">Live Bookings</p>
-                        <p className="text-2xl font-black leading-none">{todayStats?.total_bookings_today || 0}</p>
-                    </div>
-                </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-500">{card.label}</p>
+              <p className="text-xl font-semibold text-slate-900">{card.value}</p>
+              <p className="text-xs text-slate-500">{card.meta}</p>
             </div>
-         </div>
-      </div>
+          </button>
+        ))}
+      </section>
 
+      <section className="card p-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Revenue by service</h2>
+            <p className="text-sm text-slate-500">Top services ranked by collected booking revenue.</p>
+          </div>
+          <div className="text-left sm:text-right">
+            <p className="text-xs font-medium text-slate-500">Total collections</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {formatCurrency(overview.summary.total_collections)}
+            </p>
+          </div>
+        </div>
+
+        {topServices.length > 0 ? (
+          <div className="space-y-4">
+            {topServices.map((service) => (
+              <RevenueRow
+                key={service.service_id}
+                item={service}
+                maxValue={topServices[0]?.revenue || 0}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="No service revenue is available yet." />
+        )}
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <RankingCard
+          title="BDE performance"
+          description="Ranked by leads created."
+          emptyMessage="No BDE activity found."
+          items={topBdes}
+          renderMeta={(item) => `${formatNumber(item.won_count)} won`}
+          renderValue={(item) => `${formatNumber(item.lead_count)} leads`}
+        />
+
+        <RankingCard
+          title="BDM performance"
+          description="Ranked by revenue collection."
+          emptyMessage="No BDM collections found."
+          items={topBdms}
+          renderMeta={(item) => `${formatNumber(item.bookings_count)} bookings`}
+          renderValue={(item) => formatCurrency(item.revenue)}
+        />
+      </section>
+
+      {selectedUserId && (
+        <>
+          {loadingPerformance && (
+            <div className="card p-4">
+              <h2 className="text-base font-semibold text-slate-900">User performance</h2>
+              <p className="mt-2 text-sm text-slate-500">Loading performance for {selectedUserName || 'selected user'}...</p>
+            </div>
+          )}
+
+          {!loadingPerformance && performanceError && (
+            <div className="card p-4">
+              <h2 className="text-base font-semibold text-slate-900">User performance</h2>
+              <p className="mt-2 text-sm text-rose-600">{performanceError}</p>
+            </div>
+          )}
+
+          {!loadingPerformance && !performanceError && performanceData && (
+            <PerformancePanel data={performanceData} />
+          )}
+        </>
+      )}
     </div>
   );
 };
+
+const RevenueRow: React.FC<{ item: ServiceRevenueItem; maxValue: number }> = ({ item, maxValue }) => {
+  const width = maxValue > 0 ? Math.max((item.revenue / maxValue) * 100, 6) : 0;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-slate-900">{item.name}</p>
+          <p className="text-xs text-slate-500">{formatNumber(item.payments_count)} payments</p>
+        </div>
+        <p className="shrink-0 text-sm font-semibold text-slate-900">{formatCurrency(item.revenue)}</p>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100">
+        <div
+          className="h-2 rounded-full bg-indigo-500"
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+interface RankingCardProps<T extends { user_id: string; name: string }> {
+  title: string;
+  description: string;
+  emptyMessage: string;
+  items: T[];
+  renderMeta: (item: T) => string;
+  renderValue: (item: T) => string;
+}
+
+const RankingCard = <T extends { user_id: string; name: string },>({
+  title,
+  description,
+  emptyMessage,
+  items,
+  renderMeta,
+  renderValue,
+}: RankingCardProps<T>) => (
+  <div className="card p-4">
+    <div className="mb-4">
+      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+      <p className="text-sm text-slate-500">{description}</p>
+    </div>
+
+    {items.length > 0 ? (
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={item.user_id}
+            className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-3"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                {index + 1}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-900">{item.name}</p>
+                <p className="text-xs text-slate-500">{renderMeta(item)}</p>
+              </div>
+            </div>
+            <p className="shrink-0 text-sm font-semibold text-slate-900">{renderValue(item)}</p>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <EmptyState message={emptyMessage} />
+    )}
+  </div>
+);
+
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+    {message}
+  </div>
+);
 
 export default AdminDashboard;
