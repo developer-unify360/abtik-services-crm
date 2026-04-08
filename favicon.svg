@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="white"/>
+
+  <!-- Triangle -->
+  <polygon points="256,40 460,420 52,420" fill="#1a237e"/>
+
+  <!-- Head -->
+  <circle cx="256" cy="230" r="50" fill="white"/>
+
+  <!-- Body -->
+  <path d="M180 340 Q256 280 332 340 L332 380 L180 380 Z" fill="white"/>
+
+  <!-- Tie -->
+  <polygon points="256,280 240,320 256,360 272,320" fill="#1a237e"/>
+</svg>

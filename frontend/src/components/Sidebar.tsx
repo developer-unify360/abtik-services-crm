@@ -191,7 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
         <div className={`flex h-12 items-center border-b border-white/5 bg-slate-950/40 relative ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
           {!isCollapsed ? (
             <div className="min-w-0 pr-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Abtik ERP</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Abtik CRM</p>
               <p className="text-xs font-bold text-slate-100 truncate">Workspace</p>
             </div>
           ) : (

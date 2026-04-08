@@ -726,7 +726,7 @@ const buildPdfDocument = (jpegDataUrl: string) => {
 
   const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
 
-  let pdf = '%PDF-1.4\n%ERP\n';
+  let pdf = '%PDF-1.4\n%CRM\n';
   const offsets = [0];
 
   objects.forEach((object, index) => {

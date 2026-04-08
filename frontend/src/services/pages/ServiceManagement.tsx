@@ -178,7 +178,7 @@ const ServiceManagement: React.FC = () => {
       <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-6 py-5">
           <h2 className="text-lg font-semibold text-slate-900">Service List</h2>
-          <p className="mt-1 text-sm text-slate-600">Short, clean names work best because they appear throughout the ERP.</p>
+          <p className="mt-1 text-sm text-slate-600">Short, clean names work best because they appear throughout the CRM.</p>
         </div>
 
         {isLoading ? (
